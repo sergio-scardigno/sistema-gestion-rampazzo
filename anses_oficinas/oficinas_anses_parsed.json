@@ -1,0 +1,3872 @@
+[
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI CAMPANA, BUENOS AIRES",
+    "repeated_name": "UDAI Campana",
+    "province_detail": "Buenos Aires",
+    "address": "Mitre 1265",
+    "city": "Campana",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI ESCOBAR, BUENOS AIRES",
+    "repeated_name": "UDAI Escobar",
+    "province_detail": "Buenos Aires",
+    "address": "Eugenia Tapida de Cruz 1139",
+    "city": "Escobar",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI SAN MARTÍN, BUENOS AIRES",
+    "repeated_name": "UDAI San Martín",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 77 nº 2048",
+    "city": "San Martín",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI HURLINGHAM, BUENOS AIRES",
+    "repeated_name": "UDAI Hurlingham",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Pedro Díaz 999",
+    "city": "Hurlingham",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI JOSÉ C. PAZ, BUENOS AIRES",
+    "repeated_name": "UDAI José C. Paz",
+    "province_detail": "Buenos Aires",
+    "address": "Pte. Perón 5098",
+    "city": "José C. Paz",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI MALVINAS ARGENTINAS, BUENOS AIRES",
+    "repeated_name": "UDAI Malvinas Argentinas",
+    "province_detail": "Buenos Aires",
+    "address": "Seguí 1702 esq. Luis Vernet",
+    "city": "Grand Bourg",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI MERLO, BUENOS AIRES",
+    "repeated_name": "UDAI Merlo",
+    "province_detail": "Buenos Aires",
+    "address": "Sarandi 670",
+    "city": "Merlo",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI MORENO, BUENOS AIRES",
+    "repeated_name": "UDAI Moreno",
+    "province_detail": "Buenos Aires",
+    "address": "Boulevard Alcorta 2438",
+    "city": "Moreno",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LONGCHAMPS, BUENOS AIRES",
+    "repeated_name": "UDAI Longchamps",
+    "province_detail": "Buenos Aires",
+    "address": "Carlos Diehl 1765",
+    "city": "Longchamps",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI AVELLANEDA, BUENOS AIRES",
+    "repeated_name": "UDAI Avellaneda",
+    "province_detail": "Buenos Aires",
+    "address": "Levalle 355",
+    "city": "Avellaneda",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI BERAZATEGUI, BUENOS AIRES",
+    "repeated_name": "UDAI Berazategui",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 148 Nº 750 e/ 7 y 8",
+    "city": "Berazategui",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI BERISSO, BUENOS AIRES",
+    "repeated_name": "UDAI Berisso",
+    "province_detail": "Buenos Aires",
+    "address": "Montevideo 110 PB (Polo Tecnológico)",
+    "city": "Berisso",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI ENSENADA, BUENOS AIRES",
+    "repeated_name": "UDAI Ensenada",
+    "province_detail": "Buenos Aires",
+    "address": "La Merced 183",
+    "city": "Ensenada / Cerrada por remodelación. A partir del 27/04: atención en Calle 45 N° 671 e/ 8 y 9",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI MONTE GRANDE, BUENOS AIRES",
+    "repeated_name": "UDAI Monte Grande",
+    "province_detail": "Buenos Aires",
+    "address": "Máximo Paz 11",
+    "city": "Monte Grande",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI EZEIZA, BUENOS AIRES",
+    "repeated_name": "UDAI Ezeiza",
+    "province_detail": "Buenos Aires",
+    "address": "Conquista del Desierto 380",
+    "city": "Ezeiza",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI FLORENCIO VARELA, BUENOS AIRES",
+    "repeated_name": "UDAI Florencio Varela",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Gral. José de San Martín N°3380",
+    "city": "e/ Av. Pte. Perón y Nicolás Bocuzzi",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI SAN JUSTO, BUENOS AIRES",
+    "repeated_name": "UDAI San Justo",
+    "province_detail": "Buenos Aires",
+    "address": "Arturo Illia 2456",
+    "city": "San Justo",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI RAMOS MEJÍA, BUENOS AIRES",
+    "repeated_name": "UDAI Ramos Mejía",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Rivadavia 14752",
+    "city": "e/ Laprida y Maipú – Ramos Mejía",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA GONZÁLEZ CATÁN (DEPENDE DE UDAI SAN JUSTO), BUENOS AIRES",
+    "repeated_name": "Oficina González Catán (depende de UDAI San Justo)",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Juan Manuel de Rosas Nº 17798",
+    "city": "e/ Mariano Acosta y Sunchales – Ruta Provincial Nº 3",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LAFERRERE, BUENOS AIRES",
+    "repeated_name": "UDAI Laferrere",
+    "province_detail": "Buenos Aires",
+    "address": "Olmos 2685",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI VIRREY DEL PINO, BUENOS AIRES",
+    "repeated_name": "UDAI Virrey del Pino",
+    "province_detail": "Buenos Aires",
+    "address": "J. M. de Rosas 20.538",
+    "city": "Ruta 3 Km. 35700",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LANÚS, BUENOS AIRES",
+    "repeated_name": "UDAI Lanús",
+    "province_detail": "Buenos Aires",
+    "address": "H. Yrigoyen 5060",
+    "city": "Lanús",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LA PLATA I, BUENOS AIRES",
+    "repeated_name": "UDAI La Plata I",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 9 nº 1279",
+    "city": "La Plata",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LA PLATA II, BUENOS AIRES",
+    "repeated_name": "UDAI La Plata II",
+    "province_detail": "Buenos Aires",
+    "address": "Plaza Paso N° 170/175 (e/13 y 44)",
+    "city": "La Plata",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI LOMAS DE ZAMORA, BUENOS AIRES",
+    "repeated_name": "UDAI Lomas de Zamora",
+    "province_detail": "Buenos Aires",
+    "address": "Hipolito Yrigoyen 7550",
+    "city": "Banfield",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI PRESIDENTE PERÓN, BUENOS AIRES",
+    "repeated_name": "UDAI Presidente Perón",
+    "province_detail": "Buenos Aires",
+    "address": "Avenida Jauretche Nº 1047",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI QUILMES, BUENOS AIRES",
+    "repeated_name": "UDAI Quilmes",
+    "province_detail": "Buenos Aires",
+    "address": "H. Yrigoyen 420",
+    "city": "Quilmes",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI SAN VICENTE, BUENOS AIRES",
+    "repeated_name": "UDAI San Vicente",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Presidente Juan Domingo Perón 4550",
+    "city": "Alejandro Korn",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI AYACUCHO, BUENOS AIRES",
+    "repeated_name": "UDAI Ayacucho",
+    "province_detail": "Buenos Aires",
+    "address": "Güemes 664",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI AZUL, BUENOS AIRES",
+    "repeated_name": "UDAI Azul",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Pte. Perón 425",
+    "city": "Azul",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI BOLÍVAR, BUENOS AIRES",
+    "repeated_name": "UDAI Bolívar",
+    "province_detail": "Buenos Aires",
+    "address": "Alvear 146",
+    "city": "Bolívar",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI BENITO JUÁREZ, BUENOS AIRES",
+    "repeated_name": "UDAI Benito Juárez",
+    "province_detail": "Buenos Aires",
+    "address": "Santana Zabalza 283",
+    "city": "Benito Juárez",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI CHASCOMÚS, BUENOS AIRES",
+    "repeated_name": "UDAI Chascomús",
+    "province_detail": "Buenos Aires",
+    "address": "Belgrano 115",
+    "city": "Chascomús",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI SANTA TERESITA, BUENOS AIRES",
+    "repeated_name": "UDAI Santa Teresita",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 3 nº 981 e/36 y 37",
+    "city": "Santa Teresita",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI VILLA GESELL, BUENOS AIRES",
+    "repeated_name": "UDAI Villa Gesell",
+    "province_detail": "Buenos Aires",
+    "address": "Av. 3 nº 875 / 79",
+    "city": "Villa Gesell",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs."
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA MAR DE AJÓ (DEPENDE DE UDAI SANTA TERESITA), BUENOS AIRES",
+    "repeated_name": "Oficina Mar de Ajó (depende de UDAI Santa Teresita)",
+    "province_detail": "Buenos Aires",
+    "address": "Jorge Newbery 1487",
+    "city": "Mar de Ajó",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA MIRAMAR (DEPENDE DE UDAI MAR DEL PLATA SUR), BUENOS AIRES",
+    "repeated_name": "Oficina Miramar (depende de UDAI Mar del Plata Sur)",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 17 e/ 32 y 34",
+    "city": "Miramar",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI DOLORES, BUENOS AIRES",
+    "repeated_name": "UDAI Dolores",
+    "province_detail": "Buenos Aires",
+    "address": "Manuel Rico 47",
+    "city": "Dolores",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA GENERAL BELGRANO (DEPENDE DE UDAI AZUL), BUENOS AIRES",
+    "repeated_name": "Oficina General Belgrano (depende de UDAI Azul)",
+    "province_detail": "Buenos Aires",
+    "address": "Avda. San Martín nº 541",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA GENERAL GUIDO (DEPENDE DE UDAI AYACUCHO), BUENOS AIRES",
+    "repeated_name": "Oficina General Guido (depende de UDAI Ayacucho)",
+    "province_detail": "Buenos Aires",
+    "address": "Irigoyen 274",
+    "city": "General Guido",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs."
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA GRAL. LAMADRID (DEPENDE DE UDAI OLAVARRÍA), BUENOS AIRES",
+    "repeated_name": "Oficina Gral. Lamadrid (depende de UDAI Olavarría)",
+    "province_detail": "Buenos Aires",
+    "address": "San Martín 666",
+    "city": "Lamadrid",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "7.00 a 15.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI GENERAL MADARIAGA, BUENOS AIRES",
+    "repeated_name": "UDAI General Madariaga",
+    "province_detail": "Buenos Aires",
+    "address": "Martinez Guerrero 1850",
+    "city": "Gral. Madariaga",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA LAS FLORES (DEPENDE DE UDAI AZUL), BUENOS AIRES",
+    "repeated_name": "Oficina Las Flores (depende de UDAI Azul)",
+    "province_detail": "Buenos Aires",
+    "address": "San Martín 614",
+    "city": "Las Flores",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA MAIPÚ (DEPENDE DE UDAI GENERAL MADARIAGA), BUENOS AIRES",
+    "repeated_name": "Oficina Maipú (depende de UDAI General Madariaga)",
+    "province_detail": "Buenos Aires",
+    "address": "Belgrano 899",
+    "city": "Maipú",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "UDAI TANDIL, BUENOS AIRES",
+    "repeated_name": "UDAI Tandil",
+    "province_detail": "Buenos Aires",
+    "address": "Chacabuco 507",
+    "city": "Tandil",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Buenos Aires",
+    "office_name": "OFICINA TAPALQUÉ (DEPENDE DE UDAI AZUL), BUENOS AIRES",
+    "repeated_name": "Oficina Tapalqué (depende de UDAI Azul)",
+    "province_detail": "Buenos Aires",
+    "address": "25 de Mayo 590",
+    "city": "Tapalqué",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Catamarca",
+    "office_name": "UDAI CATAMARCA, CATAMARCA",
+    "repeated_name": "UDAI Catamarca",
+    "province_detail": "Catamarca",
+    "address": "San Martín 201 esq. Ayacucho",
+    "city": "San Fdo. del Valle de Catamarca",
+    "region": null,
+    "schedule": "6.30 a 12.30 hs."
+  },
+  {
+    "province": "Catamarca",
+    "office_name": "OFICINA SANTA MARÍA, CATAMARCA",
+    "repeated_name": "Oficina Santa María",
+    "province_detail": "Catamarca",
+    "address": "Sarmiento 135",
+    "city": "Santa María",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Catamarca",
+    "office_name": "OFICINA BELÉN, CATAMARCA",
+    "repeated_name": "Oficina Belén",
+    "province_detail": "Catamarca",
+    "address": "Coronel Daza 69",
+    "city": "Belén",
+    "region": null,
+    "schedule": "7.00 a 15.00 hs."
+  },
+  {
+    "province": "Chaco",
+    "office_name": "UDAI RESISTENCIA, CHACO",
+    "repeated_name": "UDAI Resistencia",
+    "province_detail": "Chaco",
+    "address": "Pueyrredón 95",
+    "city": "Resistencia",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Chaco",
+    "office_name": "UDAI ROQUE SÁENZ PEÑA, CHACO",
+    "repeated_name": "UDAI Roque Sáenz Peña",
+    "province_detail": "Chaco",
+    "address": "9 de Julio 342",
+    "city": "Roque Sáenz Peña",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Chaco",
+    "office_name": "UDAI VILLA ANGELA, CHACO",
+    "repeated_name": "UDAI Villa Angela",
+    "province_detail": "Chaco",
+    "address": "Mitre 264",
+    "city": "Villa Angela",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Chaco",
+    "office_name": "OFICINA CHARATA, CHACO",
+    "repeated_name": "Oficina Charata",
+    "province_detail": "Chaco",
+    "address": "Chacabuco 235",
+    "city": "Charata",
+    "region": null,
+    "schedule": "7.00 a 12.00 hs."
+  },
+  {
+    "province": "Chaco",
+    "office_name": "OFICINA LAS BREÑAS, CHACO",
+    "repeated_name": "Oficina Las Breñas",
+    "province_detail": "Chaco",
+    "address": "General Jones 1834",
+    "city": "Las Breñas",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Chubut",
+    "office_name": "UDAI PUERTO MADRYN, CHUBUT",
+    "repeated_name": "UDAI Puerto Madryn",
+    "province_detail": "Chubut",
+    "address": "H. Yrigoyen 567",
+    "city": "Puerto Madryn",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Chubut",
+    "office_name": "UDAI TRELEW, CHUBUT",
+    "repeated_name": "UDAI Trelew",
+    "province_detail": "Chubut",
+    "address": "Pellegrini 461",
+    "city": "Trelew",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Chubut",
+    "office_name": "UDAI COMODORO RIVADAVIA, CHUBUT",
+    "repeated_name": "UDAI Comodoro Rivadavia",
+    "province_detail": "Chubut",
+    "address": "San Martín 1543",
+    "city": "Cdro. Rivadavia",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Chubut",
+    "office_name": "UDAI ESQUEL, CHUBUT",
+    "repeated_name": "UDAI Esquel",
+    "province_detail": "Chubut",
+    "address": "9 de Julio 740",
+    "city": "Esquel",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Chubut",
+    "office_name": "OFICINA TREVELIN, CHUBUT",
+    "repeated_name": "Oficina Trevelin",
+    "province_detail": "Chubut",
+    "address": "Fontana 170",
+    "city": "Trevelin",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Chubut",
+    "office_name": "OFICINA RAWSON, CHUBUT",
+    "repeated_name": "Oficina Rawson",
+    "province_detail": "Chubut",
+    "address": "Mitre 787",
+    "city": "Rawson",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI BELL VILLE, CORDOBA",
+    "repeated_name": "UDAI Bell Ville",
+    "province_detail": "Cordoba",
+    "address": "Tucumán 290",
+    "city": "Bell Ville",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI CÓRDOBA, CÓRDOBA",
+    "repeated_name": "UDAI Córdoba",
+    "province_detail": "Córdoba",
+    "address": "Rivadavia Nº 6 / 8 / 10",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI CÓRDOBA II, CÓRDOBA",
+    "repeated_name": "UDAI Córdoba II",
+    "province_detail": "Córdoba",
+    "address": "Avellaneda 490 (CP 5000)",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI CRUZ DEL EJE, CORDOBA",
+    "repeated_name": "UDAI Cruz del Eje",
+    "province_detail": "Cordoba",
+    "address": "San Martín 283",
+    "city": "Cruz del Eje",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI RÍO CUARTO, CORDOBA",
+    "repeated_name": "UDAI Río Cuarto",
+    "province_detail": "Cordoba",
+    "address": "Sarmiento y Velez Sarsfield",
+    "city": "Río Cuarto",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI SAN FRANCISCO, CORDOBA",
+    "repeated_name": "UDAI San Francisco",
+    "province_detail": "Cordoba",
+    "address": "Gerónimo L. de Cabrera 1250",
+    "city": "San Francisco",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI VILLA MARÍA, CORDOBA",
+    "repeated_name": "UDAI Villa María",
+    "province_detail": "Cordoba",
+    "address": "Av. Hipólito Yrigoyen 211",
+    "city": "Villa María",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI RÍO TERCERO, CORDOBA",
+    "repeated_name": "UDAI Río Tercero",
+    "province_detail": "Cordoba",
+    "address": "Acuña 317",
+    "city": "Río Tercero",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI COSQUÍN, CORDOBA",
+    "repeated_name": "UDAI Cosquín",
+    "province_detail": "Cordoba",
+    "address": "San Luis 649",
+    "city": "Cosquín",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI JESÚS MARÍA, CORDOBA",
+    "repeated_name": "UDAI Jesús María",
+    "province_detail": "Cordoba",
+    "address": "Paseo del Huerto 191",
+    "city": "Jesús María",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI LABOULAYE, CORDOBA",
+    "repeated_name": "UDAI Laboulaye",
+    "province_detail": "Cordoba",
+    "address": "Av. Independencia 678",
+    "city": "Laboulaye",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI VILLA DOLORES, CORDOBA",
+    "repeated_name": "UDAI Villa Dolores",
+    "province_detail": "Cordoba",
+    "address": "San Martín 262",
+    "city": "V. Dolores",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "OFICINA CENTRO AMÉRICA, CORDOBA",
+    "repeated_name": "Oficina Centro América",
+    "province_detail": "Cordoba",
+    "address": "Av. Juan B. Justo 4242",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "OFICINA VILLA EL LIBERTADOR, CORDOBA",
+    "repeated_name": "Oficina Villa El Libertador",
+    "province_detail": "Cordoba",
+    "address": "Av. Fuerzas Armadas esq. Esquel",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "OFICINA DIRECCIÓN DE EMPLEO, CORDOBA",
+    "repeated_name": "Oficina Dirección de Empleo",
+    "province_detail": "Cordoba",
+    "address": "Laprida 753",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "OFICINA SAN AGUSTÍN, CORDOBA",
+    "repeated_name": "Oficina San Agustín",
+    "province_detail": "Cordoba",
+    "address": "San Martín esq. A. Zabatini",
+    "city": "San Agustín",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "OFICINA DEAN FUNES, CORDOBA",
+    "repeated_name": "Oficina Dean Funes",
+    "province_detail": "Cordoba",
+    "address": "Rivadavia 123",
+    "city": "Dean Funes",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI VILLA CARLOS PAZ, CORDOBA",
+    "repeated_name": "UDAI Villa Carlos Paz",
+    "province_detail": "Cordoba",
+    "address": "9 de Julio 555",
+    "city": "Carlos Paz",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "ULADE CÓRDOBA",
+    "repeated_name": "ULADE Córdoba",
+    "province_detail": "Av. Chacabuco 187 7º",
+    "address": "Córdoba",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI CORRIENTES",
+    "repeated_name": "UDAI Corrientes",
+    "province_detail": "Av. Armenia 3850",
+    "address": "Corrientes",
+    "city": "Corrientes",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Córdoba",
+    "office_name": "UDAI ALTA GRACIA, CORDOBA",
+    "repeated_name": "UDAI Alta Gracia",
+    "province_detail": "Cordoba",
+    "address": "Presidente Perón 1997",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "UDAI CURUZÚ CUATIÁ, CORRIENTES",
+    "repeated_name": "UDAI Curuzú Cuatiá",
+    "province_detail": "Corrientes",
+    "address": "Berón de Astrada",
+    "city": "Curuzú Cuatiá",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "UDAI GOYA, CORRIENTES",
+    "repeated_name": "UDAI Goya",
+    "province_detail": "Corrientes",
+    "address": "José E. Gómez 698",
+    "city": "Goya",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "UDAI MONTE CASEROS, CORRIENTES",
+    "repeated_name": "UDAI Monte Caseros",
+    "province_detail": "Corrientes",
+    "address": "Colón 1640",
+    "city": "Monte Caseros",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "OFICINA SANTO TOMÉ, CORRIENTES",
+    "repeated_name": "Oficina Santo Tomé",
+    "province_detail": "Corrientes",
+    "address": "San Martín 1147",
+    "city": "Santo Tomé",
+    "region": null,
+    "schedule": "6.00 a 14.00 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "OFICINA GDOR. VIRASORO, CORRIENTES",
+    "repeated_name": "Oficina Gdor. Virasoro",
+    "province_detail": "Corrientes",
+    "address": "Mocito Acuña 62",
+    "city": "Gdor. Virasoro",
+    "region": null,
+    "schedule": "6.00 a 14.00 hs."
+  },
+  {
+    "province": "Corrientes",
+    "office_name": "OFICINA ITUZAINGÓ, CORRIENTES",
+    "repeated_name": "Oficina Ituzaingó",
+    "province_detail": "Corrientes",
+    "address": "3 de abril 1571",
+    "city": "Ituzaingó",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "UDAI CONCORDIA, ENTRE RIOS",
+    "repeated_name": "UDAI Concordia",
+    "province_detail": "Entre Rios",
+    "address": "H. Yrigoyen 487",
+    "city": "Concordia",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "UDAI GUALEGUAYCHÚ, ENTRE RIOS",
+    "repeated_name": "UDAI Gualeguaychú",
+    "province_detail": "Entre Rios",
+    "address": "San Martín 1024",
+    "city": "Gualeguaychú",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "UDAI CONCEPCIÓN DEL URUGUAY, ENTRE RIOS",
+    "repeated_name": "UDAI Concepción del Uruguay",
+    "province_detail": "Entre Rios",
+    "address": "España 51",
+    "city": "Concepción del Uruguay",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "UDAI GUALEGUAY, ENTRE RIOS",
+    "repeated_name": "UDAI Gualeguay",
+    "province_detail": "Entre Rios",
+    "address": "Segundo Gianello 200",
+    "city": "Gualeguay",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "UDAI PARANÁ, ENTRE RIOS",
+    "repeated_name": "UDAI Paraná",
+    "province_detail": "Entre Rios",
+    "address": "España 319",
+    "city": "Paraná",
+    "region": null,
+    "schedule": "7.15 a 13.00 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "OFICINA CHAJARÍ, ENTRE RIOS",
+    "repeated_name": "Oficina Chajarí",
+    "province_detail": "Entre Rios",
+    "address": "Urquiza 1298",
+    "city": "Entre Ríos",
+    "region": null,
+    "schedule": "7.15 a 12.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "OFICINA VICTORIA, ENTRE RIOS",
+    "repeated_name": "Oficina Victoria",
+    "province_detail": "Entre Rios",
+    "address": "Congreso 351",
+    "city": "Victoria",
+    "region": null,
+    "schedule": "7.15 a 12.15 hs."
+  },
+  {
+    "province": "Entre Ríos",
+    "office_name": "OFICINA VILLAGUAY, ENTRE RIOS",
+    "repeated_name": "Oficina Villaguay",
+    "province_detail": "Entre Rios",
+    "address": "Tucumán 250",
+    "city": "Villaguay",
+    "region": null,
+    "schedule": "7.00 a 12.00 hs."
+  },
+  {
+    "province": "Formosa",
+    "office_name": "UDAI FORMOSA",
+    "repeated_name": "UDAI Formosa",
+    "province_detail": "Av. 9 de Julio 196",
+    "address": "Formosa",
+    "city": "Formosa",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Formosa",
+    "office_name": "OFICINA LAS LOMITAS, FORMOSA",
+    "repeated_name": "Oficina Las Lomitas",
+    "province_detail": "Formosa",
+    "address": "Benjamín Matienzo 455",
+    "city": "PB. Galería Center – Las Lomitas",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Formosa",
+    "office_name": "OFICINA CLORINDA, FORMOSA",
+    "repeated_name": "Oficina Clorinda",
+    "province_detail": "Formosa",
+    "address": "José Fernández Cancio 1913",
+    "city": "Clorinda",
+    "region": null,
+    "schedule": "6.15 a 12.15 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "UDAI JUJUY",
+    "repeated_name": "UDAI Jujuy",
+    "province_detail": "Curupaytí 297",
+    "address": "San Salvador de Jujuy",
+    "city": "Jujuy",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA SAN PEDRO, JUJUY",
+    "repeated_name": "Oficina San Pedro",
+    "province_detail": "Jujuy",
+    "address": "Gdor. Tello esq. Rogelio Leach",
+    "city": "San Pedro de Jujuy",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA LA QUIACA, JUJUY",
+    "repeated_name": "Oficina La Quiaca",
+    "province_detail": "Jujuy",
+    "address": "Rivadavia s/n. Edificio Municipal",
+    "city": "La Quiaca",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA LIBERTADOR GRAL. SAN MARTÍN, JUJUY",
+    "repeated_name": "Oficina Libertador Gral. San Martín",
+    "province_detail": "Jujuy",
+    "address": "Independencia 272",
+    "city": "Lib. Gral. San Martín",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA MONTERRICO, JUJUY",
+    "repeated_name": "Oficina Monterrico",
+    "province_detail": "Jujuy",
+    "address": "Avda. 9 de Julio esq. 23 de Agosto",
+    "city": "Jujuy",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA HUMAHUACA, JUJUY",
+    "repeated_name": "Oficina Humahuaca",
+    "province_detail": "Jujuy",
+    "address": "Buenos Aires 630 PB",
+    "city": "Humahuaca",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Jujuy",
+    "office_name": "OFICINA ABRA PAMPA, JUJUY",
+    "repeated_name": "Oficina Abra Pampa",
+    "province_detail": "Jujuy",
+    "address": "Gdor. Tello s/n esq. J. D. Perón",
+    "city": "Abra Pampa",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "La Pampa",
+    "office_name": "UDAI SANTA ROSA, LA PAMPA",
+    "repeated_name": "UDAI Santa Rosa",
+    "province_detail": "La Pampa",
+    "address": "Sarmiento 318",
+    "city": "Santa Rosa",
+    "region": null,
+    "schedule": "7.30 a 12.30 hs."
+  },
+  {
+    "province": "La Pampa",
+    "office_name": "UDAI GENERAL PICO, LA PAMPA",
+    "repeated_name": "UDAI General Pico",
+    "province_detail": "La Pampa",
+    "address": "Calle 2 nº 854",
+    "city": "Gral. Pico",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "La Pampa",
+    "office_name": "OFICINA INGENIERO LUIGGI, LA PAMPA",
+    "repeated_name": "Oficina Ingeniero Luiggi",
+    "province_detail": "La Pampa",
+    "address": "Tucumán 259",
+    "city": "La Pampa",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "La Pampa",
+    "office_name": "OFICINA INTENDENTE ALVEAR, LA PAMPA",
+    "repeated_name": "Oficina Intendente Alvear",
+    "province_detail": "La Pampa",
+    "address": "Av. San Martín y 25 de Mayo",
+    "city": "La Pampa",
+    "region": null,
+    "schedule": "7.15 a 12.15 hs."
+  },
+  {
+    "province": "La Rioja",
+    "office_name": "UDAI LA RIOJA",
+    "repeated_name": "UDAI La Rioja",
+    "province_detail": "Pelagio B. Luna 545",
+    "address": "La Rioja",
+    "city": "La Rioja",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs."
+  },
+  {
+    "province": "La Rioja",
+    "office_name": "UDAI CHILECITO, LA RIOJA",
+    "repeated_name": "UDAI Chilecito",
+    "province_detail": "La Rioja",
+    "address": "J. Hernández 224 esq. Gob. Motta",
+    "city": "Chilecito",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "La Rioja",
+    "office_name": "OFICINA CHAMICAL, LA RIOJA",
+    "repeated_name": "Oficina Chamical",
+    "province_detail": "La Rioja",
+    "address": "Longeville esquina Castro Barros",
+    "city": "Chamical",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "La Rioja",
+    "office_name": "OFICINA CHEPES, LA RIOJA",
+    "repeated_name": "Oficina Chepes",
+    "province_detail": "La Rioja",
+    "address": "9 de Julio esquina Sarmiento",
+    "city": "La Rioja",
+    "region": null,
+    "schedule": "7 a 13 hs."
+  },
+  {
+    "province": "La Rioja",
+    "office_name": "OFICINA AIMOGASTA, LA RIOJA",
+    "repeated_name": "Oficina Aimogasta",
+    "province_detail": "La Rioja",
+    "address": "Calle 9 de julio",
+    "city": "esquina San Martín",
+    "region": null,
+    "schedule": "7.15 a 13.30 hs."
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI MENDOZA",
+    "repeated_name": "UDAI Mendoza",
+    "province_detail": "Eusebio Blanco 450",
+    "address": "Mendoza",
+    "city": "Mendoza",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs. /14:00 a 18:00 hs A.U.H"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI SAN RAFAEL, MENDOZA",
+    "repeated_name": "UDAI San Rafael",
+    "province_detail": "Mendoza",
+    "address": "Av. Mitre 406",
+    "city": "San Rafael",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI GODOY CRUZ, MENDOZA",
+    "repeated_name": "UDAI Godoy Cruz",
+    "province_detail": "Mendoza",
+    "address": "San Martín Sur 23",
+    "city": "Godoy Cruz",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs/14:00 a 18:00 hs A.U.H"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI SAN MARTÍN, MENDOZA",
+    "repeated_name": "UDAI San Martín",
+    "province_detail": "Mendoza",
+    "address": "Alem 387",
+    "city": "Gral San Martín",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "OFICINA GENERAL ALVEAR, MENDOZA",
+    "repeated_name": "Oficina General Alvear",
+    "province_detail": "Mendoza",
+    "address": "Ameghino 74",
+    "city": "General Alvear",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI MALARGÜE, MENDOZA",
+    "repeated_name": "UDAI Malargüe",
+    "province_detail": "Mendoza",
+    "address": "Saturnino Torres",
+    "city": "Malargüe",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI VALLE DE UCO, MENDOZA",
+    "repeated_name": "UDAI Valle de Uco",
+    "province_detail": "Mendoza",
+    "address": "Irigoyen 898",
+    "city": "Valle de Uco",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "OFICINA RIVADAVIA, MENDOZA",
+    "repeated_name": "Oficina Rivadavia",
+    "province_detail": "Mendoza",
+    "address": "Aristóbulo del Valle y Lavalle",
+    "city": "Rivadavia",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Mendoza",
+    "office_name": "UDAI MAIPÚ, MENDOZA",
+    "repeated_name": "UDAI Maipú",
+    "province_detail": "Mendoza",
+    "address": "España 71",
+    "city": "Maipú",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs. / 14.00 a 18.00hs. A.U.H"
+  },
+  {
+    "province": "Misiones",
+    "office_name": "UDAI POSADAS, MISIONES",
+    "repeated_name": "UDAI Posadas",
+    "province_detail": "Misiones",
+    "address": "3 de Febrero 1940",
+    "city": "Posadas",
+    "region": null,
+    "schedule": "6.15 a 12.15hs."
+  },
+  {
+    "province": "Misiones",
+    "office_name": "UDAI EL DORADO, MISIONES",
+    "repeated_name": "UDAI El dorado",
+    "province_detail": "Misiones",
+    "address": "San Martín 1506",
+    "city": "Eldorado",
+    "region": null,
+    "schedule": "6.15 a 12.15hs."
+  },
+  {
+    "province": "Misiones",
+    "office_name": "UDAI OBERÁ, MISIONES",
+    "repeated_name": "UDAI Oberá",
+    "province_detail": "Misiones",
+    "address": "9 de Julio 850",
+    "city": "Oberá",
+    "region": null,
+    "schedule": "6.15 a 12.15hs."
+  },
+  {
+    "province": "Misiones",
+    "office_name": "OFICINA BERNARDO DE IRIGOYEN, MISIONES",
+    "repeated_name": "Oficina Bernardo de Irigoyen",
+    "province_detail": "Misiones",
+    "address": "Av. Libertador s/n",
+    "city": "Bernardo de Irigoyen",
+    "region": null,
+    "schedule": "6.15 a 12.15hs."
+  },
+  {
+    "province": "Misiones",
+    "office_name": "OFICINA IGUAZÚ, MISIONES",
+    "repeated_name": "Oficina Iguazú",
+    "province_detail": "Misiones",
+    "address": "Misiones 249",
+    "city": "Puerto Iguazú",
+    "region": null,
+    "schedule": "6.15 a 12.15hs."
+  },
+  {
+    "province": "Misiones",
+    "office_name": "ULADE CONSEJO DE CS. ECONÓMICAS DE POSADAS, MISIONES",
+    "repeated_name": "ULADE Consejo de Cs. Económicas de Posadas",
+    "province_detail": "Misiones",
+    "address": "Bolívar 2344",
+    "city": "Posadas",
+    "region": null,
+    "schedule": "7.30 a 12hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "UDAI NEUQUÉN",
+    "repeated_name": "UDAI Neuquén",
+    "province_detail": "Córdoba 65 PB",
+    "address": "Neuquén",
+    "city": "Neuquén",
+    "region": null,
+    "schedule": "7:15 a 12:15hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "OFICINA RINCÓN DE LOS SAUCES, NEUQUÉN",
+    "repeated_name": "Oficina Rincón de los Sauces",
+    "province_detail": "Neuquén",
+    "address": "Yrigoyen 161",
+    "city": "Neuquén",
+    "region": null,
+    "schedule": "7:15 a 12:15hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "UDAI ZAPALA, NEUQUÉN",
+    "repeated_name": "UDAI Zapala",
+    "province_detail": "Neuquén",
+    "address": "Av. Trannack y Luis Monti",
+    "city": "Zapala",
+    "region": null,
+    "schedule": "8:00 a 13:00hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "OFICINA SAN MARTÍN DE LOS ANDES, NEUQUÉN",
+    "repeated_name": "Oficina San Martín de los Andes",
+    "province_detail": "Neuquén",
+    "address": "Rudecindo Roca 869",
+    "city": "San M. de los Andes",
+    "region": null,
+    "schedule": "7:15 a 12:15hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "OFICINA CHOS MALAL, NEUQUÉN",
+    "repeated_name": "Oficina Chos Malal",
+    "province_detail": "Neuquén",
+    "address": "Olascoaga 445",
+    "city": "Chos Malal",
+    "region": null,
+    "schedule": "7:15 a 12:15hs."
+  },
+  {
+    "province": "Neuquén",
+    "office_name": "OFICINA CUTRAL CO, NEUQUÉN",
+    "repeated_name": "Oficina Cutral Co",
+    "province_detail": "Neuquén",
+    "address": "Alem Nº 393 Esquina Avda. Olascoaga (Se ingresa por Avda Olascoaga S/N)",
+    "city": "Neuquén",
+    "region": null,
+    "schedule": "7:15 a 12:15 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI GENERAL ROCA, RÍO NEGRO",
+    "repeated_name": "UDAI General Roca",
+    "province_detail": "Río Negro",
+    "address": "La Pampa 1444",
+    "city": "General Roca",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI SAN CARLOS DE BARILOCHE, RÍO NEGRO",
+    "repeated_name": "UDAI San Carlos de Bariloche",
+    "province_detail": "Río Negro",
+    "address": "O’ Connor 467",
+    "city": "Bariloche",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI VIEDMA, RÍO NEGRO",
+    "repeated_name": "UDAI Viedma",
+    "province_detail": "Río Negro",
+    "address": "Alvaro Barros 475",
+    "city": "Viedma",
+    "region": null,
+    "schedule": "7.30 a 12.30 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI CHOELE CHOEL, RÍO NEGRO",
+    "repeated_name": "UDAI Choele Choel",
+    "province_detail": "Río Negro",
+    "address": "Avellaneda 728",
+    "city": "Choele Choel",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "OFICINA EL BOLSÓN, RÍO NEGRO",
+    "repeated_name": "Oficina El Bolsón",
+    "province_detail": "Río Negro",
+    "address": "Paso 419",
+    "city": "Río Negro",
+    "region": null,
+    "schedule": "7.15 a 12.15 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "OFICINA RÍO COLORADO, RÍO NEGRO",
+    "repeated_name": "Oficina Río Colorado",
+    "province_detail": "Río Negro",
+    "address": "Rivadavia 151",
+    "city": "Río Colorado",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI VILLA REGINA, RÍO NEGRO",
+    "repeated_name": "UDAI Villa Regina",
+    "province_detail": "Río Negro",
+    "address": "Rivadavia 261",
+    "city": "Río Negro",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "OFICINA SAN ANTONIO OESTE, RÍO NEGRO",
+    "repeated_name": "Oficina San Antonio Oeste",
+    "province_detail": "Río Negro",
+    "address": "San Martín 642",
+    "city": "San Antonio Oeste",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "OFICINA SIERRA GRANDE, RÍO NEGRO",
+    "repeated_name": "Oficina Sierra Grande",
+    "province_detail": "Río Negro",
+    "address": "Bahía Blanca 380",
+    "city": "Sierra Grande",
+    "region": null,
+    "schedule": "8.00 a 13.00 hs."
+  },
+  {
+    "province": "Río Negro",
+    "office_name": "UDAI CIPOLLETTI, RÍO NEGRO",
+    "repeated_name": "UDAI Cipolletti",
+    "province_detail": "Río Negro",
+    "address": "Esmeralda 1017",
+    "city": "Cipolletti",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Salta",
+    "office_name": "UDAI ORÁN, SALTA",
+    "repeated_name": "UDAI Orán",
+    "province_detail": "Salta",
+    "address": "Avda. Lopez y Planes 360",
+    "city": "San Ramón de la Nueva Orán",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA TARTAGAL, SALTA",
+    "repeated_name": "Oficina Tartagal",
+    "province_detail": "Salta",
+    "address": "Alberdi S/N esquina Belgrano",
+    "city": "Tartagal",
+    "region": null,
+    "schedule": "7.15 a 15 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA CAFAYATE, SALTA",
+    "repeated_name": "Oficina Cafayate",
+    "province_detail": "Salta",
+    "address": "Ntra. Sra. del Rosario 9",
+    "city": "Cafayate",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "UDAI METÁN, SALTA",
+    "repeated_name": "UDAI Metán",
+    "province_detail": "Salta",
+    "address": "Güemes 202",
+    "city": "San José de Metán",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA ROSARIO DE LA FRONTERA, SALTA",
+    "repeated_name": "Oficina Rosario de la Frontera",
+    "province_detail": "Salta",
+    "address": "Pje. Heroes Argentinos N° 74",
+    "city": "Rosario de la Frontera",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA JOAQUÍN V. GONZÁLEZ, SALTA",
+    "repeated_name": "Oficina Joaquín V. González",
+    "province_detail": "Salta",
+    "address": "H. Yrigoyen 442",
+    "city": "Joaquín V. González",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA EL CARRIL, SALTA",
+    "repeated_name": "Oficina El Carril",
+    "province_detail": "Salta",
+    "address": "Gral. Güemes 960",
+    "city": "El Carril",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA ROSARIO DE LERMA, SALTA",
+    "repeated_name": "Oficina Rosario de Lerma",
+    "province_detail": "Salta",
+    "address": "Bernardo De Irigoyen 114",
+    "city": "Rosario de Lerma",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA GENERAL GÜEMES, SALTA",
+    "repeated_name": "Oficina General Güemes",
+    "province_detail": "Salta",
+    "address": "Alberdi 58",
+    "city": "General Güemes",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "OFICINA CACHI, SALTA",
+    "repeated_name": "Oficina Cachi",
+    "province_detail": "Salta",
+    "address": "Avda. Gral Martín de Güemes",
+    "city": "entre Ruiz de los Llanos y B. Zorrilla",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Salta",
+    "office_name": "ULADE CONSEJO DE CS. ECONÓMICAS DE SALTA",
+    "repeated_name": "ULADE Consejo de Cs. Económicas de Salta",
+    "province_detail": "España 1420",
+    "address": "Salta",
+    "city": "Salta",
+    "region": null,
+    "schedule": "7.30 a 12 hs"
+  },
+  {
+    "province": "San Juan",
+    "office_name": "UDAI SAN JUAN",
+    "repeated_name": "UDAI San Juan",
+    "province_detail": "Tucumán 18 Norte",
+    "address": "San Juan",
+    "city": "San Juan",
+    "region": null,
+    "schedule": "7.30 a 13.30hs/14:00 a 18:00 hs A.U.H"
+  },
+  {
+    "province": "San Juan",
+    "office_name": "OFICINA JACHAL, SAN JUAN",
+    "repeated_name": "Oficina Jachal",
+    "province_detail": "San Juan",
+    "address": "Juan de Echegaray 271",
+    "city": "Jachal",
+    "region": null,
+    "schedule": "7.30 a 13.30hs"
+  },
+  {
+    "province": "San Juan",
+    "office_name": "OFICINA CALINGASTA, SAN JUAN",
+    "repeated_name": "Oficina Calingasta",
+    "province_detail": "San Juan",
+    "address": "Av. Las Heras s/n (casi Pte. Roca) distrito Barreal",
+    "city": "San Juan",
+    "region": null,
+    "schedule": "7.30 a 13.30hs"
+  },
+  {
+    "province": "San Juan",
+    "office_name": "ULADE CONSEJO DE CS. ECONÓMICAS DE SAN JUAN",
+    "repeated_name": "ULADE Consejo de Cs. Económicas de San Juan",
+    "province_detail": "Suipacha 377",
+    "address": "San Juan",
+    "city": "San Juan",
+    "region": null,
+    "schedule": "7.30 a 13.30hs"
+  },
+  {
+    "province": "San Juan",
+    "office_name": "UDAI RAWSON, SAN JUAN",
+    "repeated_name": "UDAI Rawson",
+    "province_detail": "San Juan",
+    "address": "República del Líbano 557",
+    "city": "San Juan",
+    "region": null,
+    "schedule": "7.30 a 13.30hs"
+  },
+  {
+    "province": "San Luís",
+    "office_name": "UDAI SAN LUIS",
+    "repeated_name": "UDAI San Luis",
+    "province_detail": "Las Heras 1026",
+    "address": "San Luis",
+    "city": "San Luis",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "San Luís",
+    "office_name": "UDAI VILLA MERCEDES, SAN LUIS",
+    "repeated_name": "UDAI Villa Mercedes",
+    "province_detail": "San Luis",
+    "address": "Tucumán 579",
+    "city": "Villa Mercedes",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "San Luís",
+    "office_name": "OFICINA VILLA DE MERLO, SAN LUIS",
+    "repeated_name": "Oficina Villa de Merlo",
+    "province_detail": "San Luis",
+    "address": "El Tigre y Poeta Agüero",
+    "city": "Villa de Merlo",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs"
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA RÍO TURBIO, SANTA CRUZ",
+    "repeated_name": "Oficina Río Turbio",
+    "province_detail": "Santa Cruz",
+    "address": "Av. de los Mineros 637",
+    "city": "Río Turbio",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA SAN JULIÁN, SANTA CRUZ",
+    "repeated_name": "Oficina San Julián",
+    "province_detail": "Santa Cruz",
+    "address": "San Martín 433",
+    "city": "San Julián",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "UDAI CALETA OLIVIA, SANTA CRUZ",
+    "repeated_name": "UDAI Caleta Olivia",
+    "province_detail": "Santa Cruz",
+    "address": "Av. San Martín y Av. Ducaret",
+    "city": "Caleta Olivia",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA PICO TRUNCADO, SANTA CRUZ",
+    "repeated_name": "Oficina Pico Truncado",
+    "province_detail": "Santa Cruz",
+    "address": "Rivadavia 237",
+    "city": "Pico Truncado",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA PUERTO DESEADO, SANTA CRUZ",
+    "repeated_name": "Oficina Puerto Deseado",
+    "province_detail": "Santa Cruz",
+    "address": "Estrada 1515",
+    "city": "Pto. Deseado",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA LAS HERAS, SANTA CRUZ",
+    "repeated_name": "Oficina Las Heras",
+    "province_detail": "Santa Cruz",
+    "address": "San Martín 412",
+    "city": "Las Heras",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA EL CALAFATE, SANTA CRUZ",
+    "repeated_name": "Oficina El Calafate",
+    "province_detail": "Santa Cruz",
+    "address": "Comandante Espora 175 – Local 1",
+    "city": "Santa Cruz",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA LOS ANTIGUOS, SANTA CRUZ",
+    "repeated_name": "Oficina Los Antiguos",
+    "province_detail": "Santa Cruz",
+    "address": "Av. 11 de Julio s/n",
+    "city": "Los Antiguos",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "UDAI RÍO GALLEGOS, SANTA CRUZ",
+    "repeated_name": "UDAI Río Gallegos",
+    "province_detail": "Santa Cruz",
+    "address": "Vélez Sarsfield 419",
+    "city": "Santa Cruz",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Cruz",
+    "office_name": "OFICINA PUERTO SANTA CRUZ, SANTA CRUZ",
+    "repeated_name": "Oficina Puerto Santa Cruz",
+    "province_detail": "Santa Cruz",
+    "address": "Tucumán Nº 561",
+    "city": "Santa Cruz",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI RAFAELA, SANTA FE",
+    "repeated_name": "UDAI Rafaela",
+    "province_detail": "Santa Fe",
+    "address": "Lehmann 539",
+    "city": "Rafaela",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI RECONQUISTA, SANTA FE",
+    "repeated_name": "UDAI Reconquista",
+    "province_detail": "Santa Fe",
+    "address": "Habegger Nº754",
+    "city": "Reconquista",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI ROSARIO, SANTA FE",
+    "repeated_name": "UDAI Rosario",
+    "province_detail": "Santa Fe",
+    "address": "Rioja 1120",
+    "city": "Rosario",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA GALVEZ, SANTA FE",
+    "repeated_name": "Oficina Galvez",
+    "province_detail": "Santa Fe",
+    "address": "Lis. de La Torre 234",
+    "city": "Gálvez",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI ROSARIO NORTE, SANTA FE",
+    "repeated_name": "UDAI Rosario Norte",
+    "province_detail": "Santa Fe",
+    "address": "Av. Alberdi 651",
+    "city": "Rosario",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI RUFINO, SANTA FE",
+    "repeated_name": "UDAI Rufino",
+    "province_detail": "Santa Fe",
+    "address": "España 455",
+    "city": "Rufino",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI SANTA FE",
+    "repeated_name": "UDAI Santa Fe",
+    "province_detail": "San Martín 2533",
+    "address": "Santa Fe",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI VENADO TUERTO, SANTA FE",
+    "repeated_name": "UDAI Venado Tuerto",
+    "province_detail": "Santa Fe",
+    "address": "25 de Mayo 1088",
+    "city": "Venado Tuerto",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI CAÑADA DE GÓMEZ, SANTA FE",
+    "repeated_name": "UDAI Cañada de Gómez",
+    "province_detail": "Santa Fe",
+    "address": "Moreno 148 PB",
+    "city": "Cañada de Gómez",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA CASILDA, SANTA FE",
+    "repeated_name": "Oficina Casilda",
+    "province_detail": "Santa Fe",
+    "address": "Bv. Lisandro De La Torre N° 2167",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA CERES, SANTA FE",
+    "repeated_name": "Oficina Ceres",
+    "province_detail": "Santa Fe",
+    "address": "Rivadavia 2499 (CP 3080) EsperanzaAlmte. Brown y Santa Fe",
+    "city": "Ceres",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI SAN JORGE, SANTA FE",
+    "repeated_name": "UDAI San Jorge",
+    "province_detail": "Santa Fe",
+    "address": "Av. Alberdi 1155",
+    "city": "San JorgeAv. Alberdi 1155",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA ESPERANZA, SANTA FE",
+    "repeated_name": "Oficina Esperanza",
+    "province_detail": "Santa Fe",
+    "address": "Gobernador Crespo 1938",
+    "city": "Esperanza",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI VILLA CONSTITUCIÓN, SANTA FE",
+    "repeated_name": "UDAI Villa Constitución",
+    "province_detail": "Santa Fe",
+    "address": "Salta N° 255",
+    "city": "Villa Constitución",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA SAN JUSTO, SANTA FE",
+    "repeated_name": "Oficina San Justo",
+    "province_detail": "Santa Fe",
+    "address": "Batalla de Tucumán 2485",
+    "city": "San Justo",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA VERA, SANTA FE",
+    "repeated_name": "Oficina Vera",
+    "province_detail": "Santa Fe",
+    "address": "25 de Mayo 1728",
+    "city": "Vera",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "OFICINA TOSTADO, SANTA FE",
+    "repeated_name": "Oficina Tostado",
+    "province_detail": "Santa Fe",
+    "address": "Balcarce 1132",
+    "city": "Tostado",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santa Fé",
+    "office_name": "UDAI ROSARIO OESTE, SANTA FE",
+    "repeated_name": "UDAI Rosario Oeste",
+    "province_detail": "Santa Fe",
+    "address": "Av. Provincias Unidas 571",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": "7.15 a 13.15 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "UDAI AÑATUYA, SANTIAGO DEL ESTERO",
+    "repeated_name": "UDAI Añatuya",
+    "province_detail": "Santiago del Estero",
+    "address": "Chacabuco 256",
+    "city": "Añatuya",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "UDAI SANTIAGO DEL ESTERO",
+    "repeated_name": "UDAI Santiago del Estero",
+    "province_detail": "25 de Mayo 28",
+    "address": "Santiago del Estero",
+    "city": "Santiago del Estero",
+    "region": null,
+    "schedule": "6.30 a 12.30 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "OFICINA LA BANDA, SANTIAGO DEL ESTERO",
+    "repeated_name": "Oficina La Banda",
+    "province_detail": "Santiago del Estero",
+    "address": "República del Líbano 285",
+    "city": "La Banda",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "UDAI FRÍAS, SANTIAGO DEL ESTERO",
+    "repeated_name": "UDAI Frías",
+    "province_detail": "Santiago del Estero",
+    "address": "Rivadavia 444",
+    "city": "Frías",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "OFICINA MONTE QUEMADO, SANTIAGO DEL ESTERO",
+    "repeated_name": "Oficina Monte Quemado",
+    "province_detail": "Santiago del Estero",
+    "address": "San Martín y Alberdi",
+    "city": "Monte Quemado",
+    "region": null,
+    "schedule": "7.00 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "OFICINA OJO DE AGUA, SANTIAGO DEL ESTERO",
+    "repeated_name": "Oficina Ojo de Agua",
+    "province_detail": "Santiago del Estero",
+    "address": "J. D. Perón y Dr. José Gorostiaga – Ex Terminal de mnibus",
+    "city": "Ojo de Agua",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "OFICINA RÍO HONDO, SANTIAGO DEL ESTERO",
+    "repeated_name": "Oficina Río Hondo",
+    "province_detail": "Santiago del Estero",
+    "address": "Moreno y Belgrano – Ctro. Cultural San Martín",
+    "city": "Río Hondo",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Santiago del Estero",
+    "office_name": "OFICINA QUIMILI, SANTIAGO DEL ESTERO",
+    "repeated_name": "Oficina Quimili",
+    "province_detail": "Santiago del Estero",
+    "address": "Rivadavia 57",
+    "city": "Santiago del Estero",
+    "region": null,
+    "schedule": "7.30 a 13.00 hs."
+  },
+  {
+    "province": "Tierra de Fuego",
+    "office_name": "UDAI RÍO GRANDE, TIERRA DEL FUEGO",
+    "repeated_name": "UDAI Río Grande",
+    "province_detail": "Tierra del Fuego",
+    "address": "Espora 503",
+    "city": "Río Grande",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tierra de Fuego",
+    "office_name": "UDAI USHUAIA, TIERRA DEL FUEGO",
+    "repeated_name": "UDAI Ushuaia",
+    "province_detail": "Tierra del Fuego",
+    "address": "Juan Manuel de Rosas 126",
+    "city": "Ushuaia",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CONCEPCIÓN, TUCUMÁN",
+    "repeated_name": "UDAI Concepción",
+    "province_detail": "Tucumán",
+    "address": "24 de Septiembre 1308",
+    "city": "Concepción de Tucumán",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TUCUMÁN, TUCUMÁN",
+    "repeated_name": "UDAI Tucumán",
+    "province_detail": "Tucumán",
+    "address": "Córdoba 498",
+    "city": "San Miguel de Tucumán",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI YERBA BUENA, TUCUMÁN",
+    "repeated_name": "UDAI Yerba Buena",
+    "province_detail": "Tucumán",
+    "address": "Avda. Aconquija 670",
+    "city": "Yerba Buena",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "",
+    "repeated_name": null,
+    "province_detail": null,
+    "address": null,
+    "city": null,
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MORÓN",
+    "repeated_name": "UDAI Morón",
+    "province_detail": "Crisólogo Larralde 514",
+    "address": "Morón",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PILAR",
+    "repeated_name": "UDAI Pilar",
+    "province_detail": "Estanislao López 788 (esquina 11 de septiembre).",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN FERNANDO",
+    "repeated_name": "UDAI San Fernando",
+    "province_detail": "Simón de Iriondo 1310",
+    "address": "San Fernando",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN ISIDRO",
+    "repeated_name": "UDAI San Isidro",
+    "province_detail": "Av. Centenario 811",
+    "address": "San Isidro",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN MIGUEL",
+    "repeated_name": "UDAI San Miguel",
+    "province_detail": "Sarmiento 1957",
+    "address": "San Miguel",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TIGRE",
+    "repeated_name": "UDAI Tigre",
+    "province_detail": "H. Yrigoyen 576",
+    "address": "General Pacheco",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TRES DE FEBRERO",
+    "repeated_name": "UDAI Tres de Febrero",
+    "province_detail": "Juan B. Alberdi 4839",
+    "address": "Tres de Febrero",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MUNRO",
+    "repeated_name": "UDAI Munro",
+    "province_detail": "Gervasio Méndez 3175",
+    "address": "Munro",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CIUDADELA (DEPENDE DE UDAI TRES DE FEBRERO)",
+    "repeated_name": "Oficina Ciudadela (depende de UDAI Tres de Febrero)",
+    "province_detail": "Maldonado 175",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA JOSÉ LEÓN SUÁREZ (DEPENDE DE UDAI SAN MARTÍN)",
+    "repeated_name": "Oficina José León Suárez (depende de UDAI San Martín)",
+    "province_detail": "Juan Manuel de Rosas 2613",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14:00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "",
+    "repeated_name": null,
+    "province_detail": null,
+    "address": null,
+    "city": null,
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI ITUZAINGÓ",
+    "repeated_name": "UDAI Ituzaingó",
+    "province_detail": "Zufriategui 758",
+    "address": "Ituzaingó",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": "8.00 a 14.00 hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MAGDALENA (DEPENDE DE UDAI LA PLATA II), BUENOS AIRES",
+    "repeated_name": "Oficina Magdalena (depende de UDAI La Plata II)",
+    "province_detail": "Buenos Aires",
+    "address": "Goenaga 990",
+    "city": "Magdalena Goenaga 990 Magdalena",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TRUJUI",
+    "repeated_name": "UDAI Trujui",
+    "province_detail": "Bernardo Caveri 1415",
+    "address": "ex Cervantes",
+    "city": "entre Echeverría y Joaquín V. González – Trujui",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN FRANCISCO SOLANO, BUENOS AIRES",
+    "repeated_name": "UDAI San Francisco Solano",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 842 N° 2447 e/ 895 y 897 San Francisco Solano",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TURDERA, BUENOS AIRES",
+    "repeated_name": "UDAI Turdera",
+    "province_detail": "Buenos Aires",
+    "address": "H. Yrigoyen 11585",
+    "city": "Turdera",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA ALBERTINA, BUENOS AIRES",
+    "repeated_name": "UDAI Villa Albertina",
+    "province_detail": "Buenos Aires",
+    "address": "Bayona 40 e/Homero y Falucho",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA RAFAEL CALZADA (DEPENDE DE UDAI LONGCHAMPS), BUENOS AIRES",
+    "repeated_name": "Oficina Rafael Calzada (depende de UDAI Longchamps)",
+    "province_detail": "Buenos Aires",
+    "address": "San Martin 2931",
+    "city": "Rafael Calzada",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA RAMOS MEJÍA (DEPENDE DE UDAI RAMOS MEJÍA), BUENOS AIRES",
+    "repeated_name": "Oficina Ramos Mejía (depende de UDAI Ramos Mejía)",
+    "province_detail": "Buenos Aires",
+    "address": "Avenida Rivadavia 13518",
+    "city": "esquina Brown",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VERÓNICA (DEPENDE DE UDAI LA PLATA I), BUENOS AIRES",
+    "repeated_name": "Oficina Verónica (depende de UDAI La Plata I)",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 30 e/ 31 y 4ta",
+    "city": "Verónica",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BAHÍA BLANCA, BUENOS AIRES",
+    "repeated_name": "UDAI Bahía Blanca",
+    "province_detail": "Buenos Aires",
+    "address": "Brown 180",
+    "city": "Bahía Blanca",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BAHÍA BLANCA II, BUENOS AIRES",
+    "repeated_name": "UDAI Bahía Blanca II",
+    "province_detail": "Buenos Aires",
+    "address": "Avenida Colón 279",
+    "city": "Bahía Blanca",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BALCARCE, BUENOS AIRES",
+    "repeated_name": "UDAI Balcarce",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 16 esquina 17",
+    "city": "Balcarce",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CARMEN DE PATAGONES (DEPENDE DE UDAI BAHÍA BLANCA II), BUENOS AIRES",
+    "repeated_name": "Oficina Carmen de Patagones (depende de UDAI Bahía Blanca II)",
+    "province_detail": "Buenos Aires",
+    "address": "Garibaldi 311",
+    "city": "Carmen de Patagones",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CORONEL DORREGO, BUENOS AIRES",
+    "repeated_name": "UDAI Coronel Dorrego",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Santagada 914",
+    "city": "Cnel. Dorrego",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CORONEL PRINGLES, BUENOS AIRES",
+    "repeated_name": "UDAI Coronel Pringles",
+    "province_detail": "Buenos Aires",
+    "address": "Belgrano Nº 604",
+    "city": "Coronel Pringles",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CORONEL SUÁREZ, BUENOS AIRES",
+    "repeated_name": "UDAI Coronel Suárez",
+    "province_detail": "Buenos Aires",
+    "address": "Rivadavia 53",
+    "city": "Coronel Suárez",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CASTELLI (DEPENDE DE UDAI DOLORES), BUENOS AIRES",
+    "repeated_name": "Oficina Castelli (depende de UDAI Dolores)",
+    "province_detail": "Buenos Aires",
+    "address": "25 de Mayo",
+    "city": "esquina Rivadavia",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LAPRIDA (DEPENDE DE UDAI OLAVARRÍA), BUENOS AIRES",
+    "repeated_name": "Oficina Laprida (depende de UDAI Olavarría)",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Pedro Pereyra y Mitre (Centro Cívico) – Laprida",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LEZAMA (DEPENDE DE UDAI CHASCOMÚS), BUENOS AIRES",
+    "repeated_name": "Oficina Lezama (depende de UDAI Chascomús)",
+    "province_detail": "Buenos Aires",
+    "address": "San Martin 214",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CORONEL VIDAL (DEPENDE DE UDAI VILLA GESELL), BUENOS AIRES",
+    "repeated_name": "Oficina Coronel Vidal (depende de UDAI Villa Gesell)",
+    "province_detail": "Buenos Aires",
+    "address": "Gral. Paz 534",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI OLAVARRÍA, BUENOS AIRES",
+    "repeated_name": "UDAI Olavarría",
+    "province_detail": "Buenos Aires",
+    "address": "Vicente López 2825 / Olavarría",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA PILA (DEPENDE DE UDAI DOLORES), BUENOS AIRES",
+    "repeated_name": "Oficina Pila (depende de UDAI Dolores)",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 23 N° 9 Entre 2 y 4",
+    "city": "Pila",
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PINAMAR, BUENOS AIRES",
+    "repeated_name": "UDAI Pinamar",
+    "province_detail": "Buenos Aires",
+    "address": "Jasón y Valle Fértil",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA TORDILLO (DEPENDE DE UDAI SANTA TERESITA), BUENOS AIRES",
+    "repeated_name": "Oficina Tordillo (depende de UDAI Santa Teresita)",
+    "province_detail": "Buenos Aires",
+    "address": "Juan Manuel de Rosas 137 (Edificio Intendencia)",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SANTA CLARA DEL MAR (DEPENDE DE UDAI VILLA GESELL), BUENOS AIRES",
+    "repeated_name": "Oficina Santa Clara del Mar (depende de UDAI Villa Gesell)",
+    "province_detail": "Buenos Aires",
+    "address": "Selva Negra y Santa Mónica",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GENERAL LAVALLE (DEPENDE DE UDAI SANTA TERESITA), BUENOS AIRES",
+    "repeated_name": "Oficina General Lavalle (depende de UDAI Santa Teresita)",
+    "province_detail": "Buenos Aires",
+    "address": "Mitre 900",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VELA (DEPENDE DE UDAI TANDIL), BUENOS AIRES",
+    "repeated_name": "Oficina Vela (depende de UDAI Tandil)",
+    "province_detail": "Buenos Aires",
+    "address": "Mitre 547 – Vela",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MAR DEL PLATA, BUENOS AIRES",
+    "repeated_name": "UDAI Mar del Plata",
+    "province_detail": "Buenos Aires",
+    "address": "Av. P. Luro 4942",
+    "city": "Mar del Plata",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MAR DEL PLATA SUR, BUENOS AIRES",
+    "repeated_name": "UDAI Mar del Plata Sur",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Independencia 3151",
+    "city": "Mar del Plata",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MAR DEL PLATA PUERTO, BUENOS AIRES",
+    "repeated_name": "UDAI Mar del Plata Puerto",
+    "province_detail": "Buenos Aires",
+    "address": "Rondeau y Ayolas – Puerto",
+    "city": "Mar del Plata",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI NECOCHEA, BUENOS AIRES",
+    "repeated_name": "UDAI Necochea",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 59 nº 2940",
+    "city": "Necochea",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PUNTA ALTA, BUENOS AIRES",
+    "repeated_name": "UDAI Punta Alta",
+    "province_detail": "Buenos Aires",
+    "address": "Roca 526",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TRES ARROYOS, BUENOS AIRES",
+    "repeated_name": "UDAI Tres Arroyos",
+    "province_detail": "Buenos Aires",
+    "address": "Moreno 443",
+    "city": "Tres Arroyos",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRAL. DANIEL CERRI (DEPENDE DE UDAI BAHÍA BLANCA), BUENOS AIRES",
+    "repeated_name": "Oficina Gral. Daniel Cerri (depende de UDAI Bahía Blanca)",
+    "province_detail": "Buenos Aires",
+    "address": "Gutiérrez 379",
+    "city": "Gral. Daniel Cerri",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA INGENIERO WHITE (DEPENDE DE UDAI BAHÍA BLANCA), BUENOS AIRES",
+    "repeated_name": "Oficina Ingeniero White (depende de UDAI Bahía Blanca)",
+    "province_detail": "Buenos Aires",
+    "address": "Belgrano 3741",
+    "city": "Ing. White",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA DARREGUEIRA (DEPENDE DE UDAI BAHÍA BLANCA II), BUENOS AIRES",
+    "repeated_name": "Oficina Darregueira (depende de UDAI Bahía Blanca II)",
+    "province_detail": "Buenos Aires",
+    "address": "25 de Mayo 58",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MONTE HERMOSO (DEPENDE DE UDAI BAHÍA BLANCA II), BUENOS AIRES",
+    "repeated_name": "Oficina Monte Hermoso (Depende de UDAI Bahía Blanca II)",
+    "province_detail": "Buenos Aires",
+    "address": "Bahia Blanca 354",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA TORNQUIST (DEPENDE DE UDAI BAHÍA BLANCA II), BUENOS AIRES",
+    "repeated_name": "Oficina Tornquist (depende de UDAI Bahía Blanca II)",
+    "province_detail": "Buenos Aires",
+    "address": "9 de julio 598",
+    "city": "esquina Mitre Torquist",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LOBERÍA (DEPENDE DE UDAI NECOCHEA), BUENOS AIRES",
+    "repeated_name": "Oficina Lobería (depende de UDAI Necochea)",
+    "province_detail": "Buenos Aires",
+    "address": "Aristóbulo del Valle 272",
+    "city": "Lobería",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA QUEQUÉN (DEPENDE DE UDAI NECOCHEA), BUENOS AIRES",
+    "repeated_name": "Oficina Quequén (depende de UDAI Necochea)",
+    "province_detail": "Buenos Aires",
+    "address": "Avda. 554 Nro. 916",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CARHUE (DEPENDE DE UDAI CORONEL SUÁREZ), BUENOS AIRES",
+    "repeated_name": "Oficina Carhue (Depende de UDAI Coronel Suárez)",
+    "province_detail": "Buenos Aires",
+    "address": "Rivadavia 1187",
+    "city": "Carhue",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CASBAS (DEPENDE DE UDAI CORONEL SUÁREZ), BUENOS AIRES",
+    "repeated_name": "Oficina Casbas (depende de UDAI Coronel Suárez)",
+    "province_detail": "Buenos Aires",
+    "address": "Caride 58",
+    "city": "Casbas",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA PIGÜÉ (DEPENDE DE UDAI CORONEL SUÁREZ), BUENOS AIRES",
+    "repeated_name": "Oficina Pigüé (depende de UDAI Coronel Suárez)",
+    "province_detail": "Buenos Aires",
+    "address": "España 270",
+    "city": "Pigüé",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA DAIREAUX (DEPENDE DE UDAI SALADILLO), BUENOS AIRES",
+    "repeated_name": "Oficina Daireaux (depende de UDAI Saladillo)",
+    "province_detail": "Buenos Aires",
+    "address": "Pelegrini 530",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SAN CAYETANO (DEPENDE DE UDAI TRES ARROYOS), BUENOS AIRES",
+    "repeated_name": "Oficina San Cayetano (depende de UDAI Tres Arroyos)",
+    "province_detail": "Buenos Aires",
+    "address": "25 de Mayo 237",
+    "city": "San Cayetano",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CHACABUCO, BUENOS AIRES",
+    "repeated_name": "UDAI Chacabuco",
+    "province_detail": "Buenos Aires",
+    "address": "Sarmiento 95",
+    "city": "Chacabuco",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CHIVILCOY, BUENOS AIRES",
+    "repeated_name": "UDAI Chivilcoy",
+    "province_detail": "Buenos Aires",
+    "address": "Bolivar 79",
+    "city": "Chivilcoy",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI GENERAL VILLEGAS, BUENOS AIRES",
+    "repeated_name": "UDAI General Villegas",
+    "province_detail": "Buenos Aires",
+    "address": "Alberti 455 Gral. Villegas",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI JUNÍN, BUENOS AIRES",
+    "repeated_name": "UDAI Junín",
+    "province_detail": "Buenos Aires",
+    "address": "Winter 84",
+    "city": "Junín",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LINCOLN, BUENOS AIRES",
+    "repeated_name": "UDAI Lincoln",
+    "province_detail": "Buenos Aires",
+    "address": "San Martín 1273",
+    "city": "Lincoln",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PERGAMINO, BUENOS AIRES",
+    "repeated_name": "UDAI Pergamino",
+    "province_detail": "Buenos Aires",
+    "address": "San Nicolás 623",
+    "city": "Pergamino",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI RAMALLO, BUENOS AIRES",
+    "repeated_name": "UDAI Ramallo",
+    "province_detail": "Buenos Aires",
+    "address": "Av. San Martín 1368",
+    "city": "Ramallo",
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN PEDRO",
+    "repeated_name": "UDAI San Pedro",
+    "province_detail": "25 de Mayo y Balcarce",
+    "address": "San Pedro",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN NICOLÁS",
+    "repeated_name": "UDAI San Nicolás",
+    "province_detail": "Nación 649 esq. Soler",
+    "address": "San Nicolás",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI TRENQUE LAUQUEN",
+    "repeated_name": "UDAI Trenque Lauquen",
+    "province_detail": "Santa María de Oro 367",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA AMEGHINO (DEPENDE DE JUNÍN)",
+    "repeated_name": "Oficina Ameghino (depende de Junín)",
+    "province_detail": "Calle 5 y 26",
+    "address": "Ameghino",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ALBERTI (DEPENDE DE UDAI CHIVILCOY)",
+    "repeated_name": "Oficina Alberti (depende de UDAI Chivilcoy)",
+    "province_detail": "Uriburu 85",
+    "address": "Alberti",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA BRAGADO (DEPENDE DE UDAI CHIVILCOY)",
+    "repeated_name": "Oficina Bragado (depende de UDAI Chivilcoy)",
+    "province_detail": "Rivadavia 840",
+    "address": "Bragado",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LOS TOLDOS (DEPENDE DE UDAI CHIVILCOY)",
+    "repeated_name": "Oficina Los Toldos (depende de UDAI Chivilcoy)",
+    "province_detail": "Diagonal Arzuaga Nº 295",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ROJAS (DEPENDE DE UDAI PERGAMINO)",
+    "repeated_name": "Oficina Rojas (depende de UDAI Pergamino)",
+    "province_detail": "Eva Perón 518",
+    "address": "Rojas",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SALTO (DEPENDE DE UDAI PERGAMINO)",
+    "repeated_name": "Oficina Salto (depende de UDAI Pergamino)",
+    "province_detail": "9 de julio Nro 110",
+    "address": "Salto",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA COLÓN (DEPENDE DE UDAI PERGAMINO)",
+    "repeated_name": "Oficina Colón (depende de UDAI Pergamino)",
+    "province_detail": "Calle 21 nº 624 y Severo Roda",
+    "address": "Colón",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ARRECIFES (DEPENDE DE UDAI PERGAMINO)",
+    "repeated_name": "Oficina Arrecifes (depende de UDAI Pergamino)",
+    "province_detail": "España 811 esq. Saavedra",
+    "address": "Arrecifes",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ASCENSIÓN (DEPENDE DE UDAI JUNÍN)",
+    "repeated_name": "Oficina Ascensión (depende de UDAI Junín)",
+    "province_detail": "Libertad 12",
+    "address": "Munic. Ascensión",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CARLOS CASARES (DEPENDE DE UDAI PEHUAJÓ)",
+    "repeated_name": "Oficina Carlos Casares (depende de UDAI Pehuajó)",
+    "province_detail": "Av. 9 de Julio 150 esq. Av. Maya",
+    "address": "Carlos Casares",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CARLOS TEJEDOR (DEPENDE DE UDAI PEHUAJÓ)",
+    "repeated_name": "Oficina Carlos Tejedor (depende de UDAI Pehuajó)",
+    "province_detail": "Rivadavia 426",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA AMÉRICA (DEPENDE DE UDAI TRENQUE LAUQUEN)",
+    "repeated_name": "Oficina América (Depende de UDAI Trenque Lauquen)",
+    "province_detail": "Sarmiento 359 PB Rivadavia (funciona en el centro cívico)",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA HENDERSON (DEPENDE DE UDAI TRENQUE LAUQUEN)",
+    "repeated_name": "Oficina Henderson (depende de UDAI Trenque Lauquen)",
+    "province_detail": "25 de Mayo y Sargento Cabral",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRAL. PINTO (DEPENDE DE UDAI LINCOLN)",
+    "repeated_name": "Oficina Gral. Pinto (depende de UDAI Lincoln)",
+    "province_detail": "Alsina 464",
+    "address": "Gral. Pinto",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LA EMILIA (DEPENDE DE UDAI SAN NICOLÁS)",
+    "repeated_name": "Oficina La Emilia (depende de UDAI San Nicolás)",
+    "province_detail": "Alberto Gonzalez s/n Esq. Eráclito Ferreyra",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BARADERO, BUENOS AIRES",
+    "repeated_name": "UDAI Baradero",
+    "province_detail": "Buenos Aires",
+    "address": "Anchorena 1433",
+    "city": "Baradero",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CAÑUELAS, BUENOS AIRES",
+    "repeated_name": "UDAI Cañuelas",
+    "province_detail": "Buenos Aires",
+    "address": "Del Carmen 690",
+    "city": "Cañuelas",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LUJÁN, BUENOS AIRES",
+    "repeated_name": "UDAI Luján",
+    "province_detail": "Buenos Aires",
+    "address": "Almirante Brown N° 244",
+    "city": "Luján",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MERCEDES, BUENOS AIRES",
+    "repeated_name": "UDAI Mercedes",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 26 y 21",
+    "city": "Mercedes",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MONTE, BUENOS AIRES",
+    "repeated_name": "UDAI Monte",
+    "province_detail": "Buenos Aires",
+    "address": "Petrachi 640",
+    "city": "Monte",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SALADILLO, BUENOS AIRES",
+    "repeated_name": "UDAI Saladillo",
+    "province_detail": "Buenos Aires",
+    "address": "Sarmiento 3047",
+    "city": "Saladillo",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI ZÁRATE, BUENOS AIRES",
+    "repeated_name": "UDAI Zárate",
+    "province_detail": "Buenos Aires",
+    "address": "Almirante Brown 139",
+    "city": "Zárate",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SAN ANDRES DE GILES (DEPENDE DE UDAI MERCEDES), BUENOS AIRES",
+    "repeated_name": "Oficina San Andres de Giles (depende de UDAI Mercedes)",
+    "province_detail": "Buenos Aires",
+    "address": "9 de Julio 907 esq. Alsina",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SAN ANTONIO DE ARECO (DEPENDE DE UDAI MERCEDES), BUENOS AIRES",
+    "repeated_name": "Oficina San Antonio de Areco (depende de UDAI Mercedes)",
+    "province_detail": "Buenos Aires",
+    "address": "Moreno 112",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CARMEN DE ARECO (DEPENDE DE UDAI MERCEDES), BUENOS AIRES",
+    "repeated_name": "Oficina Carmen de Areco (depende de UDAI Mercedes)",
+    "province_detail": "Buenos Aires",
+    "address": "M. Moreno 541",
+    "city": "Carmen de Areco",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LOBOS (DEPENDE DE UDAI SALADILLO), BUENOS AIRES",
+    "repeated_name": "Oficina Lobos (depende de UDAI Saladillo)",
+    "province_detail": "Buenos Aires",
+    "address": "Necochea 244",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA 25 DE MAYO (DEPENDE DE UDAI SALADILLO), BUENOS AIRES",
+    "repeated_name": "Oficina 25 de Mayo (depende de UDAI Saladillo)",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 10 entre 31 y 32",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRAL. ALVEAR (DEPENDE DE UDAI SALADILLO), BUENOS AIRES",
+    "repeated_name": "Oficina Gral. Alvear (depende de UDAI Saladillo)",
+    "province_detail": "Buenos Aires",
+    "address": "Sarmiento esquina Perón – Alvear",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CORONEL BRANDSEN, BUENOS AIRES",
+    "repeated_name": "UDAI Coronel Brandsen",
+    "province_detail": "Buenos Aires",
+    "address": "Bartolomé Mitre 265",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VICENTE CASARES (DEPENDE DE UDAI CAÑUELAS), BUENOS AIRES",
+    "repeated_name": "Oficina Vicente Casares (depende de UDAI Cañuelas)",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Vicente Casares (Centro Cívico)",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CAPITAN SARMIENTO (DEPENDE DE UDAI BARADERO), BUENOS AIRES",
+    "repeated_name": "Oficina Capitan Sarmiento (depende de UDAI Baradero)",
+    "province_detail": "Buenos Aires",
+    "address": "Centenario 499",
+    "city": "Capitán Sarmiento",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA EXALTACIÓN DE LA CRUZ (DEPENDE DE UDAI ZÁRATE), BUENOS AIRES",
+    "repeated_name": "Oficina Exaltación de la Cruz (depende de UDAI Zárate)",
+    "province_detail": "Buenos Aires",
+    "address": "Mateo s Casco N° 666",
+    "city": "Capilla del Señor",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GENERAL RODRÍGUEZ (DEPENDE DE UDAI LUJÁN), BUENOS AIRES",
+    "repeated_name": "Oficina General Rodríguez (depende de UDAI Luján)",
+    "province_detail": "Buenos Aires",
+    "address": "Almirante Brown 52",
+    "city": "General Rodríguez",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MARCOS PAZ (DEPENDE DE UDAI LUJÁN), BUENOS AIRES",
+    "repeated_name": "Oficina Marcos Paz (depende de UDAI Luján)",
+    "province_detail": "Buenos Aires",
+    "address": "Libertad 2099",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA RANCHOS (DEPENDE DE UDAI MONTE), BUENOS AIRES",
+    "repeated_name": "Oficina Ranchos (depende de UDAI Monte)",
+    "province_detail": "Buenos Aires",
+    "address": "Dr. Hernández Castro 2813",
+    "city": "Ranchos",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BARRACAS, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Barracas",
+    "province_detail": "Capital Federal",
+    "address": "Av. Regimiento de Patricios 939",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CENTRO, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Centro",
+    "province_detail": "Capital Federal",
+    "address": "Av. Córdoba 1118",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI FLORES II, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Flores II",
+    "province_detail": "Capital Federal",
+    "address": "Av. Rivadavia 7451",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI FLORESTA, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Floresta",
+    "province_detail": "Capital Federal",
+    "address": "Av. Segurola 1129 / 33",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LINIERS, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Liniers",
+    "province_detail": "Capital Federal",
+    "address": "Av. Gral. Paz 10658",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MONSERRAT, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Monserrat",
+    "province_detail": "Capital Federal",
+    "address": "México 270",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PACÍFICO, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Pacífico",
+    "province_detail": "Capital Federal",
+    "address": "Av. Santa Fe 5140",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PLAZA DE MAYO, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Plaza de Mayo",
+    "province_detail": "Capital Federal",
+    "address": "Paseo Colón 239",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SAN CRISTÓBAL, CAPITAL FEDERAL",
+    "repeated_name": "UDAI San Cristóbal",
+    "province_detail": "Capital Federal",
+    "address": "Av. Jujuy 966",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA LUGANO, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Villa Lugano",
+    "province_detail": "Capital Federal",
+    "address": "Sayos 5654",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA URQUIZA, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Villa Urquiza",
+    "province_detail": "Capital Federal",
+    "address": "Av. Alvarez Thomas 2356",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LAS HERAS, MENDOZA",
+    "repeated_name": "UDAI Las Heras",
+    "province_detail": "Mendoza",
+    "address": "Rivadavia 687",
+    "city": "Mendoza",
+    "region": null,
+    "schedule": "7.30 a 13.30 hs. / 14.00 A 18.00hs. A.U.H"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI 9 DE JULIO",
+    "repeated_name": "UDAI 9 de Julio",
+    "province_detail": "Libertad 1102 (esq. Salta)",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA DEL VISO",
+    "repeated_name": "Oficina Del Viso",
+    "province_detail": "Juan Ramón Giménez 1095",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI ISIDRO CASANOVA, BUENOS AIRES",
+    "repeated_name": "UDAI Isidro Casanova",
+    "province_detail": "Buenos Aires",
+    "address": "Madrid 3204",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LEONES, CORDOBA",
+    "repeated_name": "Oficina Leones",
+    "province_detail": "Cordoba",
+    "address": "Amadeo Bertini 634",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CAUCETE, SAN JUAN",
+    "repeated_name": "Oficina Caucete",
+    "province_detail": "San Juan",
+    "address": "Terminal de ómnibus",
+    "city": "terminal de ómnibus",
+    "region": null,
+    "schedule": "7.30 a 13.30hs"
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SALTA NORTE, SALTA",
+    "repeated_name": "UDAI Salta Norte",
+    "province_detail": "Salta",
+    "address": "Jujuy 43",
+    "city": "Salta",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI NAVARRO, BUENOS AIRES",
+    "repeated_name": "UDAI Navarro",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 26 Nº 330",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SALTA SUR, SALTA",
+    "repeated_name": "UDAI SALTA Sur",
+    "province_detail": "Salta",
+    "address": "Pellegrini N° 931",
+    "city": "Salta",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA TUPUNGATO, MENDOZA",
+    "repeated_name": "Oficina Tupungato",
+    "province_detail": "Mendoza",
+    "address": "Almirante Brown Nº 190",
+    "city": "Mendoza",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI GUAYMALLEN, MENDOZA",
+    "repeated_name": "UDAI Guaymallen",
+    "province_detail": "Mendoza",
+    "address": "Godoy Cruz 1533",
+    "city": "San José",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA BICENTENARIO, SAN JUAN",
+    "repeated_name": "Oficina Bicentenario",
+    "province_detail": "San Juan",
+    "address": "Mitre Nº 58",
+    "city": "San Juan",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA CHIMBAS, SAN JUAN",
+    "repeated_name": "Oficina Chimbas",
+    "province_detail": "San Juan",
+    "address": "Calle 25 de Mayo Nº 1187",
+    "city": "San Juan",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LAVALLE, MENDOZA",
+    "repeated_name": "Oficina Lavalle",
+    "province_detail": "Mendoza",
+    "address": "Juan Domingo Peron Nº 75",
+    "city": "Local 5",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MAR DEL PLATA CONSTITUCIÓN, BUENOS AIRES",
+    "repeated_name": "UDAI Mar del Plata Constitución",
+    "province_detail": "Buenos Aires",
+    "address": "Avda. Constitución 6145",
+    "city": "Mar del Plata",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI SANTA FE II, SANTA FE",
+    "repeated_name": "UDAI Santa Fe II",
+    "province_detail": "Santa Fe",
+    "address": "Facundo Zuviría 6568/80",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PARANÁ II, ENTRE RIOS",
+    "repeated_name": "UDAI Paraná II",
+    "province_detail": "Entre Rios",
+    "address": "Av.Ramírez 1671- Paraná- Entre Ríos",
+    "city": "Entre Ríos",
+    "region": null,
+    "schedule": "7.15 a 13.00 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SUIPACHA (DEPENDE DE LA UDAI MERCEDES), BUENOS AIRES",
+    "repeated_name": "Oficina Suipacha (depende de la UDAI Mercedes)",
+    "province_detail": "Buenos Aires",
+    "address": "Combate de San Lorenzo",
+    "city": "e/ Rivadavia y San Martín",
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LOS HORNOS, BUENOS AIRES",
+    "repeated_name": "UDAI Los Hornos",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 143 Nº 1647",
+    "city": "e/ 65 y 66",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI EL TALAR",
+    "repeated_name": "UDAI El Talar",
+    "province_detail": "Colectora Oeste KM 30.80",
+    "address": "e/197 y Venezuela",
+    "city": "Don Torcuato",
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI WILDE, BUENOS AIRES",
+    "repeated_name": "UDAI Wilde",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Fabián Onzari y Juan Cruz Varela",
+    "city": "Wilde.",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BERNAL, BUENOS AIRES",
+    "repeated_name": "UDAI Bernal",
+    "province_detail": "Buenos Aires",
+    "address": "Avenida Dardo Rocha 501",
+    "city": "esq. Ameghino",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": "8 a 14 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BOSQUES (FLORENCIO VARELA II), BUENOS AIRES",
+    "repeated_name": "UDAI Bosques (Florencio Varela II)",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Lujan 1071",
+    "city": "Bosques",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BURZACO, BUENOS AIRES",
+    "repeated_name": "UDAI Burzaco",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Hipólito Yrigoyen 14926/30",
+    "city": "Burzaco",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PEHUAJÓ",
+    "repeated_name": "UDAI Pehuajó",
+    "province_detail": "San Nicolás 623",
+    "address": "Pehuajó",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI MERCADO CENTRAL, BUENOS AIRES",
+    "repeated_name": "UDAI Mercado Central",
+    "province_detail": "Buenos Aires",
+    "address": "Av. de Circunvalación esq. Calle del Fruto",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI JUNÍN II",
+    "repeated_name": "UDAI Junín II",
+    "province_detail": "Alvear 903",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI PARQUE PATRICIOS, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Parque Patricios",
+    "province_detail": "Capital Federal",
+    "address": "La Rioja 2079",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI RAFAEL CASTILLO, BUENOS AIRES",
+    "repeated_name": "UDAI Rafael Castillo",
+    "province_detail": "Buenos Aires",
+    "address": "Mendez de los Andes 1663",
+    "city": null,
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI LA TABLADA, BUENOS AIRES",
+    "repeated_name": "UDAI La Tablada",
+    "province_detail": "Buenos Aires",
+    "address": "Av. Crovara N° 2283 e/ Pringles y Bolivar",
+    "city": "La Tablada",
+    "region": "Jefatura Regional Conurbano II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA GOBERNADOR GALVEZ, SANTA FE",
+    "repeated_name": "UDAI Villa Gobernador Galvez",
+    "province_detail": "Santa Fe",
+    "address": "Av. San Martín 1654",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI FLORES, CAPITAL FEDERAL",
+    "repeated_name": "UDAI Flores",
+    "province_detail": "Capital Federal",
+    "address": "Av. Eva Perón 3799",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA JUAN JOSÉ CASTELLI, CHACO",
+    "repeated_name": "Oficina Juan José Castelli",
+    "province_detail": "Chaco",
+    "address": "Av. Perón 470",
+    "city": "Castelli",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GUATRACHÉ, LA PAMPA",
+    "repeated_name": "Oficina Guatraché",
+    "province_detail": "La Pampa",
+    "address": "Yrigoyen 124",
+    "city": "Guatraché",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CÓRDOBA III, CÓRDOBA",
+    "repeated_name": "UDAI Córdoba III",
+    "province_detail": "Córdoba",
+    "address": "Avenida de Mayo 1261",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI CONCORDIA II, ENTRE RÍOS",
+    "repeated_name": "UDAI Concordia II",
+    "province_detail": "Entre Ríos",
+    "address": "Buenos Aires 240",
+    "city": "Concordia",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA BOSCH",
+    "repeated_name": "UDAI Villa Bosch",
+    "province_detail": "Santos Vega 7245 Villa Bosch",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA RAUCH (DEPENDE UDAI TANDIL)",
+    "repeated_name": "Oficina Rauch (Depende UDAI Tandil)",
+    "province_detail": "Alberti 60",
+    "address": "Rauch",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense I",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI BATÁN, BUENOS AIRES",
+    "repeated_name": "UDAI Batán",
+    "province_detail": "Buenos Aires",
+    "address": "Colectora Ruta 88 y calle 149",
+    "city": "Batán",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA PEDRO LURO, BUENOS AIRES",
+    "repeated_name": "Oficina Pedro Luro",
+    "province_detail": "Buenos Aires",
+    "address": "Calle 32 N°254",
+    "city": "Pedro Luro",
+    "region": "Jefatura Regional Bonaerense II",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VEDIA (DEPENDE UDAI JUNÍN)",
+    "repeated_name": "Oficina Vedia (Depende UDAI Junín)",
+    "province_detail": "Diagonal Estrada 65",
+    "address": "Vedia",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense III",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LAS HERAS (DEPENDE UDAI NAVARRO)",
+    "repeated_name": "Oficina Las Heras (Depende UDAI Navarro)",
+    "province_detail": "BELGRANO 174",
+    "address": "Las Heras",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MÁXIMO PAZ (DEPENDE UDAI CAÑUELAS)",
+    "repeated_name": "Oficina Máximo Paz (Depende UDAI Cañuelas)",
+    "province_detail": "Perez (ex Ruta 205) esq. Belgrano",
+    "address": null,
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ROQUE PÉREZ (DEPENDE UDAI SALADILLO)",
+    "repeated_name": "Oficina Roque Pérez (Depende UDAI Saladillo)",
+    "province_detail": "Avellaneda 1217",
+    "address": "Roque Pérez",
+    "city": null,
+    "region": "Jefatura Regional Bonaerense IV",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA PADRE MUGICA",
+    "repeated_name": "Oficina Padre Mugica",
+    "province_detail": "Galpón 2 (Playón bajo autopista)",
+    "address": "Villa 31",
+    "city": null,
+    "region": "Jefatura Regional Capital Federal (CABA)",
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA ARGUELLO (DEPENDE UDAI CÓRDOBA)",
+    "repeated_name": "Oficina Arguello (Depende UDAI Córdoba)",
+    "province_detail": "Rafael Nuñez esq. Av. Ricardo Rojas",
+    "address": "Arguello",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA APYME (DEPENDE UDAI CÓRDOBA)",
+    "repeated_name": "Oficina APYME (Depende UDAI Córdoba)",
+    "province_detail": "Rosario de Santa Fe 565",
+    "address": "Córdoba",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA HUINCA RENANCÓ (DEPENDE UDAI LABOULAYE)",
+    "repeated_name": "Oficina Huinca Renancó (depende UDAI Laboulaye)",
+    "province_detail": "Suipacha 462",
+    "address": "Huinca Renacó",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MERCADO DE LA CIUDAD (DEPENDE UDAI CÓRDOBA)",
+    "repeated_name": "Oficina Mercado de la Ciudad (Depende UDAI Córdoba)",
+    "province_detail": "Oncativo 50",
+    "address": "Córdoba",
+    "city": "Córdoba",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LAS CATITAS (DPENDE UDAI MALARGÜE), MENDOZA",
+    "repeated_name": "Oficina Las Catitas (dpende UDAI Malargüe)",
+    "province_detail": "Mendoza",
+    "address": "Emilio Civit 104",
+    "city": "Mendoza",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VILLA ATUEL (DEPENDE UDAI SAN RAFAEL)",
+    "repeated_name": "Oficina Villa Atuel (Depende UDAI San Rafael)",
+    "province_detail": "9 de Julio y San Martín",
+    "address": "Villa Atuel",
+    "city": "Mendoza",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LA PAZ (DEPENDE UDAI PARANÁ)",
+    "repeated_name": "Oficina La Paz (Depende UDAI Paraná)",
+    "province_detail": "3 de Febrero y 9 de Julio",
+    "address": "La Paz",
+    "city": "Entre Rios",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI ROSARIO IV",
+    "repeated_name": "UDAI Rosario IV",
+    "province_detail": "Mendoza 948",
+    "address": "Rosario Santa Fe",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI VILLA CAÑÁS",
+    "repeated_name": "UDAI Villa Cañás",
+    "province_detail": "Av. 50 y 65 Villa Cañás",
+    "address": "Santa Fe",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA FIRMAT (DEPENDE DE UDAI VILLA CAÑÁS)",
+    "repeated_name": "Oficina Firmat (Depende de UDAI Villa Cañás)",
+    "province_detail": "Av. Provincias Unidas 571",
+    "address": "Firmat",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRO. BAIGORRIA (DEPENDE UDAI ROSARIO OESTE)",
+    "repeated_name": "Oficina Gro. Baigorria (depende UDAI Rosario Oeste)",
+    "province_detail": "Av. San Martín 2281 Loc 2 y 3",
+    "address": "Granadero Baigorria",
+    "city": "Santa Fe",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SANTO TOMÉ (DEPENDE UDAI SANTA FE)",
+    "repeated_name": "Oficina Santo Tomé (Depende UDAI Santa Fe)",
+    "province_detail": "7 de Marzo 2277",
+    "address": "Santa Fe",
+    "city": "7.15 a 13.15 hs.",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA LULES (DEPENDE UDAI TUCUMÁN)",
+    "repeated_name": "Oficina Lules (depende UDAI Tucumán)",
+    "province_detail": "Alte. Brown 106",
+    "address": "San Isidro de Lules",
+    "city": "Tucumán",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFOCINA MONTEROS (DEPENDE UDAI CONCEPCIÓN)",
+    "repeated_name": "Ofocina Monteros (depende UDAI Concepción)",
+    "province_detail": "San Martín 446 1°Piso",
+    "address": "Monteros",
+    "city": "Tucumán",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA MERCEDES (DEPENDE UADI CURUZÚ CUATIÁ)",
+    "repeated_name": "Oficina Mercedes (Depende UADI Curuzú Cuatiá)",
+    "province_detail": "Juan Pujol 874",
+    "address": "Corrientes",
+    "city": "6 a 14 hs.",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA PASO DE LOS LIBRES (DEPENDE DE UDAI CURUZÚ CUATIÁ)",
+    "repeated_name": "Oficina Paso de los Libres (depende de UDAI Curuzú Cuatiá)",
+    "province_detail": "Av. Madariaga y Brasil",
+    "address": "Corrientes",
+    "city": null,
+    "region": null,
+    "schedule": "6.00 a 14.00 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRAL. SAN MARTÍN (DEPENDE DE UDAI RESISTENCIA)",
+    "repeated_name": "Oficina Gral. San Martín (depende de UDAI Resistencia)",
+    "province_detail": "Av. Alte Brown esq. Belgrano",
+    "address": "San Martín",
+    "city": "Chaco",
+    "region": null,
+    "schedule": "6.00 a 14.00 hs."
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SAN VICENTE (DEPENDE DE UDAI OBERÁ)",
+    "repeated_name": "Oficina San Vicente (Depende de UDAI Oberá)",
+    "province_detail": "Av. Tejada 235",
+    "address": "San Vicente",
+    "city": "Misiones",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA SUNCHO CORRAL (DEPENDE DE UDAI SANTIAGO DEL ESTERO)",
+    "repeated_name": "Oficina Suncho Corral (Depende de UDAI Santiago del Estero)",
+    "province_detail": "9 de julio y Mitre",
+    "address": "Suncho Corral",
+    "city": "Santiago del Estero",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA GRAL. ACHA (DEPENDE DE UDAI STA. ROSA)",
+    "repeated_name": "Oficina Gral. Acha (Depende de UDAI Sta. Rosa)",
+    "province_detail": "Avellaneda 546",
+    "address": "Gral. Acha",
+    "city": "La Pampa",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA VILLA LA ANGOSTURA (DEPENDE DE UDAI BARILOCHE)",
+    "repeated_name": "Oficina Villa La Angostura (Depende de UDAI Bariloche)",
+    "province_detail": "Los Notros 182",
+    "address": "Villa La Angostura",
+    "city": "Neuquén",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA TOLHUIN (DEPEND DE UDAI RÍO GRANDE)",
+    "repeated_name": "Oficina Tolhuin (Depend de UDAI Río Grande)",
+    "province_detail": "Rafaela Isthon 269",
+    "address": "Tolhuin",
+    "city": "Tierra del Fuego",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "OFICINA FONTANA",
+    "repeated_name": "Oficina Fontana",
+    "province_detail": "Av. Alvear 4650",
+    "address": "Chaco",
+    "city": "6:00hs a 14:00hs",
+    "region": null,
+    "schedule": null
+  },
+  {
+    "province": "Tucumán",
+    "office_name": "UDAI EL PALOMAR",
+    "repeated_name": "UDAI El Palomar",
+    "province_detail": "Madariaga 501/505",
+    "address": "El Palomar",
+    "city": null,
+    "region": "Jefatura Regional Conurbano I",
+    "schedule": null
+  }
+]

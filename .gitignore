@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+dist_out/
+build/
+build_out/
+SistemaRampazzo.zip
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Data local
+data/local.db
+data/*.db
+
+# Config con credenciales
+config.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PyInstaller
+*.spec
+
+# Build info (generado por scripts de build)
+build_info.py
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+htmlcov/

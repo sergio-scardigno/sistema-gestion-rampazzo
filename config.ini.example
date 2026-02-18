@@ -1,0 +1,37 @@
+[mongo]
+; URI de conexion a MongoDB Atlas
+; Reemplazar con la URI real del cluster
+uri = mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net
+database = gestion
+
+[sync]
+; Intervalo de sincronizacion en segundos (300 = 5 minutos)
+interval_seconds = 300
+; Tiempo de expiracion de bloqueos en minutos
+lock_expiry_minutes = 15
+
+[machine]
+; Identificador unico de esta maquina (se auto-detecta si no se configura)
+; id = PC-RECEPCION
+
+[logging]
+; Nivel de logging: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: DEBUG)
+; level = DEBUG
+; Tamano maximo de cada archivo de log en MB (default: 10)
+; max_mb = 10
+; Cantidad de archivos de log rotativos a conservar (default: 5)
+; backup_count = 5
+; Directorio de logs personalizado (vacio = automatico: logs/ en dev, AppData en .exe)
+; dir =
+
+[security]
+; Clave de encripcion para datos sensibles (generar una clave segura)
+; encryption_key = mi-clave-segura-de-32-caracteres
+
+[sqlite]
+; Ruta al archivo SQLite (por defecto: data/local.db)
+; path = data/local.db
+
+[paths]
+; Directorio de documentos adjuntos (por defecto: data/documentos)
+; docs_dir = data/documentos

@@ -1,0 +1,29 @@
+[run]
+source = core,controllers,models,utils
+omit =
+    */views/*
+    */resources/*
+    */data/*
+    */__pycache__/*
+    */tests/*
+    # Modulos de infraestructura excluidos de la iteracion 1
+    utils/migration/*
+    utils/export.py
+    core/scheduler.py
+    core/lock_manager.py
+    core/session_guard.py
+    core/connection_monitor.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__
+    raise NotImplementedError
+    pass
+show_missing = true
+# Umbral progresivo: 70% iteracion 1, elevar a 80%+ en iteraciones futuras
+fail_under = 70
+
+[html]
+directory = htmlcov
