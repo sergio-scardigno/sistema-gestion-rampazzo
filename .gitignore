@@ -33,8 +33,9 @@ config.ini
 .DS_Store
 Thumbs.db
 
-# PyInstaller
-*.spec
+# PyInstaller (excluir specs generados, pero mantener el del proyecto)
+# *.spec
+# NOTA: SistemaRampazzo.spec se versiona porque contiene la config de build
 
 # Build info (generado por scripts de build)
 build_info.py
