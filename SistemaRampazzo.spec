@@ -1,19 +1,24 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib, os
 
-# Localizar plugins de PySide6 dinámicamente (funciona con .venv, venv o Anaconda)
 _pyside6_path = os.path.dirname(importlib.import_module('PySide6').__file__)
 _pyside6_plugins = os.path.join(_pyside6_path, 'plugins')
+
+_extra_datas = [
+    ('resources', 'resources'),
+    ('anses_oficinas', 'anses_oficinas'),
+]
+
+# En Windows, incluir plugins de PySide6 explicitamente.
+# En Linux/macOS los hooks de PyInstaller los resuelven automaticamente.
+if os.path.isdir(_pyside6_plugins):
+    _extra_datas.append((_pyside6_plugins, os.path.join('PySide6', 'plugins')))
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('resources', 'resources'),
-        ('anses_oficinas', 'anses_oficinas'),
-        (_pyside6_plugins, os.path.join('PySide6', 'plugins')),
-    ],
+    datas=_extra_datas,
     hiddenimports=['build_info'],
     hookspath=[],
     hooksconfig={},
