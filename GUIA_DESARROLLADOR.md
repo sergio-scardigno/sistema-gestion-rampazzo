@@ -292,10 +292,13 @@ Al ejecutar por primera vez, la aplicacion crea automaticamente:
 
 ### Pasos para el usuario final
 
-1. Descomprimir `SistemaRampazzo.zip` en la ubicacion deseada (ej: `C:\SistemaRampazzo\`).
+1. Descomprimir `SistemaRampazzo.zip` en la ubicacion deseada.
 2. Renombrar `config.ini.example` a `config.ini`.
 3. Editar `config.ini` con las credenciales de MongoDB Atlas (si aplica).
-4. Ejecutar `SistemaRampazzo.exe`.
+4. Ejecutar la app segun el sistema operativo:
+   - **Windows**: `SistemaRampazzo.exe`
+   - **Linux**: `./SistemaRampazzo`
+   - **macOS**: `iniciar_mac.command` (primera ejecucion recomendada)
 
 ### Notas importantes
 
@@ -303,6 +306,7 @@ Al ejecutar por primera vez, la aplicacion crea automaticamente:
 - Si no hay permisos de escritura, la app usa `%LOCALAPPDATA%\SistemaRampazzo\data\` como alternativa.
 - Sin `config.ini` con credenciales de MongoDB, la app funciona en **modo offline** (solo SQLite local).
 - Los datos del sistema (BD, documentos, backups) se almacenan en `data/` y deben incluirse en las politicas de backup del cliente.
+- En **macOS**, si Gatekeeper bloquea la app descargada, ejecutar primero `iniciar_mac.command` o aplicar la alternativa manual de la seccion de Troubleshooting.
 
 ---
 
@@ -401,6 +405,24 @@ La aplicacion busca `config.ini` en este orden:
 ### Los tests de UI fallan en CI
 
 Los smoke tests de UI necesitan un display virtual. En GitHub Actions, el workflow usa `xvfb-run`. Localmente en Windows/macOS no deberia haber problema.
+
+### macOS: "app no se puede abrir" / bloqueo de Gatekeeper
+
+macOS puede bloquear binarios descargados de internet por el atributo de cuarentena (`com.apple.quarantine`).
+
+Opciones para resolverlo:
+
+1. Recomendado: hacer doble click en `iniciar_mac.command` (incluido en el ZIP de macOS).
+2. Alternativa: click derecho sobre `SistemaRampazzo` -> **Abrir** -> confirmar.
+3. Manual por terminal (en la carpeta descomprimida):
+
+```bash
+xattr -cr .
+chmod +x SistemaRampazzo
+./SistemaRampazzo
+```
+
+> Nota: para distribucion externa sin advertencias de seguridad, se requiere firma/notarizacion con Apple Developer ID.
 
 ### Quiero regenerar el .spec desde cero
 

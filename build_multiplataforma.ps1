@@ -37,6 +37,17 @@ function Resolve-Gh {
     return $null
 }
 
+function Test-RemoteBranch {
+    param(
+        [string]$GhPath,
+        [string]$Repository,
+        [string]$BranchName
+    )
+    if ([string]::IsNullOrWhiteSpace($BranchName)) { return $false }
+    & $GhPath api "repos/$Repository/branches/$BranchName" 2>$null | Out-Null
+    return ($LASTEXITCODE -eq 0)
+}
+
 Write-Host "============================================"
 Write-Host "  Sistema Rampazzo - Build Multiplataforma"
 Write-Host "  (orquestado con GitHub Actions)"
@@ -54,6 +65,7 @@ Write-Host "      OK"
 Write-Host ""
 
 Step "[2/8] Resolviendo repo y rama..."
+$branchProvided = -not [string]::IsNullOrWhiteSpace($Branch)
 if ([string]::IsNullOrWhiteSpace($Repo)) {
     try {
         $repoJson = & $gh repo view --json nameWithOwner | ConvertFrom-Json
@@ -68,7 +80,22 @@ if ([string]::IsNullOrWhiteSpace($Branch)) {
         $branchJson = & $gh repo view $Repo --json defaultBranchRef | ConvertFrom-Json
         $Branch = $branchJson.defaultBranchRef.name
     } catch {
-        $Branch = "main"
+        $Branch = ""
+    }
+}
+if (-not (Test-RemoteBranch -GhPath $gh -Repository $Repo -BranchName $Branch)) {
+    if ($branchProvided) {
+        throw "La rama '$Branch' no existe en el repositorio '$Repo'."
+    }
+    $fallbackBranches = @("master", "main", "develop")
+    foreach ($candidate in $fallbackBranches) {
+        if (Test-RemoteBranch -GhPath $gh -Repository $Repo -BranchName $candidate) {
+            $Branch = $candidate
+            break
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($Branch)) {
+        throw "No se pudo detectar una rama valida para '$Repo'. Pasar -Branch explicitamente."
     }
 }
 Write-Host "      Repo: $Repo"
@@ -99,11 +126,26 @@ Write-Host "      Workflow disparado."
 Write-Host ""
 
 Step "[5/8] Obteniendo run_id..."
-$runs = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 1 --json databaseId | ConvertFrom-Json
-if (-not $runs -or $runs.Count -eq 0) {
-    throw "No se pudo obtener run_id del workflow."
+$runId = $null
+$maxAttempts = 20
+$sleepSeconds = 3
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $runsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 1 --json databaseId 2>$null
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runsRaw)) {
+        try {
+            $runs = $runsRaw | ConvertFrom-Json
+            $runsArray = @($runs)
+            if ($runsArray.Count -gt 0 -and $runsArray[0].databaseId) {
+                $runId = [string]$runsArray[0].databaseId
+                break
+            }
+        } catch {}
+    }
+    Start-Sleep -Seconds $sleepSeconds
 }
-$runId = [string]$runs[0].databaseId
+if ([string]::IsNullOrWhiteSpace($runId)) {
+    throw "No se pudo obtener run_id del workflow. Reintentar en unos segundos."
+}
 Write-Host "      Run ID: $runId"
 Write-Host ""
 
@@ -124,24 +166,37 @@ $winZip = Join-Path $tmpDir "SistemaRampazzo-Windows\SistemaRampazzo.zip"
 $linuxZip = Join-Path $tmpDir "SistemaRampazzo-Linux\SistemaRampazzo.zip"
 $macZip = Join-Path $tmpDir "SistemaRampazzo-macOS\SistemaRampazzo.zip"
 
+$missingPlatforms = @()
+
 if (Test-Path $winZip) {
     Copy-Item -Force $winZip (Join-Path $winDir ("SistemaRampazzo-win-" + $Version + ".zip"))
+    Write-Host "      Windows: OK"
 } else {
-    Write-Warning "No se encontro artifact de Windows."
+    $missingPlatforms += "Windows"
+    Write-Host "      Windows: FALTANTE"
 }
 if (Test-Path $linuxZip) {
     Copy-Item -Force $linuxZip (Join-Path $linuxDir ("SistemaRampazzo-linux-" + $Version + ".zip"))
+    Write-Host "      Linux:   OK"
 } else {
-    Write-Warning "No se encontro artifact de Linux."
+    $missingPlatforms += "Linux"
+    Write-Host "      Linux:   FALTANTE"
 }
 if (Test-Path $macZip) {
     Copy-Item -Force $macZip (Join-Path $macDir ("SistemaRampazzo-mac-" + $Version + ".zip"))
+    Write-Host "      macOS:   OK"
 } else {
-    Write-Warning "No se encontro artifact de macOS."
+    $missingPlatforms += "macOS"
+    Write-Host "      macOS:   FALTANTE"
 }
 
 if (Test-Path $tmpDir) {
     Remove-Item -Recurse -Force $tmpDir
+}
+
+if ($missingPlatforms.Count -gt 0) {
+    $platforms = $missingPlatforms -join ", "
+    throw "Faltan artifacts de las siguientes plataformas: $platforms. El build multiplataforma no esta completo."
 }
 
 Write-Host ""

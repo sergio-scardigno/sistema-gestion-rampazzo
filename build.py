@@ -24,6 +24,7 @@ BUILD_INFO_FILE = PROJECT_ROOT / "build_info.py"
 ZIP_FILE = PROJECT_ROOT / "SistemaRampazzo.zip"
 CONFIG_FILE = PROJECT_ROOT / "config.ini"
 CONFIG_EXAMPLE_FILE = PROJECT_ROOT / "config.ini.example"
+MAC_LAUNCHER_FILE = PROJECT_ROOT / "iniciar_mac.command"
 
 
 def _print(msg: str) -> None:
@@ -133,6 +134,11 @@ def _copy_config_files() -> None:
 
     if CONFIG_EXAMPLE_FILE.exists():
         shutil.copy2(CONFIG_EXAMPLE_FILE, APP_DIR / "config.ini.example")
+
+    if sys.platform == "darwin" and MAC_LAUNCHER_FILE.exists():
+        mac_launcher_dst = APP_DIR / "iniciar_mac.command"
+        shutil.copy2(MAC_LAUNCHER_FILE, mac_launcher_dst)
+        mac_launcher_dst.chmod(0o755)
 
     _print("      OK")
 

@@ -27,9 +27,8 @@ if "%REPO%"=="" (
 )
 
 if "%BRANCH%"=="" (
-  set /p BRANCH="Ingrese la rama (ej: main) o ENTER para usar main: "
+  set /p BRANCH="Ingrese la rama (ej: main/master) o ENTER para autodetectar: "
 )
-if "%BRANCH%"=="" set "BRANCH=main"
 
 set "PS_SCRIPT=%~dp0build_multiplataforma.ps1"
 if not exist "%PS_SCRIPT%" (

@@ -41,6 +41,58 @@ jobs:
       - name: Build distributable
         run: python build.py
 
+      - name: Prepare macOS launcher and permissions
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p mac_zip_tmp
+          unzip -q SistemaRampazzo.zip -d mac_zip_tmp
+          cp iniciar_mac.command mac_zip_tmp/iniciar_mac.command
+          chmod +x mac_zip_tmp/SistemaRampazzo mac_zip_tmp/iniciar_mac.command
+          xattr -cr mac_zip_tmp || true
+          rm -f SistemaRampazzo.zip
+          (cd mac_zip_tmp && zip -qry ../SistemaRampazzo.zip .)
+          rm -rf mac_zip_tmp
+
+      - name: Validate build artifact
+        shell: python
+        run: |
+          import os, sys, zipfile
+
+          zip_path = "SistemaRampazzo.zip"
+          runner_os = os.environ.get("RUNNER_OS", "")
+
+          if not os.path.isfile(zip_path):
+              print(f"[FAIL] ZIP no encontrado: {zip_path}")
+              sys.exit(1)
+          size_mb = round(os.path.getsize(zip_path) / (1024 * 1024), 1)
+          print(f"[OK] ZIP encontrado: {zip_path} ({size_mb} MB)")
+
+          try:
+              with zipfile.ZipFile(zip_path, "r") as zf:
+                  bad = zf.testzip()
+                  if bad is not None:
+                      print(f"[FAIL] Archivo corrupto dentro del ZIP: {bad}")
+                      sys.exit(1)
+                  names = zf.namelist()
+          except zipfile.BadZipFile as exc:
+              print(f"[FAIL] ZIP invalido: {exc}")
+              sys.exit(1)
+          print("[OK] Integridad del ZIP verificada")
+
+          binary = "SistemaRampazzo.exe" if runner_os == "Windows" else "SistemaRampazzo"
+          required = [binary, "config.ini.example"]
+          if runner_os == "macOS":
+              required.append("iniciar_mac.command")
+
+          missing = [f for f in required if f not in names]
+          if missing:
+              print(f"[FAIL] Archivos obligatorios faltantes en el ZIP: {missing}")
+              print(f"Contenido del ZIP (primeros 30): {names[:30]}")
+              sys.exit(1)
+
+          print(f"[OK] Archivos obligatorios presentes: {required}")
+          print(f"[OK] El ZIP contiene {len(names)} entradas en total")
+
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
