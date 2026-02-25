@@ -213,22 +213,33 @@ Es el modulo central del sistema. Cada carpeta es un tramite o caso legal de un 
 
 **Como ver una carpeta:**
 
-En el listado se muestran las columnas: N° Carpeta, Tipo Tramite, Estado, Responsable, Prioridad, Fecha Apertura y Nro. Tramite ANSES.
+En el listado se muestran las columnas: N° Carpeta, **Rama**, **Subtipo**, Tipo Tramite, Estado, Responsable, Prioridad, Fecha Apertura y Nro. Tramite ANSES.
 
 **Como crear o editar una carpeta:**
 
 1. Clic en **+ Nueva Carpeta** o seleccionar una y clic en **Editar**.
-2. El formulario tiene varias **pestañas**:
+2. El formulario tiene varias **pestañas**.
 
 **Pestaña "Datos"** (la principal):
 
 - **Cliente**: seleccionar de la lista.
 - **N° Carpeta**: se muestra automaticamente al elegir el cliente (solo lectura).
 - **Tipo de tramite**: Jubilacion, Retiro por salud, Laboral, Amparo, Pension, PUAM, RTI, Reajuste, Otro.
+- **Rama**: Laboral, ART, Previsional, Amparos, Migraciones, Familia o Daños.
+- **Subtipo**: se carga automaticamente segun la rama elegida.
+- **Datos especificos**: bloque dinamico que cambia segun la rama/subtipo (ej.: campos laborales, ART, previsionales, etc.).
+- **Modulo Judicial**:
+  - Activar el checkbox **Caso judicializado** para mostrar los campos judiciales comunes.
+  - Campos judiciales: Fuero, Juzgado, Secretaria, N° expediente, Provincia, Instancia, Monto reclamado, Etapa procesal.
 - **Responsable** (obligatorio): quien esta a cargo.
 - **Estado**: Activo, En tramite, En espera, Guardada, Favorable, Desfavorable, Cerrado, Archivado.
 - **Prioridad**: Alta, Normal, Baja.
-- Otros campos: Area, Ubicacion fisica, Link Drive, Nro. Tramite ANSES, Resultado, Fecha de cierre, Observaciones.
+- Otros campos: Ubicacion fisica, Link Drive, Nro. Tramite ANSES, Resultado, Fecha de cierre, Observaciones.
+
+**Regla especial de claves ANSES/Fiscal:**
+
+- **Clave Mi ANSES** y **Clave Fiscal** solo se muestran cuando la **Rama = Previsional**.
+- En otras ramas, esos campos permanecen ocultos para simplificar la carga.
 
 **Otras pestañas** (dentro de la misma carpeta):
 

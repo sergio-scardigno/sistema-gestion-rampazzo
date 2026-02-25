@@ -4,7 +4,7 @@ import logging
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QMessageBox, QFrame,
-    QCompleter, QComboBox, QScrollArea
+    QCompleter, QComboBox, QScrollArea, QWidget
 )
 from PySide6.QtCore import Qt, QDate, QRegularExpression, QStringListModel
 from PySide6.QtGui import QFont, QRegularExpressionValidator

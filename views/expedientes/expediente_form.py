@@ -1,10 +1,11 @@
 """Formulario de alta/edicion de Carpeta."""
+import json
 import logging
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox,
-    QTabWidget, QWidget, QCompleter, QScrollArea, QFrame
+    QTabWidget, QWidget, QCompleter, QScrollArea, QFrame, QCheckBox,
 )
 from PySide6.QtCore import Qt, QDate, QTimer
 from PySide6.QtGui import QFont
@@ -12,6 +13,7 @@ from PySide6.QtGui import QFont
 logger = logging.getLogger(__name__)
 
 from controllers.expediente_controller import ExpedienteController
+from views.widgets.rama_datos_widget import RamaDatosWidget
 from controllers.cliente_controller import ClienteController
 from controllers.tarea_controller import TareaController
 from controllers.turno_controller import TurnoController
@@ -286,7 +288,8 @@ class ExpedienteFormDialog(QDialog):
             "background-color: #2a2a2a; color: #c9a84c; font-weight: bold;"
             " font-size: 13px; padding: 4px 6px;"
         )
-        form.addRow("Clave Mi ANSES:", self._txt_clave_mi_anses)
+        self._lbl_clave_mi_anses = QLabel("Clave Mi ANSES:")
+        form.addRow(self._lbl_clave_mi_anses, self._txt_clave_mi_anses)
 
         self._txt_clave_fiscal = QLineEdit()
         self._txt_clave_fiscal.setPlaceholderText("Clave fiscal AFIP del cliente")
@@ -295,7 +298,11 @@ class ExpedienteFormDialog(QDialog):
             "background-color: #2a2a2a; color: #c9a84c; font-weight: bold;"
             " font-size: 13px; padding: 4px 6px;"
         )
-        form.addRow("Clave Fiscal:", self._txt_clave_fiscal)
+        self._lbl_clave_fiscal = QLabel("Clave Fiscal:")
+        form.addRow(self._lbl_clave_fiscal, self._txt_clave_fiscal)
+
+        # Ocultar claves por defecto (solo visibles para rama Previsional)
+        self._set_claves_visible(False)
 
         # ── Seccion: Tramite ──
         form.addRow(self._make_separator("TRAMITE"))
@@ -305,14 +312,52 @@ class ExpedienteFormDialog(QDialog):
             self._cmb_tipo.addItem(t)
         form.addRow("Tipo tramite *:", self._cmb_tipo)
 
-        self._txt_area = QLineEdit()
-        form.addRow("Area:", self._txt_area)
+        self._cmb_rama = QComboBox()
+        self._cmb_rama.addItem("")
+        for r in ExpedienteController.RAMAS:
+            self._cmb_rama.addItem(r)
+        self._cmb_rama.currentTextChanged.connect(self._on_rama_changed)
+        form.addRow("Rama:", self._cmb_rama)
+
+        self._cmb_subtipo = QComboBox()
+        self._cmb_subtipo.addItem("-- Seleccionar subtipo --")
+        self._cmb_subtipo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self._cmb_subtipo.setMinimumContentsLength(24)
+        self._cmb_subtipo.setMinimumWidth(240)
+        form.addRow("Subtipo:", self._cmb_subtipo)
 
         self._date_apertura = QDateEdit()
         self._date_apertura.setCalendarPopup(True)
         self._date_apertura.setDate(QDate.currentDate())
         self._date_apertura.setDisplayFormat("dd/MM/yyyy")
         form.addRow("Fecha apertura:", self._date_apertura)
+
+        # ── Seccion: Datos especificos de la rama ──
+        self._rama_separator = self._make_separator("DATOS ESPECIFICOS")
+        self._rama_separator.setVisible(False)
+        form.addRow(self._rama_separator)
+
+        self._rama_datos_container = QWidget()
+        self._rama_datos_layout = QVBoxLayout(self._rama_datos_container)
+        self._rama_datos_layout.setContentsMargins(0, 0, 0, 0)
+        self._rama_datos_widget: RamaDatosWidget | None = None
+        self._rama_datos_container.setVisible(False)
+        form.addRow(self._rama_datos_container)
+
+        # ── Seccion: Modulo Judicial ──
+        form.addRow(self._make_separator("MODULO JUDICIAL"))
+
+        self._chk_judicializado = QCheckBox("Caso judicializado")
+        self._chk_judicializado.toggled.connect(self._on_judicializado_changed)
+        form.addRow(self._chk_judicializado)
+
+        self._judicial_container = QWidget()
+        judicial_layout = QVBoxLayout(self._judicial_container)
+        judicial_layout.setContentsMargins(0, 0, 0, 0)
+        self._judicial_widget = RamaDatosWidget(ExpedienteController.CAMPOS_JUDICIAL)
+        judicial_layout.addWidget(self._judicial_widget)
+        self._judicial_container.setVisible(False)
+        form.addRow(self._judicial_container)
 
         # ── Seccion: Responsables ──
         form.addRow(self._make_separator("RESPONSABLES"))
@@ -364,9 +409,11 @@ class ExpedienteFormDialog(QDialog):
         # ── Seccion: Cierre ──
         form.addRow(self._make_separator("CIERRE"))
 
-        self._txt_resultado = QLineEdit()
-        self._txt_resultado.setPlaceholderText("Resultado de la carpeta (al cerrar)")
-        form.addRow("Resultado:", self._txt_resultado)
+        self._cmb_resultado = QComboBox()
+        self._cmb_resultado.addItem("-- Seleccionar resultado --", "")
+        for r in ["Favorable", "Parcial", "Desfavorable", "Acuerdo"]:
+            self._cmb_resultado.addItem(r, r)
+        form.addRow("Resultado:", self._cmb_resultado)
 
         self._date_cierre = QDateEdit()
         self._date_cierre.setCalendarPopup(True)
@@ -406,7 +453,37 @@ class ExpedienteFormDialog(QDialog):
             self._cmb_cliente.setCurrentIndex(idx)
         self._on_cliente_changed(self._cmb_cliente.currentIndex())
         self._cmb_tipo.setCurrentText(data.get("tipo_tramite", ""))
-        self._txt_area.setText(data.get("area", ""))
+
+        # Cargar rama y subtipo
+        rama = data.get("rama", "") or ""
+        if rama:
+            self._cmb_rama.setCurrentText(rama)
+        subtipo = data.get("subtipo", "") or ""
+        if subtipo:
+            self._cmb_subtipo.setCurrentText(subtipo)
+
+        # Cargar datos específicos de la rama
+        datos_rama = data.get("datos_rama")
+        if isinstance(datos_rama, str):
+            try:
+                datos_rama = json.loads(datos_rama)
+            except (json.JSONDecodeError, ValueError):
+                datos_rama = {}
+        if datos_rama and self._rama_datos_widget:
+            self._rama_datos_widget.set_data(datos_rama)
+
+        # Cargar módulo judicial
+        datos_judicial = data.get("datos_judicial")
+        if isinstance(datos_judicial, str):
+            try:
+                datos_judicial = json.loads(datos_judicial)
+            except (json.JSONDecodeError, ValueError):
+                datos_judicial = {}
+        if datos_judicial and isinstance(datos_judicial, dict):
+            self._chk_judicializado.setChecked(True)
+            self._judicial_widget.set_data(datos_judicial)
+        else:
+            self._chk_judicializado.setChecked(False)
         fa = data.get("fecha_apertura", "")
         if fa and len(fa) >= 10:
             self._date_apertura.setDate(QDate.fromString(fa[:10], "yyyy-MM-dd"))
@@ -430,7 +507,14 @@ class ExpedienteFormDialog(QDialog):
         self._txt_ubicacion.setText(data.get("ubicacion_fisica", ""))
         self._txt_link_drive.setText(data.get("link_drive", ""))
         self._txt_nro_exp.setText(data.get("numero_expediente_anses", ""))
-        self._txt_resultado.setText(data.get("resultado", ""))
+        resultado = data.get("resultado", "") or ""
+        idx_res = self._cmb_resultado.findData(resultado)
+        if idx_res >= 0:
+            self._cmb_resultado.setCurrentIndex(idx_res)
+        elif resultado:
+            # Compatibilidad con resultados historicos de texto libre
+            self._cmb_resultado.addItem(resultado, resultado)
+            self._cmb_resultado.setCurrentIndex(self._cmb_resultado.count() - 1)
         fc = data.get("fecha_cierre", "")
         if fc and len(fc) >= 10:
             self._date_cierre.setDate(QDate.fromString(fc[:10], "yyyy-MM-dd"))
@@ -686,11 +770,51 @@ class ExpedienteFormDialog(QDialog):
         dlg = AuditDetailDialog(audit_id, parent=self)
         dlg.exec()
 
+    def _set_claves_visible(self, visible: bool):
+        """Muestra u oculta los campos de Clave Mi ANSES y Clave Fiscal."""
+        self._lbl_clave_mi_anses.setVisible(visible)
+        self._txt_clave_mi_anses.setVisible(visible)
+        self._lbl_clave_fiscal.setVisible(visible)
+        self._txt_clave_fiscal.setVisible(visible)
+
+    def _on_rama_changed(self, rama: str):
+        """Actualiza subtipos disponibles y regenera los campos específicos de la rama."""
+        self._cmb_subtipo.blockSignals(True)
+        self._cmb_subtipo.clear()
+        self._cmb_subtipo.addItem("-- Seleccionar subtipo --")
+        subtipos = ExpedienteController.SUBTIPOS_POR_RAMA.get(rama, [])
+        for s in subtipos:
+            self._cmb_subtipo.addItem(s)
+        self._cmb_subtipo.blockSignals(False)
+
+        # Claves ANSES/Fiscal solo para rama Previsional
+        self._set_claves_visible(rama == "Previsional")
+
+        # Regenerar widget de datos específicos
+        if self._rama_datos_widget:
+            self._rama_datos_layout.removeWidget(self._rama_datos_widget)
+            self._rama_datos_widget.deleteLater()
+            self._rama_datos_widget = None
+
+        campos = ExpedienteController.CAMPOS_POR_RAMA.get(rama, [])
+        if campos:
+            self._rama_datos_widget = RamaDatosWidget(campos)
+            self._rama_datos_layout.addWidget(self._rama_datos_widget)
+            self._rama_datos_container.setVisible(True)
+            self._rama_separator.setVisible(True)
+        else:
+            self._rama_datos_container.setVisible(False)
+            self._rama_separator.setVisible(False)
+
+    def _on_judicializado_changed(self, checked: bool):
+        """Muestra u oculta los campos del módulo judicial."""
+        self._judicial_container.setVisible(checked)
+
     def _on_estado_changed(self, estado: str):
         """Habilitar campos de cierre solo cuando el estado es Cerrado o Archivado."""
         es_cierre = estado in ExpedienteController.ESTADOS_CIERRE
         self._date_cierre.setEnabled(es_cierre)
-        self._txt_resultado.setEnabled(es_cierre)
+        self._cmb_resultado.setEnabled(es_cierre)
 
     def _save(self):
         resp_username = self._cmb_responsable.currentData() or ""
@@ -705,10 +829,10 @@ class ExpedienteFormDialog(QDialog):
 
         # Regla de negocio: cierre formal requiere resultado
         if estado in ExpedienteController.ESTADOS_CIERRE:
-            if not self._txt_resultado.text().strip():
+            if not (self._cmb_resultado.currentData() or "").strip():
                 QMessageBox.warning(
                     self, "Atencion",
-                    "Para cerrar una carpeta debe ingresar un resultado."
+                    "Para cerrar una carpeta debe seleccionar un resultado."
                 )
                 return
 
@@ -734,10 +858,28 @@ class ExpedienteFormDialog(QDialog):
         clave_fiscal = self._txt_clave_fiscal.text().strip()
         cliente_id = self._cmb_cliente.currentData() or ""
 
+        # Recolectar datos de rama
+        rama = self._cmb_rama.currentText()
+        subtipo = self._cmb_subtipo.currentText()
+        if subtipo == "-- Seleccionar subtipo --":
+            subtipo = ""
+        datos_rama = {}
+        if self._rama_datos_widget:
+            datos_rama = self._rama_datos_widget.get_data()
+
+        # Recolectar datos judiciales
+        datos_judicial = {}
+        if self._chk_judicializado.isChecked():
+            datos_judicial = self._judicial_widget.get_data()
+
         data = {
             "id_cliente": cliente_id,
             "tipo_tramite": self._cmb_tipo.currentText(),
-            "area": self._txt_area.text().strip(),
+            "area": rama,
+            "rama": rama,
+            "subtipo": subtipo,
+            "datos_rama": datos_rama,
+            "datos_judicial": datos_judicial if datos_judicial else "",
             "fecha_apertura": self._date_apertura.date().toString("yyyy-MM-dd"),
             "responsable": responsable_legible.upper(),
             "responsable_username": resp_username,
@@ -755,7 +897,7 @@ class ExpedienteFormDialog(QDialog):
 
         # Agregar datos de cierre formal si aplica
         if estado in ExpedienteController.ESTADOS_CIERRE:
-            data["resultado"] = self._txt_resultado.text().strip()
+            data["resultado"] = (self._cmb_resultado.currentData() or "").strip()
             data["fecha_cierre"] = self._date_cierre.date().toString("yyyy-MM-dd")
 
         # Sincronizar claves al cliente (sin abortar si falla)

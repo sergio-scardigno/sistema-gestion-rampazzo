@@ -195,7 +195,11 @@ Alta, baja y modificacion de clientes del estudio. Es el punto de entrada de tod
 
 Modulo central del sistema. Cada carpeta representa un tramite o caso legal:
 
-- **Datos principales:** Tipo de tramite (Jubilacion, Retiro por salud, Laboral, Amparo, Pension, PUAM, RTI, Reajuste, Otro), responsable, estado, prioridad, numero de tramite ANSES.
+- **Clasificacion por rama:** Rama + Subtipo (dependiente de la rama) para ordenar el trabajo juridico.
+- **Datos principales:** Tipo de tramite, responsable, estado, prioridad, numero de tramite ANSES.
+- **Campos dinamicos por rama:** el formulario activa campos especificos segun la rama seleccionada.
+- **Modulo Judicial comun:** activable con checkbox para cargar fuero, juzgado, secretaria, numero de expediente, provincia, instancia, monto reclamado y etapa procesal.
+- **Regla de claves ANSES/AFIP:** Clave Mi ANSES y Clave Fiscal solo visibles para rama Previsional.
 - **Pestañas integradas** (en la vista de edicion):
   - Tareas asociadas a la carpeta
   - Turnos ANSES vinculados

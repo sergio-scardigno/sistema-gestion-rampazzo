@@ -307,10 +307,12 @@ class AuditListView(QWidget):
             accion=accion,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
+            limit=200,
+            resumen_detallado=False,
         )
 
         self._populate_log_table(data)
-        self._lbl_log_count.setText(f"{len(data)} registros encontrados")
+        self._lbl_log_count.setText(f"{len(data)} registros encontrados (max 200)")
 
     def _clear_filters(self):
         """Limpia todos los filtros."""
@@ -515,8 +517,9 @@ class AuditListView(QWidget):
         fig, ax = plt.subplots(figsize=(5, 3.5))
         fechas = [d["fecha"][5:] if d["fecha"] else "" for d in data]  # MM-DD
         cantidades = [d["cantidad"] for d in data]
-        ax.plot(fechas, cantidades, color="#c9a84c", linewidth=2, marker="o", markersize=4)
-        ax.fill_between(range(len(fechas)), cantidades, alpha=0.15, color="#c9a84c")
+        x = list(range(len(fechas)))
+        ax.plot(x, cantidades, color="#c9a84c", linewidth=2, marker="o", markersize=4)
+        ax.fill_between(x, cantidades, alpha=0.15, color="#c9a84c")
         ax.set_ylabel("Acciones", color="#4a4a4a")
         ax.set_title("Actividad Diaria (30 dias)", color="#1a1a1a", fontweight="bold", fontsize=11)
         ax.tick_params(colors="#4a4a4a")
@@ -525,6 +528,9 @@ class AuditListView(QWidget):
             step = max(1, len(fechas) // 6)
             ax.set_xticks(range(0, len(fechas), step))
             ax.set_xticklabels([fechas[i] for i in range(0, len(fechas), step)])
+        else:
+            ax.set_xticks(x)
+            ax.set_xticklabels(fechas)
         plt.xticks(rotation=45, ha="right")
         fig.tight_layout()
         self._chart_labels["diaria"].setPixmap(

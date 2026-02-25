@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS expedientes (
     id_cliente TEXT,
     tipo_tramite TEXT,
     area TEXT,
+    rama TEXT,
+    subtipo TEXT,
+    datos_rama TEXT,
+    datos_judicial TEXT,
     fecha_apertura TEXT,
     responsable TEXT,
     responsable_secundario TEXT,
@@ -349,6 +353,13 @@ def init_db():
         except sqlite3.OperationalError:
             conn.execute(f"ALTER TABLE expedientes ADD COLUMN {col} TEXT")
             conn.commit()
+    # Migracion: agregar columnas de ramas y modulo judicial a expedientes
+    for col in ["rama", "subtipo", "datos_rama", "datos_judicial"]:
+        try:
+            conn.execute(f"SELECT {col} FROM expedientes LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute(f"ALTER TABLE expedientes ADD COLUMN {col} TEXT")
+            conn.commit()
     # Indice unico para evitar carpetas duplicadas
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_numero_carpeta "
@@ -379,6 +390,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_movimientos_id_cliente ON movimientos(id_cliente)",
         "CREATE INDEX IF NOT EXISTS idx_turnos_id_cliente ON turnos(id_cliente)",
         "CREATE INDEX IF NOT EXISTS idx_audit_log_coleccion_doc ON audit_log(coleccion, documento_id)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_usuario_timestamp ON audit_log(usuario, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_coleccion_accion_timestamp ON audit_log(coleccion, accion, timestamp)",
         # Indices para busqueda rapida de clientes por DNI, nombre y CUIL
         "CREATE INDEX IF NOT EXISTS idx_clientes_dni ON clientes(dni)",
         "CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre_completo)",

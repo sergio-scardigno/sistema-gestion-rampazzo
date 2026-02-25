@@ -70,6 +70,8 @@ class ReportesView(QWidget):
 
         # Tabs de reportes
         tabs = QTabWidget()
+        self._tabs = tabs
+        self._rendered_tabs: set[int] = set()
 
         # ── Tab 1: Graficos principales ──
         tab_graficos = QWidget()
@@ -137,6 +139,7 @@ class ReportesView(QWidget):
         self._layout.addWidget(tabs)
         scroll.setWidget(content)
         outer.addWidget(scroll)
+        self._tabs.currentChanged.connect(self._on_tab_changed)
 
     def _create_chart_frame(self, key: str, title_text: str) -> QFrame:
         frame = QFrame()
@@ -156,19 +159,33 @@ class ReportesView(QWidget):
     def refresh(self):
         if not self._has_access:
             return
-        self._render_chart_por_tipo()
-        self._render_chart_por_responsable()
-        self._render_chart_por_procedencia()
-        if self._has_eco:
-            self._render_chart_economico()
-        # Nuevas metricas
-        self._render_chart_tiempo_resolucion()
-        self._render_chart_retrasos_etapa()
-        self._render_chart_turnos_vs_casos()
-        self._render_chart_clientes_sin_carpeta()
-        self._render_chart_tiempo_estado_responsable()
-        self._render_chart_aperturas_cierres()
-        self._render_chart_indicadores_humanos()
+        # Carga diferida: renderizar solo la pestaña activa.
+        self._rendered_tabs.clear()
+        self._render_tab(self._tabs.currentIndex())
+
+    def _on_tab_changed(self, index: int):
+        self._render_tab(index)
+
+    def _render_tab(self, index: int):
+        if index in self._rendered_tabs:
+            return
+        self._rendered_tabs.add(index)
+
+        if index == 0:  # Graficos principales
+            self._render_chart_por_tipo()
+            self._render_chart_por_responsable()
+            self._render_chart_por_procedencia()
+            if self._has_eco:
+                self._render_chart_economico()
+        elif index == 1:  # Tiempos y retrasos
+            self._render_chart_tiempo_resolucion()
+            self._render_chart_retrasos_etapa()
+            self._render_chart_turnos_vs_casos()
+            self._render_chart_clientes_sin_carpeta()
+            self._render_chart_tiempo_estado_responsable()
+            self._render_chart_aperturas_cierres()
+        elif index == 2:  # Indicadores humanos
+            self._render_chart_indicadores_humanos()
 
     # Paleta de colores para graficos (dorado/gris/negro)
     CHART_COLORS = [

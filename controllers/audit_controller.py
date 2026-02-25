@@ -30,7 +30,8 @@ class AuditController:
     @staticmethod
     def get_all(usuario: str = "", coleccion: str = "", accion: str = "",
                 fecha_desde: str = "", fecha_hasta: str = "",
-                limit: int = 500) -> list[dict]:
+                limit: int = 200,
+                resumen_detallado: bool = False) -> list[dict]:
         """Log completo con filtros opcionales."""
         conditions = []
         params = []
@@ -61,11 +62,15 @@ class AuditController:
             limit=limit,
         )
 
-        # Enriquecer cada registro con resumen legible
+        # Enriquecer cada registro con resumen legible.
+        # En listados grandes usamos resumen rapido para mejorar rendimiento.
         for row in rows:
             row["accion_label"] = ACCION_LABELS.get(row.get("accion", ""), row.get("accion", ""))
             row["coleccion_label"] = COLECCION_LABELS.get(row.get("coleccion", ""), row.get("coleccion", ""))
-            row["resumen"] = AuditController._generar_resumen(row)
+            if resumen_detallado:
+                row["resumen"] = AuditController._generar_resumen(row)
+            else:
+                row["resumen"] = AuditController._generar_resumen_rapido(row)
 
         return rows
 
@@ -279,6 +284,19 @@ class AuditController:
                 return f"Editado en {coleccion}: {len(campos)} campos"
             return f"Editado en {coleccion}"
         return accion
+
+    @staticmethod
+    def _generar_resumen_rapido(row: dict) -> str:
+        """Resumen liviano para tablas (evita parsear JSON pesado)."""
+        accion = row.get("accion", "")
+        coleccion = COLECCION_LABELS.get(row.get("coleccion", ""), row.get("coleccion", ""))
+        if accion == "create":
+            return f"Nuevo registro en {coleccion}"
+        if accion == "delete":
+            return f"Eliminado de {coleccion}"
+        if accion == "update":
+            return f"Editado en {coleccion}"
+        return accion or "Accion"
 
 
 # ── Helpers privados ──

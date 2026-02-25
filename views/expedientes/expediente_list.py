@@ -12,6 +12,8 @@ from controllers.expediente_controller import ExpedienteController
 COLUMNS = [
     ("id_expediente", "ID"),
     ("numero_carpeta_cliente", "N° Carpeta Cliente"),
+    ("rama", "Rama"),
+    ("subtipo", "Subtipo"),
     ("tipo_tramite", "Tipo Tramite"),
     ("estado", "Estado"),
     ("responsable", "Responsable"),
@@ -35,6 +37,14 @@ class ExpedienteListView(QWidget):
         title.setFont(QFont("Lato", 17, QFont.Weight.Bold))
         header.addWidget(title)
         header.addStretch()
+
+        # Filtro rama
+        self._cmb_rama = QComboBox()
+        self._cmb_rama.addItem("Todas las ramas", "")
+        for r in ExpedienteController.RAMAS:
+            self._cmb_rama.addItem(r, r)
+        self._cmb_rama.currentIndexChanged.connect(self.refresh)
+        header.addWidget(self._cmb_rama)
 
         # Filtro estado
         self._cmb_estado = QComboBox()
@@ -71,14 +81,19 @@ class ExpedienteListView(QWidget):
 
     def refresh(self):
         estado = self._cmb_estado.currentData()
+        rama = self._cmb_rama.currentData()
+        conditions: list[str] = []
+        params: tuple = ()
         if estado:
-            data = ExpedienteController.get_scoped_with_cliente(
-                where="e.estado = ?", params=(estado,), order_by="e.fecha_apertura DESC"
-            )
-        else:
-            data = ExpedienteController.get_scoped_with_cliente(
-                order_by="e.fecha_apertura DESC"
-            )
+            conditions.append("e.estado = ?")
+            params += (estado,)
+        if rama:
+            conditions.append("e.rama = ?")
+            params += (rama,)
+        where = " AND ".join(conditions)
+        data = ExpedienteController.get_scoped_with_cliente(
+            where=where, params=params, order_by="e.fecha_apertura DESC"
+        )
         self._calcular_dias(data)
         self._table.set_data(data)
 

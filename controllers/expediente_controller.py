@@ -23,6 +23,161 @@ class ExpedienteController(BaseController):
     ESTADOS_CIERRE = ["Cerrado", "Archivado"]
     PRIORIDADES = ["Alta", "Normal", "Baja"]
 
+    # ── Ramas jurídicas ──
+
+    RAMAS = ["Laboral", "ART", "Previsional", "Amparos", "Migraciones", "Familia", "Daños"]
+
+    SUBTIPOS_POR_RAMA = {
+        "Laboral": [
+            "Despido sin causa", "Despido indirecto", "Trabajo no registrado",
+            "Diferencias salariales", "Enfermedad profesional",
+            "Accidente laboral", "Ejecucion de sentencia laboral", "Amparo laboral",
+        ],
+        "ART": [
+            "Accidente in itinere", "Accidente en establecimiento",
+            "Enfermedad profesional", "Rechazo ART",
+            "Revision Comision Medica", "Apelacion judicial",
+            "Determinacion de incapacidad", "Ejecucion",
+        ],
+        "Previsional": [
+            "Jubilacion ordinaria", "Jubilacion anticipada",
+            "Retiro por invalidez", "Pension", "Reajuste",
+            "Art. 9 Ley 24.463", "Tope docente",
+            "Reconocimiento de servicios", "Moratoria",
+        ],
+        "Amparos": [
+            "Amparo por mora administrativa", "Amparo por salud",
+            "Amparo previsional", "Amparo contra ART",
+            "Amparo por cobertura medica",
+        ],
+        "Migraciones": [
+            "Ciudadania argentina", "Residencia permanente",
+            "Residencia temporaria", "Recurso denegatoria",
+            "Carta ciudadania judicial",
+        ],
+        "Familia": [
+            "Alimentos", "Regimen de comunicacion", "Cuidado personal",
+            "Divorcio", "Compensacion economica",
+        ],
+        "Daños": [
+            "Accidente de transito", "Daño material",
+            "Daño moral", "Mala praxis",
+        ],
+    }
+
+    CAMPOS_POR_RAMA = {
+        "Laboral": [
+            {"key": "empresa_demandada", "label": "Empresa demandada", "tipo": "text"},
+            {"key": "cuit_empresa", "label": "CUIT empresa", "tipo": "text"},
+            {"key": "fecha_ingreso_laboral", "label": "Fecha ingreso", "tipo": "date"},
+            {"key": "fecha_egreso", "label": "Fecha egreso", "tipo": "date"},
+            {"key": "tipo_distracto", "label": "Tipo de distracto", "tipo": "text"},
+            {"key": "categoria", "label": "Categoria", "tipo": "text"},
+            {"key": "convenio_colectivo", "label": "Convenio colectivo", "tipo": "text"},
+            {"key": "jornada", "label": "Jornada", "tipo": "text"},
+            {"key": "salario_mensual", "label": "Salario mensual", "tipo": "number"},
+            {"key": "antiguedad", "label": "Antiguedad", "tipo": "text"},
+            {"key": "lugar_prestacion", "label": "Lugar de prestacion", "tipo": "text"},
+            {"key": "carta_documento_enviada", "label": "Carta documento enviada", "tipo": "boolean"},
+            {"key": "fecha_carta_documento", "label": "Fecha carta documento", "tipo": "date"},
+            {"key": "seclo_iniciado", "label": "SECLO iniciado", "tipo": "boolean"},
+            {"key": "fecha_seclo", "label": "Fecha SECLO", "tipo": "date"},
+            {"key": "acuerdo_seclo", "label": "Acuerdo SECLO", "tipo": "boolean"},
+            {"key": "monto_acuerdo_seclo", "label": "Monto acuerdo SECLO", "tipo": "number"},
+        ],
+        "ART": [
+            {"key": "art_interviniente", "label": "ART interviniente", "tipo": "text"},
+            {"key": "fecha_siniestro", "label": "Fecha siniestro", "tipo": "date"},
+            {"key": "tipo_accidente", "label": "Tipo accidente", "tipo": "combo",
+             "opciones": ["In itinere", "En establecimiento", "Enfermedad profesional"]},
+            {"key": "denuncia_realizada", "label": "Denuncia realizada", "tipo": "boolean"},
+            {"key": "fecha_denuncia", "label": "Fecha denuncia", "tipo": "date"},
+            {"key": "comision_medica", "label": "Comision medica", "tipo": "text"},
+            {"key": "dictamen", "label": "Dictamen", "tipo": "text"},
+            {"key": "porcentaje_incapacidad", "label": "% Incapacidad", "tipo": "number"},
+            {"key": "baremo_aplicado", "label": "Baremo aplicado", "tipo": "text"},
+            {"key": "ingreso_base_mensual", "label": "Ingreso base mensual", "tipo": "number"},
+            {"key": "monto_indemnizacion_estimado", "label": "Monto indemnizacion estimado", "tipo": "number"},
+            {"key": "rechazo_art", "label": "Rechazo ART", "tipo": "boolean"},
+        ],
+        "Previsional": [
+            {"key": "historia_laboral_cargada", "label": "Historia laboral cargada", "tipo": "boolean"},
+            {"key": "anios_con_aportes", "label": "Años con aportes", "tipo": "number"},
+            {"key": "servicios_insalubres", "label": "Servicios insalubres", "tipo": "boolean"},
+            {"key": "regimen_especial", "label": "Regimen especial", "tipo": "text"},
+            {"key": "fecha_solicitud_anses", "label": "Fecha solicitud ANSES", "tipo": "date"},
+            {"key": "estado_tramite_anses", "label": "Estado tramite ANSES", "tipo": "combo",
+             "opciones": ["Iniciado", "En analisis", "Observado", "Aprobado", "Rechazado"]},
+            {"key": "resolucion_dictada", "label": "Resolucion dictada", "tipo": "text"},
+            {"key": "haber_inicial", "label": "Haber inicial", "tipo": "number"},
+            {"key": "diferencias_estimadas", "label": "Diferencias estimadas", "tipo": "number"},
+        ],
+        "Amparos": [
+            {"key": "derecho_afectado", "label": "Derecho afectado", "tipo": "text"},
+            {"key": "urgencia_amparo", "label": "Urgencia", "tipo": "combo",
+             "opciones": ["Alta", "Media", "Baja"]},
+            {"key": "cautelar_solicitada", "label": "Medida cautelar solicitada", "tipo": "boolean"},
+            {"key": "fecha_interposicion", "label": "Fecha interposicion", "tipo": "date"},
+            {"key": "resolucion_cautelar", "label": "Resolucion cautelar", "tipo": "text"},
+            {"key": "resultado_amparo", "label": "Resultado", "tipo": "text"},
+        ],
+        "Migraciones": [
+            {"key": "nacionalidad", "label": "Nacionalidad", "tipo": "text"},
+            {"key": "fecha_ingreso_pais", "label": "Fecha ingreso al pais", "tipo": "date"},
+            {"key": "tipo_residencia", "label": "Tipo residencia", "tipo": "combo",
+             "opciones": ["Temporaria", "Permanente", "Precaria", "Irregular"]},
+            {"key": "turno_dnm", "label": "Turno DNM", "tipo": "text"},
+            {"key": "estado_tramite_migratorio", "label": "Estado tramite", "tipo": "combo",
+             "opciones": ["Iniciado", "En proceso", "Observado", "Aprobado", "Rechazado"]},
+            {"key": "documentacion_pendiente", "label": "Documentacion pendiente", "tipo": "text"},
+        ],
+        "Familia": [
+            {"key": "tipo_conflicto_familia", "label": "Tipo conflicto", "tipo": "combo",
+             "opciones": ["Alimentos", "Regimen de comunicacion", "Cuidado personal",
+                          "Divorcio", "Compensacion economica"]},
+            {"key": "hijos_cantidad", "label": "Cantidad de hijos", "tipo": "number"},
+            {"key": "hijos_edades", "label": "Edades hijos", "tipo": "text"},
+            {"key": "ingresos_parte_actora", "label": "Ingresos parte actora", "tipo": "number"},
+            {"key": "ingresos_parte_demandada", "label": "Ingresos parte demandada", "tipo": "number"},
+            {"key": "conviven", "label": "Conviven actualmente", "tipo": "boolean"},
+            {"key": "acuerdo_previo", "label": "Acuerdo previo existente", "tipo": "boolean"},
+            {"key": "violencia", "label": "Situacion de violencia", "tipo": "boolean"},
+            {"key": "mediacion_realizada", "label": "Mediacion realizada", "tipo": "boolean"},
+            {"key": "resultado_mediacion", "label": "Resultado mediacion", "tipo": "text"},
+        ],
+        "Daños": [
+            {"key": "fecha_accidente", "label": "Fecha del accidente", "tipo": "date"},
+            {"key": "lugar_accidente", "label": "Lugar del accidente", "tipo": "text"},
+            {"key": "tipo_vehiculo", "label": "Tipo de vehiculo", "tipo": "text"},
+            {"key": "intervencion_policial", "label": "Intervencion policial", "tipo": "boolean"},
+            {"key": "testigos", "label": "Testigos", "tipo": "boolean"},
+            {"key": "seguro_propio", "label": "Seguro propio", "tipo": "text"},
+            {"key": "seguro_tercero", "label": "Seguro del tercero", "tipo": "text"},
+            {"key": "lesiones", "label": "Lesiones sufridas", "tipo": "text"},
+            {"key": "porcentaje_incapacidad_danos", "label": "% Incapacidad", "tipo": "number"},
+            {"key": "dano_material", "label": "Daño material estimado", "tipo": "number"},
+            {"key": "dano_moral", "label": "Daño moral estimado", "tipo": "number"},
+            {"key": "gastos_medicos", "label": "Gastos medicos", "tipo": "number"},
+            {"key": "reclamo_aseguradora", "label": "Reclamo aseguradora presentado", "tipo": "boolean"},
+            {"key": "oferta_aseguradora", "label": "Oferta aseguradora", "tipo": "number"},
+        ],
+    }
+
+    CAMPOS_JUDICIAL = [
+        {"key": "fuero", "label": "Fuero", "tipo": "combo",
+         "opciones": ["Federal", "Nacional", "Provincial"]},
+        {"key": "juzgado", "label": "Juzgado", "tipo": "text"},
+        {"key": "secretaria", "label": "Secretaria", "tipo": "text"},
+        {"key": "numero_expediente_judicial", "label": "N° Expediente", "tipo": "text"},
+        {"key": "provincia", "label": "Provincia", "tipo": "text"},
+        {"key": "instancia", "label": "Instancia", "tipo": "combo",
+         "opciones": ["Primera instancia", "Camara", "CSJN"]},
+        {"key": "monto_reclamado", "label": "Monto reclamado", "tipo": "number"},
+        {"key": "etapa_procesal", "label": "Etapa procesal", "tipo": "combo",
+         "opciones": ["Demanda presentada", "Traslado", "Contestacion", "Prueba",
+                      "Alegatos", "Sentencia", "Ejecucion", "Cobro"]},
+    ]
+
     # ── Override create/update para registrar historial de estados ──
 
     @classmethod
@@ -113,8 +268,8 @@ class ExpedienteController(BaseController):
     @classmethod
     def search_expedientes(cls, text: str) -> list[dict]:
         return cls.search(text, [
-            "id_expediente", "tipo_tramite", "estado",
-            "responsable", "numero_expediente_anses", "observaciones"
+            "id_expediente", "tipo_tramite", "rama", "subtipo",
+            "estado", "responsable", "numero_expediente_anses", "observaciones"
         ])
 
     @classmethod
@@ -213,6 +368,8 @@ class ExpedienteController(BaseController):
             search_cond = (
                 "(CAST(e.id_expediente AS TEXT) LIKE ?"
                 " OR e.tipo_tramite LIKE ?"
+                " OR e.rama LIKE ?"
+                " OR e.subtipo LIKE ?"
                 " OR e.numero_expediente_anses LIKE ?"
                 " OR e.responsable LIKE ?"
                 " OR c.nombre_completo LIKE ?"
@@ -220,7 +377,7 @@ class ExpedienteController(BaseController):
                 " OR c.numero_carpeta LIKE ?)"
             )
             conditions.append(search_cond)
-            all_params += (text_param,) * 7
+            all_params += (text_param,) * 9
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
         if order_by:

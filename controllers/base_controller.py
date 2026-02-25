@@ -124,9 +124,9 @@ class BaseController:
 
     @classmethod
     def _deserialize(cls, row: dict):
-        """Deserializar campos JSON (telefonos, etc)."""
+        """Deserializar campos JSON (telefonos, datos_rama, etc)."""
         for k, v in row.items():
-            if isinstance(v, str) and v.startswith("["):
+            if isinstance(v, str) and v and v[0] in ("[", "{"):
                 try:
                     row[k] = json.loads(v)
                 except (json.JSONDecodeError, ValueError):
