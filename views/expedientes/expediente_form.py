@@ -19,6 +19,7 @@ from controllers.tarea_controller import TareaController
 from controllers.turno_controller import TurnoController
 from controllers.comunicacion_controller import ComunicacionController
 from controllers.documento_controller import DocumentoController
+from controllers.escrito_controller import EscritoController
 from controllers.movimiento_controller import MovimientoController
 from controllers.audit_controller import AuditController
 from core.lock_manager import LockManager
@@ -83,6 +84,7 @@ class ExpedienteFormDialog(QDialog):
 
         tabs = QTabWidget()
         self._tabs = tabs
+        self._tab_map: dict[int, str] = {}
 
         # Tab 0 – Datos (con scroll para pantallas chicas)
         datos_scroll = QScrollArea()
@@ -158,10 +160,33 @@ class ExpedienteFormDialog(QDialog):
         docs_layout.addWidget(btn_new_doc, alignment=Qt.AlignmentFlag.AlignLeft)
         tabs.addTab(docs_widget, "Documentos")
 
-        # Tab Movimientos (solo si el rol tiene permiso economico)
         session = Session.get()
+        self._can_read_escritos = tiene_permiso(session.rol, "escritos.read")
+        self._can_edit_escritos = tiene_permiso(session.rol, "escritos.update")
+        self._can_create_escritos = tiene_permiso(session.rol, "escritos.create")
+
+        # Tab Escritos (solo con permiso de lectura)
+        if self._can_read_escritos:
+            escritos_widget = QWidget()
+            escritos_layout = QVBoxLayout(escritos_widget)
+            self._escritos_table = FilterableTable([
+                ("titulo", "Titulo"),
+                ("fecha_creacion", "Fecha"),
+                ("responsable", "Responsable"),
+            ])
+            if self._can_edit_escritos:
+                self._escritos_table.row_double_clicked.connect(self._edit_escrito)
+            escritos_layout.addWidget(self._escritos_table)
+            if self._can_create_escritos:
+                btn_new_escrito = QPushButton("+ Nuevo Escrito")
+                btn_new_escrito.clicked.connect(self._new_escrito)
+                escritos_layout.addWidget(btn_new_escrito, alignment=Qt.AlignmentFlag.AlignLeft)
+            idx_escritos = tabs.count()
+            tabs.addTab(escritos_widget, "Escritos")
+            self._tab_map[idx_escritos] = "escritos"
+
+        # Tab Movimientos (solo si el rol tiene permiso economico)
         self._has_movimientos = tiene_permiso(session.rol, "movimientos.read")
-        self._tab_map: dict[int, str] = {}
 
         if self._has_movimientos:
             movs_widget = QWidget()
@@ -558,7 +583,9 @@ class ExpedienteFormDialog(QDialog):
         else:
             # Tabs dinamicos (movimientos, tiempos, historial)
             tab_name = self._tab_map.get(index)
-            if tab_name == "movimientos":
+            if tab_name == "escritos":
+                self._load_tab_escritos()
+            elif tab_name == "movimientos":
                 self._load_tab_movs()
             elif tab_name == "tiempos":
                 self._load_tab_tiempos()
@@ -580,6 +607,10 @@ class ExpedienteFormDialog(QDialog):
     def _load_tab_docs(self):
         docs = DocumentoController.get_by_expediente(self._id)
         self._docs_table.set_data(docs)
+
+    def _load_tab_escritos(self):
+        escritos = EscritoController.get_by_expediente(self._id)
+        self._escritos_table.set_data(escritos)
 
     def _load_tab_movs(self):
         movs = MovimientoController.get_by_expediente(self._id)
@@ -744,6 +775,24 @@ class ExpedienteFormDialog(QDialog):
         dlg = DocumentoFormDialog(doc_id=doc_id, parent=self)
         if dlg.exec():
             self._load_tab_docs()
+
+    def _new_escrito(self):
+        """Crear un escrito desde un modelo y abrir editor rich text."""
+        from views.escritos.modelo_selector import ModeloSelectorDialog
+        dlg = ModeloSelectorDialog(
+            id_expediente=self._id,
+            rama=self._cmb_rama.currentText().strip(),
+            parent=self,
+        )
+        if dlg.exec():
+            self._load_tab_escritos()
+
+    def _edit_escrito(self, escrito_id: str):
+        """Editar escrito existente."""
+        from views.escritos.escrito_editor import EscritoEditorDialog
+        dlg = EscritoEditorDialog(escrito_id, parent=self)
+        if dlg.exec():
+            self._load_tab_escritos()
 
     def _new_movimiento(self):
         """Crear un nuevo movimiento pre-vinculado a este expediente y cliente."""

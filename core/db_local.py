@@ -186,6 +186,34 @@ CREATE TABLE IF NOT EXISTS documentos (
     created_by_machine TEXT
 );
 
+CREATE TABLE IF NOT EXISTS modelos_escrito (
+    _id TEXT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    descripcion TEXT DEFAULT '',
+    rama TEXT DEFAULT '',
+    contenido_html TEXT NOT NULL,
+    activo INTEGER DEFAULT 1,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT
+);
+
+CREATE TABLE IF NOT EXISTS escritos (
+    _id TEXT PRIMARY KEY,
+    id_expediente TEXT NOT NULL,
+    id_modelo TEXT DEFAULT '',
+    titulo TEXT NOT NULL,
+    contenido_html TEXT NOT NULL,
+    fecha_creacion TEXT,
+    responsable TEXT DEFAULT '',
+    responsable_username TEXT DEFAULT '',
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT
+);
+
 CREATE TABLE IF NOT EXISTS turnos (
     _id TEXT PRIMARY KEY,
     id_turno INTEGER,
@@ -385,6 +413,8 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_tareas_id_expediente ON tareas(id_expediente)",
         "CREATE INDEX IF NOT EXISTS idx_turnos_id_expediente ON turnos(id_expediente)",
         "CREATE INDEX IF NOT EXISTS idx_documentos_id_expediente ON documentos(id_expediente)",
+        "CREATE INDEX IF NOT EXISTS idx_escritos_id_expediente ON escritos(id_expediente)",
+        "CREATE INDEX IF NOT EXISTS idx_modelos_escrito_rama ON modelos_escrito(rama)",
         "CREATE INDEX IF NOT EXISTS idx_comunicaciones_id_expediente ON comunicaciones(id_expediente)",
         "CREATE INDEX IF NOT EXISTS idx_movimientos_id_expediente ON movimientos(id_expediente)",
         "CREATE INDEX IF NOT EXISTS idx_movimientos_id_cliente ON movimientos(id_cliente)",

@@ -44,6 +44,7 @@ PERMISOS: dict[str, list[str]] = {
         "turnos.*",
         "comunicaciones.*",
         "documentos.read",
+        "escritos.read",
     ],
     "abogado": [
         "clientes.*",
@@ -52,6 +53,7 @@ PERMISOS: dict[str, list[str]] = {
         "turnos.*",
         "comunicaciones.*",
         "documentos.*",
+        "escritos.*",
     ],
     "administrador": [
         "clientes.*",
@@ -60,6 +62,7 @@ PERMISOS: dict[str, list[str]] = {
         "turnos.*",
         "comunicaciones.*",
         "documentos.*",
+        "escritos.*",
         "movimientos.*",
         "reportes.*",
         "auditoria.*",
