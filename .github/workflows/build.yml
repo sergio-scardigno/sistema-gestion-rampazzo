@@ -99,4 +99,4 @@ jobs:
           name: SistemaRampazzo-${{ runner.os }}
           path: SistemaRampazzo.zip
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 2

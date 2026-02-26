@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     [string]$Repo = "",
-    [string]$Branch = ""
+    [string]$Branch = "",
+    [switch]$PurgeArtifactsBeforeRun = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,6 +16,55 @@ function Ensure-Success($message) {
     if ($LASTEXITCODE -ne 0) {
         throw $message
     }
+}
+
+function Get-RepoArtifacts {
+    param(
+        [string]$GhPath,
+        [string]$Repository
+    )
+    $all = @()
+    $page = 1
+    while ($true) {
+        $raw = & $GhPath api "repos/$Repository/actions/artifacts?per_page=100&page=$page" 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($raw)) { break }
+        try {
+            $obj = $raw | ConvertFrom-Json
+            $items = @($obj.artifacts)
+            if ($items.Count -eq 0) { break }
+            $all += $items
+            if ($items.Count -lt 100) { break }
+            $page += 1
+        } catch {
+            break
+        }
+    }
+    return $all
+}
+
+function Purge-RepoArtifacts {
+    param(
+        [string]$GhPath,
+        [string]$Repository
+    )
+    $artifacts = Get-RepoArtifacts -GhPath $GhPath -Repository $Repository
+    if (-not $artifacts -or @($artifacts).Count -eq 0) {
+        Write-Host "      No hay artifacts previos para limpiar."
+        return
+    }
+
+    $count = @($artifacts).Count
+    $bytes = 0
+    foreach ($a in @($artifacts)) { $bytes += [int64]($a.size_in_bytes) }
+    $mb = [math]::Round($bytes / 1MB, 1)
+    Write-Host "      Artifacts actuales: $count (~$mb MB)"
+
+    $deleted = 0
+    foreach ($a in @($artifacts)) {
+        & $GhPath api -X DELETE "repos/$Repository/actions/artifacts/$($a.id)" 1>$null 2>$null
+        if ($LASTEXITCODE -eq 0) { $deleted += 1 }
+    }
+    Write-Host "      Artifacts eliminados: $deleted"
 }
 
 function Resolve-Gh {
@@ -66,6 +116,7 @@ Write-Host ""
 
 Step "[2/8] Resolviendo repo y rama..."
 $branchProvided = -not [string]::IsNullOrWhiteSpace($Branch)
+$branchSource = "provided"
 if ([string]::IsNullOrWhiteSpace($Repo)) {
     try {
         $repoJson = & $gh repo view --json nameWithOwner | ConvertFrom-Json
@@ -76,6 +127,19 @@ if ([string]::IsNullOrWhiteSpace($Repo)) {
     throw "No se pudo detectar el repositorio. Pasarlo como parametro o ingresarlo cuando se pida: owner/repo"
 }
 if ([string]::IsNullOrWhiteSpace($Branch)) {
+    $branchSource = "local-current-branch"
+    try {
+        $localBranch = (& git rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    } catch {
+        $localBranch = ""
+    }
+    if (-not [string]::IsNullOrWhiteSpace($localBranch) -and $localBranch -ne "HEAD" -and
+        (Test-RemoteBranch -GhPath $gh -Repository $Repo -BranchName $localBranch)) {
+        $Branch = $localBranch
+    }
+}
+if ([string]::IsNullOrWhiteSpace($Branch)) {
+    $branchSource = "default-branch"
     try {
         $branchJson = & $gh repo view $Repo --json defaultBranchRef | ConvertFrom-Json
         $Branch = $branchJson.defaultBranchRef.name
@@ -101,6 +165,12 @@ if (-not (Test-RemoteBranch -GhPath $gh -Repository $Repo -BranchName $Branch)) 
 Write-Host "      Repo: $Repo"
 Write-Host "      Rama: $Branch"
 Write-Host ""
+
+if ($PurgeArtifactsBeforeRun) {
+    Step "[2.1/8] Liberando cuota de artifacts en GitHub..."
+    Purge-RepoArtifacts -GhPath $gh -Repository $Repo
+    Write-Host ""
+}
 
 $distOut = Join-Path $PSScriptRoot "dist_out"
 $winDir = Join-Path $distOut ("win-" + $Version)
@@ -151,7 +221,24 @@ Write-Host ""
 
 Step "[6/8] Esperando finalizacion..."
 & $gh run watch $runId -R $Repo --exit-status
-Ensure-Success "El workflow termino con error. Revisar GitHub Actions."
+$runWatchExit = $LASTEXITCODE
+if ($runWatchExit -ne 0) {
+    $failedLogs = ""
+    try {
+        $failedLogs = & $gh run view $runId -R $Repo --log-failed 2>&1 | Out-String
+    } catch {
+        $failedLogs = ""
+    }
+
+    if ($failedLogs -match "Artifact storage quota has been hit") {
+        throw (
+            "El workflow fallo por cuota de artifacts de GitHub Actions. " +
+            "Aunque se eliminen artifacts, GitHub recalcula uso cada 6-12 horas. " +
+            "Reintentar mas tarde o liberar cuota adicional desde Settings > Billing/Actions."
+        )
+    }
+    throw "El workflow termino con error. Revisar GitHub Actions (run id: $runId)."
+}
 Write-Host "      Workflow completado correctamente."
 Write-Host ""
 
