@@ -9,10 +9,23 @@ _extra_datas = [
     ('anses_oficinas', 'anses_oficinas'),
 ]
 
-# En Windows, incluir plugins de PySide6 explicitamente.
-# En Linux/macOS los hooks de PyInstaller los resuelven automaticamente.
+# SQL drivers que no usamos (Firebird, Mimer, Oracle) - evita warnings de DLLs faltantes
+_excluded_sql_drivers = {'qsqlibase.dll', 'qsqlmimer.dll', 'qsqloci.dll'}
+
+# En Windows, incluir plugins de PySide6 explicitamente, excluyendo drivers SQL innecesarios.
 if os.path.isdir(_pyside6_plugins):
-    _extra_datas.append((_pyside6_plugins, os.path.join('PySide6', 'plugins')))
+    for plugin_dir in os.listdir(_pyside6_plugins):
+        plugin_full = os.path.join(_pyside6_plugins, plugin_dir)
+        if not os.path.isdir(plugin_full):
+            continue
+        if plugin_dir == 'sqldrivers':
+            for f in os.listdir(plugin_full):
+                if f.lower() not in _excluded_sql_drivers:
+                    _extra_datas.append(
+                        (os.path.join(plugin_full, f), os.path.join('PySide6', 'plugins', 'sqldrivers'))
+                    )
+        else:
+            _extra_datas.append((plugin_full, os.path.join('PySide6', 'plugins', plugin_dir)))
 
 a = Analysis(
     ['main.py'],

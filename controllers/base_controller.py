@@ -61,17 +61,22 @@ class BaseController:
 
     @classmethod
     def delete(cls, _id: str) -> bool:
-        """Eliminar un registro (soft-delete via sync, hard-delete local)."""
+        """Eliminar un registro con tombstone para sincronizacion."""
         existing = db_local.find_by_id(cls.TABLE, _id)
         if not existing:
             return False
-        db_local.delete(cls.TABLE, _id)
+        from core.auth import Session
+        session = Session.get()
+        deleted_by = session.username if session.logged_in else "system"
+        db_local.soft_delete(cls.TABLE, _id, deleted_by=deleted_by)
         log_action("delete", cls.TABLE, _id, datos_anteriores=existing)
         return True
 
     @classmethod
     def get_by_id(cls, _id: str) -> dict | None:
         row = db_local.find_by_id(cls.TABLE, _id)
+        if row and db_local.table_has_column(cls.TABLE, "is_deleted") and int(row.get("is_deleted", 0) or 0) == 1:
+            return None
         if row:
             cls._deserialize(row)
         return row
@@ -79,6 +84,12 @@ class BaseController:
     @classmethod
     def get_all(cls, where: str = "", params: tuple = (),
                 order_by: str = "", limit: int = 0) -> list[dict]:
+        if db_local.table_has_column(cls.TABLE, "is_deleted"):
+            deleted_where = "(is_deleted IS NULL OR is_deleted = 0)"
+            if where:
+                where = f"({where}) AND {deleted_where}"
+            else:
+                where = deleted_where
         rows = db_local.find_all(cls.TABLE, where=where, params=params,
                                  order_by=order_by, limit=limit)
         for r in rows:
@@ -87,6 +98,12 @@ class BaseController:
 
     @classmethod
     def count(cls, where: str = "", params: tuple = ()) -> int:
+        if db_local.table_has_column(cls.TABLE, "is_deleted"):
+            deleted_where = "(is_deleted IS NULL OR is_deleted = 0)"
+            if where:
+                where = f"({where}) AND {deleted_where}"
+            else:
+                where = deleted_where
         return db_local.count(cls.TABLE, where=where, params=params)
 
     @classmethod

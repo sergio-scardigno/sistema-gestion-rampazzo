@@ -190,6 +190,7 @@ Write-Host "      OK"
 Write-Host ""
 
 Step "[4/8] Disparando workflow $workflow..."
+ $dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddSeconds(-10)
 & $gh workflow run $workflow -R $Repo --ref $Branch
 Ensure-Success "No se pudo disparar el workflow. Verificar permisos y nombre del workflow."
 Write-Host "      Workflow disparado."
@@ -200,13 +201,23 @@ $runId = $null
 $maxAttempts = 20
 $sleepSeconds = 3
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-    $runsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 1 --json databaseId 2>$null
+    $runsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 20 --json databaseId,createdAt,status,conclusion,headBranch,event 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runsRaw)) {
         try {
             $runs = $runsRaw | ConvertFrom-Json
             $runsArray = @($runs)
-            if ($runsArray.Count -gt 0 -and $runsArray[0].databaseId) {
-                $runId = [string]$runsArray[0].databaseId
+            $recentCandidates = @(
+                $runsArray | Where-Object {
+                    $_.databaseId -and
+                    $_.event -eq "workflow_dispatch" -and
+                    $_.headBranch -eq $Branch -and
+                    $_.createdAt -and
+                    ([datetime]$_.createdAt).ToUniversalTime() -ge $dispatchStartedAtUtc
+                } | Sort-Object { [datetime]$_.createdAt } -Descending
+            )
+
+            if ($recentCandidates.Count -gt 0) {
+                $runId = [string]$recentCandidates[0].databaseId
                 break
             }
         } catch {}

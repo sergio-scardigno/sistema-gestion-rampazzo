@@ -66,6 +66,26 @@ class ReportesView(QWidget):
         btn_export_excel.clicked.connect(self._export_excel)
         header.addWidget(btn_export_excel)
 
+        btn_export_clientes_excel = QPushButton("Clientes Excel")
+        btn_export_clientes_excel.setProperty("variant", "secondary")
+        btn_export_clientes_excel.clicked.connect(self._export_clientes_excel)
+        header.addWidget(btn_export_clientes_excel)
+
+        btn_export_clientes_csv = QPushButton("Clientes CSV")
+        btn_export_clientes_csv.setProperty("variant", "secondary")
+        btn_export_clientes_csv.clicked.connect(self._export_clientes_csv)
+        header.addWidget(btn_export_clientes_csv)
+
+        btn_export_carpetas_excel = QPushButton("Carpetas Excel")
+        btn_export_carpetas_excel.setProperty("variant", "secondary")
+        btn_export_carpetas_excel.clicked.connect(self._export_carpetas_excel)
+        header.addWidget(btn_export_carpetas_excel)
+
+        btn_export_carpetas_csv = QPushButton("Carpetas CSV")
+        btn_export_carpetas_csv.setProperty("variant", "secondary")
+        btn_export_carpetas_csv.clicked.connect(self._export_carpetas_csv)
+        header.addWidget(btn_export_carpetas_csv)
+
         self._layout.addLayout(header)
 
         # Tabs de reportes
@@ -502,3 +522,63 @@ class ReportesView(QWidget):
         except Exception as e:
             logger.exception("Error al exportar reporte Excel")
             QMessageBox.warning(self, "Error", f"Error al exportar: {e}")
+
+    def _export_clientes_excel(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar Clientes (Excel)", f"clientes_analisis_{datetime.now():%Y%m%d}.xlsx",
+            "Excel (*.xlsx)"
+        )
+        if not path:
+            return
+        try:
+            from utils.export import export_clientes_excel
+            export_clientes_excel(path)
+            QMessageBox.information(self, "Exito", f"Clientes exportados en:\n{path}")
+        except Exception as e:
+            logger.exception("Error al exportar clientes Excel")
+            QMessageBox.warning(self, "Error", f"Error al exportar clientes: {e}")
+
+    def _export_clientes_csv(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar Clientes (CSV)", f"clientes_analisis_{datetime.now():%Y%m%d}.csv",
+            "CSV (*.csv)"
+        )
+        if not path:
+            return
+        try:
+            from utils.export import export_clientes_csv
+            export_clientes_csv(path)
+            QMessageBox.information(self, "Exito", f"Clientes exportados en:\n{path}")
+        except Exception as e:
+            logger.exception("Error al exportar clientes CSV")
+            QMessageBox.warning(self, "Error", f"Error al exportar clientes: {e}")
+
+    def _export_carpetas_excel(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar Carpetas (Excel)", f"carpetas_analisis_{datetime.now():%Y%m%d}.xlsx",
+            "Excel (*.xlsx)"
+        )
+        if not path:
+            return
+        try:
+            from utils.export import export_carpetas_excel
+            export_carpetas_excel(path)
+            QMessageBox.information(self, "Exito", f"Carpetas exportadas en:\n{path}")
+        except Exception as e:
+            logger.exception("Error al exportar carpetas Excel")
+            QMessageBox.warning(self, "Error", f"Error al exportar carpetas: {e}")
+
+    def _export_carpetas_csv(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar Carpetas (CSV)", f"carpetas_analisis_{datetime.now():%Y%m%d}.csv",
+            "CSV (*.csv)"
+        )
+        if not path:
+            return
+        try:
+            from utils.export import export_carpetas_csv
+            export_carpetas_csv(path)
+            QMessageBox.information(self, "Exito", f"Carpetas exportadas en:\n{path}")
+        except Exception as e:
+            logger.exception("Error al exportar carpetas CSV")
+            QMessageBox.warning(self, "Error", f"Error al exportar carpetas: {e}")

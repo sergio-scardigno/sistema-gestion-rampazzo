@@ -737,34 +737,34 @@ Para minimizar riesgos al importar grandes volumenes de datos:
 
 ## 13. Exportar / Importar sistema completo
 
-Esta funcion permite exportar **toda** la base de datos del sistema (clientes, carpetas, tareas, empleados, turnos, movimientos, comunicaciones, documentos adjuntos, claves, auditoria, etc.) a un unico archivo ZIP, y luego importarlo en otra maquina o como respaldo. Solo disponible para el rol **Superusuario (Direccion)**.
+Esta funcion permite exportar **todo** el estado del sistema en un unico ZIP (base local SQLite + documentos + dump de colecciones MongoDB) y luego importarlo para recuperacion o migracion. Solo disponible para el rol **Superusuario (Direccion)**.
 
 ### Como exportar
 
-1. Ir al modulo **Migracion Excel/CSV** (en el menu lateral).
-2. En la seccion inferior **"Exportar / Importar Sistema Completo"**, hacer clic en **Exportar Sistema (ZIP)**.
+1. Ir al modulo **Configuracion** -> pestaña **General / Logos**.
+2. En la seccion **Backups Manuales (completo híbrido)**, hacer clic en **Exportar backup completo**.
 3. Elegir donde guardar el archivo ZIP (se sugiere un nombre con fecha/hora).
 4. Esperar a que termine la exportacion.
 5. El sistema muestra un resumen con la cantidad de registros por tabla y archivos adjuntos incluidos.
 
 ### Que contiene el ZIP
 
-- **rampazzo_export.csv**: un archivo CSV con dos columnas:
-  - `table`: nombre de la tabla (clientes, expedientes, tareas, usuarios, etc.).
-  - `row_json`: cada fila de la base de datos serializada como JSON.
-  - La primera fila de datos es `__meta__` con informacion de la exportacion (version, fecha, conteos).
-- **documentos/**: carpeta con todos los archivos adjuntos, organizados por expediente.
+- **manifest.json**: metadatos del backup (version, fecha, machine_id, checksum, conteos).
+- **local/sqlite.db**: snapshot consistente de la base SQLite local.
+- **local/documentos/**: archivos adjuntos locales.
+- **remote/mongo_dump/*.jsonl**: dump por coleccion de MongoDB.
 
 ### Como importar
 
-1. Ir al modulo **Migracion Excel/CSV**.
-2. Hacer clic en **Importar Sistema (ZIP)**.
+1. Ir al modulo **Configuracion** -> pestaña **General / Logos**.
+2. Hacer clic en **Importar backup completo**.
 3. Seleccionar el archivo ZIP exportado previamente.
-4. Confirmar la operacion. El sistema creara:
+4. El sistema primero hace una validacion previa (dry-run) y luego pide confirmacion.
+5. Confirmar la operacion. El sistema creara:
    - Una **nueva base de datos** (archivo `.db` con nombre que incluye fecha/hora).
    - Un **nuevo directorio de documentos** con los archivos adjuntos del bundle.
-5. El archivo `config.ini` se actualiza automaticamente para apuntar a la nueva base de datos.
-6. **IMPORTANTE: Debe reiniciar la aplicacion** para que los cambios tomen efecto.
+6. El archivo `config.ini` se actualiza automaticamente para apuntar a la nueva base de datos.
+7. **IMPORTANTE: Debe reiniciar la aplicacion** para que los cambios tomen efecto.
 
 ### Notas importantes
 
@@ -772,6 +772,7 @@ Esta funcion permite exportar **toda** la base de datos del sistema (clientes, c
 - Las claves (Mi ANSES, Clave Fiscal) se exportan tal cual estan en la base de datos. Guarde el archivo ZIP en un lugar seguro.
 - La sincronizacion con MongoDB Atlas continuara funcionando con la nueva base tras el reinicio.
 - Si desea volver a la base de datos anterior, puede editar `config.ini` y cambiar `path` en la seccion `[sqlite]` a `data/local.db` (o eliminar esa linea), y reiniciar la aplicacion.
+- Durante la importacion se registra un evento en auditoria (`backup_import`).
 
 ---
 
@@ -811,8 +812,9 @@ Si no hay conexion a internet:
 
 Si un registro fue modificado localmente y tambien en MongoDB:
 
-- Los **cambios locales tienen prioridad** y se suben primero.
-- Los cambios remotos se incorporan para los registros sin cambios locales pendientes.
+- El sistema detecta el choque de version.
+- Se registra el conflicto en `sync_conflicts` con snapshots local/remoto.
+- El registro no se pisa en silencio.
 
 ---
 
@@ -932,7 +934,7 @@ Si un registro fue modificado localmente y tambien en MongoDB:
 R: Desde la carpeta, ir a la pestaña **Historial de Cambios** (requiere permiso de auditoria). O ir al modulo **Auditoria** y filtrar por el ID dla carpeta.
 
 **P: Como exporto datos del estudio?**
-R: Desde **Reportes** se puede exportar a PDF y Excel. Desde **Auditoria** se puede exportar el log filtrado a Excel. Para exportar **todo el sistema** (base de datos completa + documentos adjuntos), ir a **Migracion Excel/CSV** y usar **Exportar Sistema (ZIP)** (solo Superusuario).
+R: Desde **Reportes** se puede exportar a PDF y Excel. Desde **Auditoria** se puede exportar el log filtrado a Excel. Para exportar **todo el sistema** (SQLite + documentos + dump Mongo), ir a **Configuracion -> General / Logos** y usar **Exportar backup completo** (solo Superusuario).
 
 **P: Que pasa si intento asignar un N° de carpeta que ya esta en uso?**
 R: El sistema no lo permite. Se muestra un error indicando que ya existe otro cliente con ese numero.
@@ -977,5 +979,5 @@ Ademas de todo lo que puede hacer un Administrador:
 
 1. **Configuracion del sistema:** Gestionar la configuracion general, crear usuarios de cualquier rol (incluyendo otros superusuarios).
 2. **Migracion desde Excel / CSV:** Importar datos historicos usando el asistente de 6 pasos.
-3. **Exportar / Importar sistema completo:** Generar un ZIP con toda la base de datos y documentos, o restaurar desde uno existente (ver seccion 13).
+3. **Exportar / Importar sistema completo:** Generar un ZIP hibrido (SQLite + documentos + Mongo) o restaurar desde uno existente (ver seccion 13).
 4. **Supervision total:** Vision global de toda la operacion del estudio.

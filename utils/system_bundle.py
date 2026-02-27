@@ -10,6 +10,7 @@ La primera fila del CSV es metadata (__meta__) con version, fecha y conteos.
 import csv
 import io
 import json
+import hashlib
 import logging
 import os
 import shutil
@@ -21,9 +22,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import (
-    APP_VERSION, BASE_DIR, CONFIG_FILE, DATA_DIR, DOCS_DIR, SQLITE_PATH,
+    APP_VERSION, CONFIG_FILE, DATA_DIR, DOCS_DIR, MACHINE_ID, SQLITE_PATH,
 )
 from core.db_local import _TABLES_SQL, get_connection, rows_to_list
+from core import db_remote
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,10 @@ EXPORT_TABLES = [
 
 CSV_FILENAME = "rampazzo_export.csv"
 DOCS_FOLDER = "documentos"
+MANIFEST_FILENAME = "manifest.json"
+LOCAL_SQLITE_FILENAME = "local/sqlite.db"
+REMOTE_DUMP_DIR = "remote/mongo_dump"
+LOCAL_DOCS_DIR = "local/documentos"
 
 
 def export_system_bundle(zip_path: str) -> dict:
@@ -97,6 +103,138 @@ def export_system_bundle(zip_path: str) -> dict:
     stats["tables"] = table_counts
     logger.info("Bundle exportado: %s (%d filas, %d archivos)", zip_path,
                 stats["total_rows"], stats["files_copied"])
+    return stats
+
+
+def export_full_hybrid_backup(zip_path: str) -> dict:
+    """Exporta backup completo híbrido: SQLite + documentos + dump Mongo + manifest."""
+    stats = {
+        "tables": {},
+        "files_copied": 0,
+        "total_rows": 0,
+        "mongo_collections": {},
+        "bundle_path": zip_path,
+    }
+    exported_at = datetime.now(timezone.utc).isoformat()
+    bundle_id = uuid.uuid4().hex
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_root = Path(tmpdir)
+        local_dir = tmp_root / "local"
+        remote_dir = tmp_root / "remote" / "mongo_dump"
+        local_docs_dir = local_dir / "documentos"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        remote_dir.mkdir(parents=True, exist_ok=True)
+        local_docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Snapshot SQLite consistente
+        src_conn = get_connection()
+        snap_conn = sqlite3.connect(str(local_dir / "sqlite.db"))
+        src_conn.backup(snap_conn)
+        snap_conn.close()
+        src_conn.close()
+
+        # Copiar documentos locales
+        if Path(DOCS_DIR).exists():
+            shutil.copytree(str(DOCS_DIR), str(local_docs_dir), dirs_exist_ok=True)
+            for _root, _dirs, files in os.walk(local_docs_dir):
+                stats["files_copied"] += len(files)
+
+        # Dump remoto (si hay conexión)
+        if db_remote.is_connected():
+            stats["mongo_collections"] = db_remote.export_sync_collections(str(remote_dir))
+        else:
+            stats["mongo_collections"] = {}
+
+        # Conteos locales para manifest
+        conn = sqlite3.connect(str(local_dir / "sqlite.db"))
+        conn.row_factory = sqlite3.Row
+        for table in EXPORT_TABLES:
+            try:
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except Exception:
+                count = 0
+            stats["tables"][table] = count
+            stats["total_rows"] += count
+        conn.close()
+
+        checksum = _sha256_file(local_dir / "sqlite.db")
+        manifest = {
+            "bundle_id": bundle_id,
+            "exported_at": exported_at,
+            "app_version": APP_VERSION,
+            "machine_id": MACHINE_ID,
+            "local_table_counts": stats["tables"],
+            "remote_collection_counts": stats["mongo_collections"],
+            "sqlite_sha256": checksum,
+            "format": "hybrid_backup_v1",
+        }
+        (tmp_root / MANIFEST_FILENAME).write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+
+        # Comprimir bundle
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, _dirs, files in os.walk(tmp_root):
+                for fname in files:
+                    abs_path = Path(root) / fname
+                    arc_name = abs_path.relative_to(tmp_root).as_posix()
+                    zf.write(str(abs_path), arc_name)
+    return stats
+
+
+def import_full_hybrid_backup(zip_path: str, dry_run: bool = False, apply_remote: bool = True) -> dict:
+    """Importa backup híbrido generado por export_full_hybrid_backup."""
+    stats = {
+        "dry_run": dry_run,
+        "applied_local": False,
+        "applied_remote": False,
+        "local_db_path": "",
+        "docs_dir": "",
+        "remote_imported": {},
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(tmpdir)
+        root = Path(tmpdir)
+        manifest_path = root / MANIFEST_FILENAME
+        sqlite_path = root / LOCAL_SQLITE_FILENAME
+        docs_src = root / LOCAL_DOCS_DIR
+        remote_src = root / REMOTE_DUMP_DIR
+        if not manifest_path.exists() or not sqlite_path.exists():
+            raise FileNotFoundError("Bundle invalido: faltan manifest.json o local/sqlite.db")
+
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected = manifest.get("sqlite_sha256", "")
+        current = _sha256_file(sqlite_path)
+        if expected and expected != current:
+            raise ValueError("Checksum SQLite invalido: el backup esta corrupto o fue alterado.")
+
+        if dry_run:
+            stats["manifest"] = manifest
+            if remote_src.exists() and apply_remote:
+                stats["remote_imported"] = db_remote.import_sync_collections(str(remote_src), dry_run=True)
+            return stats
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        new_db_path = DATA_DIR / f"local_hybrid_import_{timestamp}.db"
+        new_docs_dir = DATA_DIR / f"documentos_hybrid_import_{timestamp}"
+        shutil.copy2(str(sqlite_path), str(new_db_path))
+        if docs_src.exists():
+            shutil.copytree(str(docs_src), str(new_docs_dir), dirs_exist_ok=True)
+        else:
+            new_docs_dir.mkdir(parents=True, exist_ok=True)
+
+        _update_config_ini(str(new_db_path), str(new_docs_dir))
+        stats["applied_local"] = True
+        stats["local_db_path"] = str(new_db_path)
+        stats["docs_dir"] = str(new_docs_dir)
+
+        if apply_remote and remote_src.exists() and db_remote.is_connected():
+            stats["remote_imported"] = db_remote.import_sync_collections(str(remote_src), dry_run=False)
+            stats["applied_remote"] = True
     return stats
 
 
@@ -210,6 +348,17 @@ def _csv_escape(value: str) -> str:
     if '"' in value or ',' in value or '\n' in value:
         return '"' + value.replace('"', '""') + '"'
     return value
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _relativize_doc_path(record: dict) -> dict:

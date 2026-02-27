@@ -88,16 +88,8 @@ set /a BUILD_NUM=!BUILD_NUM! + 1
 :: Guardar nuevo numero en build_number.txt
 echo !BUILD_NUM!> build_number.txt
 
-:: Obtener timestamp actual
-for /f "tokens=1-3 delims=/ " %%a in ('date /t') do set "BDATE=%%c-%%b-%%a"
-for /f "tokens=1-2 delims=: " %%a in ('time /t') do set "BTIME=%%a:%%b"
-:: Usar wmic para formato consistente YYYY-MM-DD HH:MM:SS
-for /f "skip=1 tokens=1" %%d in ('wmic os get localdatetime') do (
-    set "DT=%%d"
-    goto :got_dt
-)
-:got_dt
-set "BUILD_TS=!DT:~0,4!-!DT:~4,2!-!DT:~6,2! !DT:~8,2!:!DT:~10,2!:!DT:~12,2!"
+:: Obtener timestamp actual via PowerShell (compatible con Windows 10/11)
+for /f "usebackq delims=" %%d in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd HH:mm:ss'"`) do set "BUILD_TS=%%d"
 
 :: Generar build_info.py
 (
@@ -114,6 +106,9 @@ echo.
 echo [5/6] Compilando ejecutable con PyInstaller...
 echo       (esto puede tardar unos minutos)
 echo.
+
+:: Agregar PySide6 al PATH para que PyInstaller pueda resolver las DLLs de Qt
+for /f "usebackq delims=" %%p in (`python -c "import os, PySide6; print(os.path.dirname(PySide6.__file__))"`) do set "PATH=%%p;!PATH!"
 
 pyinstaller SistemaRampazzo.spec --noconfirm --distpath dist_out --workpath build_out
 if errorlevel 1 (

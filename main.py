@@ -4,6 +4,8 @@ Sistema Rampazzo - Punto de entrada.
 import os
 import sys
 import logging
+import argparse
+import json
 from pathlib import Path
 
 # Forzar UTF-8 globalmente (necesario en Windows para simbolos latinos)
@@ -33,6 +35,7 @@ from config import APP_NAME, APP_VERSION, BASE_DIR
 from core.db_local import init_db, validate_version_compatibility, validate_remote_version_compatibility
 from core.auth import ensure_admin_exists
 from core.audit import init_audit_protection
+from utils.system_bundle import export_full_hybrid_backup, import_full_hybrid_backup
 
 FONTS_DIR = BASE_DIR / "resources" / "fonts"
 
@@ -64,7 +67,42 @@ def _apply_app_icon(app: QApplication):
             app.setWindowIcon(icon)
 
 
+def _run_cli_if_requested() -> bool:
+    """Ejecuta tareas CLI (backup/import) y retorna True si debe terminar."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--export-backup", dest="export_backup", default="")
+    parser.add_argument("--import-backup", dest="import_backup", default="")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--no-remote", action="store_true")
+    args, _unknown = parser.parse_known_args(sys.argv[1:])
+
+    if not args.export_backup and not args.import_backup:
+        return False
+
+    init_db()
+    init_audit_protection()
+    ensure_admin_exists()
+
+    if args.export_backup:
+        stats = export_full_hybrid_backup(args.export_backup)
+        print(json.dumps({"ok": True, "mode": "export", "stats": stats}, ensure_ascii=False))
+        return True
+
+    if args.import_backup:
+        stats = import_full_hybrid_backup(
+            args.import_backup,
+            dry_run=args.dry_run,
+            apply_remote=not args.no_remote,
+        )
+        print(json.dumps({"ok": True, "mode": "import", "stats": stats}, ensure_ascii=False))
+        return True
+
+    return False
+
+
 def main():
+    if _run_cli_if_requested():
+        return
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyle("Fusion")

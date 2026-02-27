@@ -466,6 +466,86 @@ class ReporteController:
         result = sorted(data.values(), key=lambda x: x["iniciadas"], reverse=True)
         return result
 
+    # ── Datasets de análisis (export separados) ──
+
+    @staticmethod
+    def clientes_para_analisis() -> list[dict]:
+        """Dataset estable de clientes para análisis externo (Excel/CSV)."""
+        conn = db_local.get_connection()
+        rows = conn.execute("""
+            SELECT
+                _id,
+                id_cliente,
+                numero_carpeta,
+                nombre_completo,
+                dni,
+                cuil,
+                fecha_nacimiento,
+                direccion,
+                localidad,
+                telefonos,
+                email,
+                obra_social,
+                actividad,
+                procedencia_contacto,
+                observaciones,
+                is_deleted,
+                deleted_at,
+                deleted_by,
+                updated_at,
+                version,
+                sync_status,
+                created_by_machine
+            FROM clientes
+            ORDER BY nombre_completo ASC
+        """).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    @staticmethod
+    def carpetas_para_analisis() -> list[dict]:
+        """Dataset estable de carpetas/expedientes para análisis externo."""
+        conn = db_local.get_connection()
+        rows = conn.execute("""
+            SELECT
+                e._id,
+                e.id_expediente,
+                e.id_cliente,
+                c.numero_carpeta,
+                c.nombre_completo AS cliente_nombre,
+                c.dni AS cliente_dni,
+                c.cuil AS cliente_cuil,
+                e.tipo_tramite,
+                e.area,
+                e.rama,
+                e.subtipo,
+                e.estado,
+                e.prioridad,
+                e.responsable,
+                e.responsable_username,
+                e.responsable_secundario,
+                e.responsable_secundario_username,
+                e.fecha_apertura,
+                e.fecha_cierre,
+                e.numero_expediente_anses,
+                e.ubicacion_fisica,
+                e.link_drive,
+                e.resultado,
+                e.observaciones,
+                e.is_deleted,
+                e.deleted_at,
+                e.deleted_by,
+                e.updated_at,
+                e.version,
+                e.sync_status,
+                e.created_by_machine
+            FROM expedientes e
+            LEFT JOIN clientes c ON c._id = e.id_cliente
+            ORDER BY e.id_expediente DESC
+        """).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
     # ── Economicos extendidos por periodo ──
 
     @staticmethod

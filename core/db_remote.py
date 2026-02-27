@@ -2,8 +2,11 @@
 Conexion a MongoDB Atlas (fuente de verdad central).
 """
 import logging
+import json
+from pathlib import Path
 
 import pymongo
+from bson import json_util
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from config import MONGO_URI, MONGO_DB_NAME
@@ -12,6 +15,12 @@ logger = logging.getLogger(__name__)
 
 _client: MongoClient | None = None
 _db = None
+SYNC_COLLECTIONS = [
+    "usuarios", "consultas", "clientes", "expedientes",
+    "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
+    "modelos_escrito", "escritos", "expediente_estado_historial", "audit_log",
+    "notificaciones", "session_signals", "sync_conflicts",
+]
 
 
 def get_client() -> MongoClient:
@@ -53,11 +62,77 @@ def ensure_indexes():
     db.movimientos.create_index("id_expediente")
     db.movimientos.create_index("id_cliente")
     db.documentos.create_index("id_expediente")
+    db.turnos.create_index("id_expediente")
+    db.turnos.create_index("id_cliente")
+    db.escritos.create_index("id_expediente")
+    db.modelos_escrito.create_index("rama")
+    db.expediente_estado_historial.create_index("id_expediente")
+    db.expediente_estado_historial.create_index("responsable_username")
+    db.sync_conflicts.create_index("status")
+    db.sync_conflicts.create_index([("table_name", pymongo.ASCENDING), ("record_id", pymongo.ASCENDING)])
     db.record_locks.create_index("expires_at", expireAfterSeconds=0)
     # updated_at indexes for sync
-    for col_name in ["usuarios", "consultas", "clientes", "expedientes",
-                     "tareas", "comunicaciones", "movimientos", "documentos", "audit_log"]:
+    for col_name in [
+        "usuarios", "consultas", "clientes", "expedientes",
+        "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
+        "modelos_escrito", "escritos", "expediente_estado_historial",
+        "audit_log", "notificaciones", "sync_conflicts",
+    ]:
         db[col_name].create_index("updated_at")
+
+
+def get_remote_counts(collections: list[str] | None = None) -> dict[str, int]:
+    db = get_db()
+    result: dict[str, int] = {}
+    for name in (collections or SYNC_COLLECTIONS):
+        try:
+            result[name] = db[name].count_documents({})
+        except Exception:
+            result[name] = -1
+    return result
+
+
+def export_sync_collections(export_dir: str, collections: list[str] | None = None) -> dict[str, int]:
+    """Exporta colecciones Mongo a JSONL (una por archivo)."""
+    db = get_db()
+    out = Path(export_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    counts: dict[str, int] = {}
+    for name in (collections or SYNC_COLLECTIONS):
+        file_path = out / f"{name}.jsonl"
+        written = 0
+        with file_path.open("w", encoding="utf-8") as fh:
+            for doc in db[name].find({}):
+                fh.write(json.dumps(doc, default=json_util.default, ensure_ascii=False) + "\n")
+                written += 1
+        counts[name] = written
+    return counts
+
+
+def import_sync_collections(import_dir: str, dry_run: bool = False, collections: list[str] | None = None) -> dict[str, int]:
+    """Importa colecciones Mongo desde JSONL (replace por _id)."""
+    db = get_db()
+    base = Path(import_dir)
+    counts: dict[str, int] = {}
+    for name in (collections or SYNC_COLLECTIONS):
+        file_path = base / f"{name}.jsonl"
+        if not file_path.exists():
+            counts[name] = 0
+            continue
+        applied = 0
+        with file_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                doc = json.loads(line, object_hook=json_util.object_hook)
+                if "_id" not in doc:
+                    continue
+                if not dry_run:
+                    db[name].replace_one({"_id": doc["_id"]}, doc, upsert=True)
+                applied += 1
+        counts[name] = applied
+    return counts
 
 
 def update_remote_app_version():

@@ -60,7 +60,8 @@ class TestSyncConstants:
     def test_sync_tables_covers_all_entities(self):
         expected = {"usuarios", "consultas", "clientes", "expedientes",
                     "tareas", "turnos", "comunicaciones", "movimientos",
-                    "documentos", "expediente_estado_historial", "audit_log"}
+                    "documentos", "modelos_escrito", "escritos",
+                    "expediente_estado_historial", "audit_log"}
         assert expected == set(SYNC_TABLES)
 
     def test_local_only_fields(self):
@@ -148,6 +149,17 @@ class TestPushPending:
         call_kwargs = mock_db.clientes.replace_one.call_args
         assert call_kwargs[1].get("upsert") is True or call_kwargs[0][2] is True
 
+    def test_push_conflict_creates_sync_conflict(self, monkeypatch):
+        _insert_local_pending("clientes", "conf-1", {"version": 1})
+        mock_db = _make_mock_db()
+        mock_db.clientes.find_one.return_value = {"_id": "conf-1", "version": 3}
+        engine = SyncEngine()
+        pushed, conflicts = engine._push_pending(mock_db, "clientes")
+        assert pushed == 0
+        assert conflicts == 1
+        rows = db_local.find_all("sync_conflicts", where="record_id = ?", params=("conf-1",))
+        assert len(rows) >= 1
+
 
 class TestPullRemote:
     def test_pulls_remote_docs_into_local(self, monkeypatch):
@@ -234,6 +246,7 @@ class TestPullRemote:
 
     def test_pull_uses_incremental_query(self, monkeypatch):
         """Si hay last_pull guardado, solo trae documentos mas recientes."""
+        _insert_local_pending("clientes", "inc-1", {"sync_status": "synced"})
         db_local.set_sync_meta("last_pull_clientes", "2025-06-01T00:00:00")
 
         mock_db = _make_mock_db()

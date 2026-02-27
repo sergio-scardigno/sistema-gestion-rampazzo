@@ -357,3 +357,32 @@ class TestImportSystemBundle:
         cfg.read(str(config_file), encoding="utf-8")
         assert cfg.get("sqlite", "path") == stats["new_db_path"]
         assert cfg.get("paths", "docs_dir") == stats["new_docs_dir"]
+
+
+class TestHybridBackupBundle:
+    def test_export_full_hybrid_creates_manifest_and_sqlite(self, tmp_path, populated_db, monkeypatch):
+        from utils.system_bundle import export_full_hybrid_backup
+
+        monkeypatch.setattr("core.db_remote.is_connected", lambda: False)
+        monkeypatch.setattr("utils.system_bundle.db_remote.is_connected", lambda: False)
+
+        zip_path = str(tmp_path / "hybrid.zip")
+        stats = export_full_hybrid_backup(zip_path)
+        assert os.path.isfile(zip_path)
+        assert stats["total_rows"] > 0
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            names = set(zf.namelist())
+            assert "manifest.json" in names
+            assert "local/sqlite.db" in names
+
+    def test_import_full_hybrid_dry_run(self, tmp_path, populated_db, monkeypatch):
+        from utils.system_bundle import export_full_hybrid_backup, import_full_hybrid_backup
+
+        monkeypatch.setattr("core.db_remote.is_connected", lambda: False)
+        monkeypatch.setattr("utils.system_bundle.db_remote.is_connected", lambda: False)
+        zip_path = str(tmp_path / "hybrid.zip")
+        export_full_hybrid_backup(zip_path)
+
+        stats = import_full_hybrid_backup(zip_path, dry_run=True)
+        assert stats["dry_run"] is True
+        assert "manifest" in stats

@@ -74,6 +74,8 @@ flowchart TD
 2. Los controladores escriben en SQLite local y marcan el registro como `pending`.
 3. El `SyncEngine` (cada 5 minutos) sube los pendientes a MongoDB Atlas y baja los cambios remotos.
 4. Si no hay conexion, la app funciona 100% offline contra SQLite. Al reconectar, se sincronizan los cambios acumulados.
+5. Los borrados se gestionan como **tombstones** (`is_deleted`, `deleted_at`, `deleted_by`) para mantener consistencia entre nodos.
+6. Si hay edicion concurrente, el sistema registra conflictos en `sync_conflicts` para auditoria y resolucion.
 
 ---
 
@@ -143,6 +145,7 @@ sistema-gestion-rampazzo/
 │   ├── validators.py          # Validaciones: DNI, CUIL, email, telefono
 │   ├── formatters.py          # Formato de fechas, moneda, CUIL
 │   ├── export.py              # Exportacion a PDF y Excel
+│   ├── system_bundle.py       # Backup/import completo (SQLite + Mongo) en ZIP
 │   └── migration/             # Utilidades de migracion desde Excel
 │       ├── excel_reader.py
 │       ├── normalizer.py
@@ -354,9 +357,45 @@ sequenceDiagram
     Note over App,Atlas: Al reconectar, se sincronizan los cambios acumulados.
 ```
 
-**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, comunicaciones, movimientos, documentos, audit_log.
+**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, comunicaciones, movimientos, documentos, modelos_escrito, escritos, expediente_estado_historial, audit_log.
 
-**Resolucion de conflictos:** Si un registro tiene cambios locales pendientes (`sync_status = pending`), no se sobreescribe con la version remota. Los cambios locales se suben primero.
+**Resolucion de conflictos:** si el remoto tiene una version superior o hay cambios locales pendientes con choque de version, se registra un evento en `sync_conflicts` con snapshot local/remoto.
+
+**Metricas de sync (`sync_meta`):**
+- `sync_last_total_pushed`
+- `sync_last_total_pulled`
+- `sync_last_total_conflicts`
+- `sync_baseline_last_snapshot` (drift local/remoto por tabla)
+
+---
+
+## Backup manual completo (SQLite + Mongo)
+
+El sistema permite exportar/importar un backup hibrido completo con:
+- `local/sqlite.db`
+- `local/documentos/`
+- `remote/mongo_dump/*.jsonl`
+- `manifest.json` (version, machine_id, checksum, conteos)
+
+**Desde UI (superusuario):**
+- Modulo `Configuracion` -> pestaña `General / Logos`
+- Botones: `Exportar backup completo` y `Importar backup completo`
+
+**Desde CLI:**
+
+```bash
+# Exportar backup completo
+python main.py --export-backup "C:\ruta\backup_bundle.zip"
+
+# Validar importacion (sin aplicar cambios)
+python main.py --import-backup "C:\ruta\backup_bundle.zip" --dry-run
+
+# Importar aplicando SQLite + Mongo
+python main.py --import-backup "C:\ruta\backup_bundle.zip"
+
+# Importar solo local (sin tocar Mongo)
+python main.py --import-backup "C:\ruta\backup_bundle.zip" --no-remote
+```
 
 ---
 

@@ -88,6 +88,9 @@ class TestDelete:
         result = _TestController.delete(record["_id"])
         assert result is True
         assert _TestController.get_by_id(record["_id"]) is None
+        raw = db_local.find_by_id("clientes", record["_id"])
+        assert int(raw.get("is_deleted", 0)) == 1
+        assert raw.get("sync_status") == "pending"
 
     def test_delete_nonexistent_returns_false(self, session_superusuario):
         assert _TestController.delete("no-existe") is False

@@ -12,6 +12,8 @@ from PySide6.QtGui import QFont, QPixmap
 
 from controllers.config_controller import ConfigController
 from core.auth import Session
+from core.audit import log_action
+from utils.system_bundle import export_full_hybrid_backup, import_full_hybrid_backup
 
 
 class LogoSelector(QFrame):
@@ -296,6 +298,69 @@ class ConfigGeneralView(QWidget):
 
         layout.addWidget(reset_frame)
 
+        # -----------------------------------------------------------
+        # Backup manual completo (SQLite + Mongo)
+        # -----------------------------------------------------------
+        backup_frame = QFrame()
+        backup_frame.setStyleSheet("""
+            QFrame {
+                background-color: #f7fbff;
+                border: 1px solid #c9ddf0;
+                border-radius: 10px;
+                border-left: 4px solid #2b6cb0;
+            }
+        """)
+        backup_layout = QVBoxLayout(backup_frame)
+        backup_layout.setContentsMargins(20, 16, 20, 16)
+        backup_layout.setSpacing(10)
+
+        lbl_backup_title = QLabel("Backups Manuales (completo híbrido)")
+        lbl_backup_title.setFont(QFont("Lato", 14, QFont.Weight.Bold))
+        lbl_backup_title.setStyleSheet("color: #2b6cb0; border: none;")
+        backup_layout.addWidget(lbl_backup_title)
+
+        lbl_backup_desc = QLabel(
+            "Permite exportar/importar un bundle completo con SQLite local, documentos "
+            "y dump de colecciones MongoDB. Use 'Dry-run' para validar un backup antes de aplicar."
+        )
+        lbl_backup_desc.setWordWrap(True)
+        lbl_backup_desc.setStyleSheet("color: #6b6b6b; font-size: 12px; border: none;")
+        backup_layout.addWidget(lbl_backup_desc)
+
+        backup_btn_row = QHBoxLayout()
+        btn_export = QPushButton("Exportar backup completo")
+        btn_export.setStyleSheet("""
+            QPushButton {
+                background-color: #2b6cb0;
+                color: #ffffff;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #22578f; }
+        """)
+        btn_export.clicked.connect(self._on_export_backup)
+        backup_btn_row.addWidget(btn_export)
+
+        btn_import = QPushButton("Importar backup completo")
+        btn_import.setStyleSheet("""
+            QPushButton {
+                background-color: #2f855a;
+                color: #ffffff;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #276e4a; }
+        """)
+        btn_import.clicked.connect(self._on_import_backup)
+        backup_btn_row.addWidget(btn_import)
+        backup_btn_row.addStretch()
+        backup_layout.addLayout(backup_btn_row)
+        layout.addWidget(backup_frame)
+
         # Verificar conexion para habilitar/deshabilitar boton
         self._update_reset_button_state()
 
@@ -348,6 +413,73 @@ class ConfigGeneralView(QWidget):
 
     def _on_logo_changed(self):
         self.logo_changed.emit()
+
+    def _on_export_backup(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar backup completo",
+            "backup_bundle.zip",
+            "ZIP (*.zip)",
+        )
+        if not file_path:
+            return
+        try:
+            stats = export_full_hybrid_backup(file_path)
+            log_action(
+                "backup_export",
+                "backup",
+                file_path,
+                datos_nuevos={"path": file_path, "stats": stats},
+            )
+            QMessageBox.information(
+                self,
+                "Backup exportado",
+                f"Backup completo generado en:\n{file_path}\n\n"
+                f"Registros locales: {stats.get('total_rows', 0)}\n"
+                f"Archivos documentos: {stats.get('files_copied', 0)}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Error", f"No se pudo exportar el backup.\n{exc}")
+
+    def _on_import_backup(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar backup para importar",
+            "",
+            "ZIP (*.zip)",
+        )
+        if not file_path:
+            return
+        try:
+            dry_stats = import_full_hybrid_backup(file_path, dry_run=True)
+            manifest = dry_stats.get("manifest", {})
+            reply = QMessageBox.question(
+                self,
+                "Confirmar importación",
+                "Validación OK.\n\n"
+                f"Bundle: {manifest.get('bundle_id', '-')}\n"
+                f"Versión app: {manifest.get('app_version', '-')}\n\n"
+                "¿Desea aplicar la importación completa?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            stats = import_full_hybrid_backup(file_path, dry_run=False, apply_remote=True)
+            log_action(
+                "backup_import",
+                "backup",
+                file_path,
+                datos_nuevos={"path": file_path, "stats": stats},
+            )
+            QMessageBox.information(
+                self,
+                "Importación completada",
+                "Importación aplicada correctamente.\n\n"
+                "La aplicación se cerrará para recargar la nueva base.",
+            )
+            QApplication.quit()
+        except Exception as exc:
+            QMessageBox.critical(self, "Error", f"No se pudo importar el backup.\n{exc}")
 
     def refresh(self):
         if self._is_superusuario:

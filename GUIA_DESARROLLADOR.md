@@ -10,12 +10,14 @@ Guia tecnica para desarrolladores que necesiten configurar el entorno, ejecutar 
 2. [Setup del entorno de desarrollo](#2-setup-del-entorno-de-desarrollo)
 3. [Ejecutar en modo desarrollo](#3-ejecutar-en-modo-desarrollo)
 4. [Testing](#4-testing)
-5. [Build del ejecutable](#5-build-del-ejecutable)
-6. [Generar ZIP distribuible](#6-generar-zip-distribuible)
-7. [Estructura del ZIP resultante](#7-estructura-del-zip-resultante)
-8. [Distribucion e instalacion en cliente](#8-distribucion-e-instalacion-en-cliente)
-9. [Estructura del proyecto](#9-estructura-del-proyecto)
-10. [Troubleshooting](#10-troubleshooting)
+5. [Sincronizacion reforzada](#5-sincronizacion-reforzada)
+6. [Backup manual completo (UI y CLI)](#6-backup-manual-completo-ui-y-cli)
+7. [Build del ejecutable](#7-build-del-ejecutable)
+8. [Generar ZIP distribuible](#8-generar-zip-distribuible)
+9. [Estructura del ZIP resultante](#9-estructura-del-zip-resultante)
+10. [Distribucion e instalacion en cliente](#10-distribucion-e-instalacion-en-cliente)
+11. [Estructura del proyecto](#11-estructura-del-proyecto)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
@@ -140,7 +142,61 @@ start htmlcov\index.html
 
 ---
 
-## 5. Build del ejecutable
+## 5. Sincronizacion reforzada
+
+La sincronizacion SQLite <-> Mongo incluye:
+
+- **Tombstones** para borrado logico: `is_deleted`, `deleted_at`, `deleted_by`.
+- **Deteccion de conflictos por version** con registro en `sync_conflicts`.
+- **Metricas de ciclo** en `sync_meta`:
+  - `sync_last_total_pushed`
+  - `sync_last_total_pulled`
+  - `sync_last_total_conflicts`
+  - `sync_baseline_last_snapshot`
+
+Notas de implementacion:
+- `controllers/base_controller.py` usa `soft_delete()` en lugar de `DELETE` fisico.
+- `core/sync_engine.py` registra conflictos de push/pull con snapshots local/remoto.
+- `core/db_remote.py` asegura indices `updated_at` en colecciones sincronizadas.
+
+---
+
+## 6. Backup manual completo (UI y CLI)
+
+### 6.1 Desde la UI (superusuario)
+
+Ruta: `Configuracion -> General / Logos -> Backups Manuales`.
+
+Acciones:
+- `Exportar backup completo`
+- `Importar backup completo` (incluye validacion previa `dry-run` antes de aplicar)
+
+### 6.2 Desde CLI
+
+```bash
+# Exportar bundle hibrido completo
+python main.py --export-backup "C:\ruta\backup_bundle.zip"
+
+# Importar con validacion (sin aplicar)
+python main.py --import-backup "C:\ruta\backup_bundle.zip" --dry-run
+
+# Importar aplicando local + remoto
+python main.py --import-backup "C:\ruta\backup_bundle.zip"
+
+# Importar solo local (sin tocar Mongo)
+python main.py --import-backup "C:\ruta\backup_bundle.zip" --no-remote
+```
+
+### 6.3 Formato del bundle
+
+- `manifest.json`
+- `local/sqlite.db`
+- `local/documentos/`
+- `remote/mongo_dump/*.jsonl`
+
+---
+
+## 7. Build del ejecutable
 
 ### 5.0 Build recomendado (multiplataforma)
 
@@ -208,7 +264,7 @@ Debe abrir la ventana de login sin errores. Si falla, revisar la seccion de [Tro
 
 ---
 
-## 6. Generar ZIP distribuible
+## 8. Generar ZIP distribuible
 
 Despues de un build exitoso, ejecutar el siguiente script de PowerShell desde la raiz del proyecto para generar un ZIP listo para distribuir:
 
@@ -257,7 +313,7 @@ Copy-Item config.ini.example dist\SistemaRampazzo\config.ini.example -Force; Com
 
 ---
 
-## 7. Estructura del ZIP resultante
+## 9. Estructura del ZIP resultante
 
 ```
 SistemaRampazzo.zip
@@ -288,7 +344,7 @@ Al ejecutar por primera vez, la aplicacion crea automaticamente:
 
 ---
 
-## 8. Distribucion e instalacion en cliente
+## 10. Distribucion e instalacion en cliente
 
 ### Pasos para el usuario final
 
@@ -310,7 +366,7 @@ Al ejecutar por primera vez, la aplicacion crea automaticamente:
 
 ---
 
-## 9. Estructura del proyecto
+## 11. Estructura del proyecto
 
 ```
 sistema-gestion-rampazzo/
@@ -350,7 +406,7 @@ sistema-gestion-rampazzo/
 
 ---
 
-## 10. Troubleshooting
+## 12. Troubleshooting
 
 ### El build falla con "No module named PySide6"
 

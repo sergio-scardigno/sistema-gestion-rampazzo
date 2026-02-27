@@ -12,6 +12,12 @@ from config import SQLITE_PATH
 
 logger = logging.getLogger(__name__)
 
+SYNCED_ENTITY_TABLES = [
+    "usuarios", "consultas", "clientes", "expedientes",
+    "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
+    "modelos_escrito", "escritos", "expediente_estado_historial", "notificaciones",
+]
+
 _TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS usuarios (
     _id TEXT PRIMARY KEY,
@@ -22,6 +28,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     rol TEXT NOT NULL DEFAULT 'secretaria',
     activo INTEGER DEFAULT 1,
     eliminado INTEGER DEFAULT 0,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     ultimo_acceso TEXT,
     updated_at TEXT,
     version INTEGER DEFAULT 1,
@@ -45,6 +54,9 @@ CREATE TABLE IF NOT EXISTS consultas (
     operador TEXT,
     observaciones TEXT,
     id_cliente TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -69,6 +81,9 @@ CREATE TABLE IF NOT EXISTS clientes (
     clave_fiscal TEXT,
     procedencia_contacto TEXT,
     observaciones TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -100,6 +115,9 @@ CREATE TABLE IF NOT EXISTS expedientes (
     clave_mi_anses TEXT,
     clave_fiscal TEXT,
     observaciones TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -121,6 +139,9 @@ CREATE TABLE IF NOT EXISTS tareas (
     estado TEXT DEFAULT 'Pendiente',
     resultado TEXT,
     archivo_adjunto TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -139,6 +160,9 @@ CREATE TABLE IF NOT EXISTS comunicaciones (
     motivo TEXT,
     mensaje TEXT,
     resultado TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -158,6 +182,9 @@ CREATE TABLE IF NOT EXISTS movimientos (
     comprobante TEXT,
     saldo REAL,
     responsable_username TEXT DEFAULT '',
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -180,6 +207,9 @@ CREATE TABLE IF NOT EXISTS documentos (
     version_doc INTEGER DEFAULT 1,
     version_padre TEXT DEFAULT '',
     notas_version TEXT DEFAULT '',
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -193,6 +223,9 @@ CREATE TABLE IF NOT EXISTS modelos_escrito (
     rama TEXT DEFAULT '',
     contenido_html TEXT NOT NULL,
     activo INTEGER DEFAULT 1,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -208,6 +241,9 @@ CREATE TABLE IF NOT EXISTS escritos (
     fecha_creacion TEXT,
     responsable TEXT DEFAULT '',
     responsable_username TEXT DEFAULT '',
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -232,6 +268,9 @@ CREATE TABLE IF NOT EXISTS turnos (
     resultado TEXT,
     requiere_nuevo_turno INTEGER DEFAULT 0,
     observaciones TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -268,6 +307,9 @@ CREATE TABLE IF NOT EXISTS notificaciones (
     id_referencia TEXT DEFAULT '',
     created_at TEXT,
     leida INTEGER DEFAULT 0,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     sync_status TEXT DEFAULT 'synced',
     created_by_machine TEXT
 );
@@ -281,6 +323,9 @@ CREATE TABLE IF NOT EXISTS expediente_estado_historial (
     inicio_ts TEXT NOT NULL,
     fin_ts TEXT,
     origen TEXT DEFAULT 'manual',
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
@@ -296,6 +341,21 @@ CREATE TABLE IF NOT EXISTS app_meta (
     key TEXT PRIMARY KEY,
     value TEXT,
     updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sync_conflicts (
+    _id TEXT PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    conflict_type TEXT NOT NULL,
+    detected_at TEXT NOT NULL,
+    local_version INTEGER DEFAULT 0,
+    remote_version INTEGER DEFAULT 0,
+    local_snapshot TEXT,
+    remote_snapshot TEXT,
+    status TEXT DEFAULT 'open',
+    sync_status TEXT DEFAULT 'pending',
+    created_by_machine TEXT
 );
 """
 
@@ -403,6 +463,7 @@ def init_db():
             conn.commit()
     # Migracion: agregar columnas responsable_username en tablas operativas
     _migrate_responsable_username(conn)
+    _migrate_soft_delete_columns(conn)
 
     # ── Reparar caracteres corruptos (U+FFFD) de importaciones previas ──
     _fix_replacement_characters(conn)
@@ -431,6 +492,8 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_inicio ON expediente_estado_historial(id_expediente, inicio_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_fin ON expediente_estado_historial(id_expediente, fin_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_responsable_inicio ON expediente_estado_historial(responsable_username, inicio_ts)",
+        "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_status_detected ON sync_conflicts(status, detected_at)",
+        "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_table_record ON sync_conflicts(table_name, record_id)",
     ]
     for idx_sql in _indices:
         conn.execute(idx_sql)
@@ -592,6 +655,21 @@ def _migrate_responsable_username(conn):
     conn.commit()
 
 
+def _migrate_soft_delete_columns(conn):
+    """Agrega columnas de tombstone en tablas sincronizadas existentes."""
+    for table in SYNCED_ENTITY_TABLES:
+        for col, col_def in [
+            ("is_deleted", "INTEGER DEFAULT 0"),
+            ("deleted_at", "TEXT"),
+            ("deleted_by", "TEXT DEFAULT ''"),
+        ]:
+            try:
+                conn.execute(f"SELECT {col} FROM {table} LIMIT 1")
+            except sqlite3.OperationalError:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+                conn.commit()
+
+
 def dict_from_row(row: sqlite3.Row | None) -> dict | None:
     if row is None:
         return None
@@ -622,6 +700,30 @@ def update(table: str, _id: str, data: dict):
 def delete(table: str, _id: str):
     with get_cursor() as cur:
         cur.execute(f"DELETE FROM {table} WHERE _id = ?", (_id,))
+
+
+def table_has_column(table: str, column: str) -> bool:
+    conn = get_connection()
+    try:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        return any(r[1] == column for r in rows)
+    finally:
+        conn.close()
+
+
+def soft_delete(table: str, _id: str, deleted_by: str = "system") -> bool:
+    if not find_by_id(table, _id):
+        return False
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {"sync_status": "pending", "updated_at": now}
+    if table_has_column(table, "is_deleted"):
+        payload["is_deleted"] = 1
+    if table_has_column(table, "deleted_at"):
+        payload["deleted_at"] = now
+    if table_has_column(table, "deleted_by"):
+        payload["deleted_by"] = deleted_by
+    update(table, _id, payload)
+    return True
 
 
 def find_by_id(table: str, _id: str) -> dict | None:
@@ -706,6 +808,20 @@ def get_sync_meta(key: str) -> str | None:
 def set_sync_meta(key: str, value: str):
     with get_cursor() as cur:
         cur.execute("INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)", (key, value))
+
+
+def get_table_counts(tables: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    conn = get_connection()
+    try:
+        for table in tables:
+            try:
+                counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except Exception:
+                counts[table] = 0
+    finally:
+        conn.close()
+    return counts
 
 
 # ----- App version helpers -----

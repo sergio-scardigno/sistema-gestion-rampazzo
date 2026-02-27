@@ -1,5 +1,6 @@
-"""Utilidades de exportacion a PDF y Excel."""
+"""Utilidades de exportacion a PDF, Excel y CSV."""
 from datetime import datetime
+import json
 
 from controllers.reporte_controller import ReporteController
 from controllers.cliente_controller import ClienteController
@@ -114,3 +115,76 @@ def export_report_excel(path: str):
         kpis = {**ops, **com, **eco}
         df_kpi = pd.DataFrame(list(kpis.items()), columns=["Indicador", "Valor"])
         df_kpi.to_excel(writer, sheet_name="KPIs", index=False)
+
+
+def _normalize_for_analysis(rows: list[dict], columns: list[str]) -> list[dict]:
+    """Normaliza campos complejos (dict/list) a JSON para export analítico."""
+    normalized: list[dict] = []
+    for row in rows:
+        out = {}
+        for col in columns:
+            value = row.get(col)
+            if isinstance(value, (dict, list)):
+                out[col] = json.dumps(value, ensure_ascii=False, default=str)
+            else:
+                out[col] = value
+        normalized.append(out)
+    return normalized
+
+
+CLIENTES_ANALISIS_COLUMNS = [
+    "_id", "id_cliente", "numero_carpeta", "nombre_completo", "dni", "cuil",
+    "fecha_nacimiento", "direccion", "localidad", "telefonos", "email",
+    "obra_social", "actividad", "procedencia_contacto", "observaciones",
+    "is_deleted", "deleted_at", "deleted_by",
+    "updated_at", "version", "sync_status", "created_by_machine",
+]
+
+CARPETAS_ANALISIS_COLUMNS = [
+    "_id", "id_expediente", "id_cliente", "numero_carpeta", "cliente_nombre",
+    "cliente_dni", "cliente_cuil",
+    "tipo_tramite", "area", "rama", "subtipo",
+    "estado", "prioridad",
+    "responsable", "responsable_username",
+    "responsable_secundario", "responsable_secundario_username",
+    "fecha_apertura", "fecha_cierre", "numero_expediente_anses",
+    "ubicacion_fisica", "link_drive", "resultado", "observaciones",
+    "is_deleted", "deleted_at", "deleted_by",
+    "updated_at", "version", "sync_status", "created_by_machine",
+]
+
+
+def export_clientes_excel(path: str):
+    import pandas as pd
+
+    rows = ReporteController.clientes_para_analisis()
+    norm = _normalize_for_analysis(rows, CLIENTES_ANALISIS_COLUMNS)
+    df = pd.DataFrame(norm, columns=CLIENTES_ANALISIS_COLUMNS)
+    df.to_excel(path, index=False, sheet_name="ClientesAnalisis")
+
+
+def export_clientes_csv(path: str):
+    import pandas as pd
+
+    rows = ReporteController.clientes_para_analisis()
+    norm = _normalize_for_analysis(rows, CLIENTES_ANALISIS_COLUMNS)
+    df = pd.DataFrame(norm, columns=CLIENTES_ANALISIS_COLUMNS)
+    df.to_csv(path, index=False, encoding="utf-8-sig")
+
+
+def export_carpetas_excel(path: str):
+    import pandas as pd
+
+    rows = ReporteController.carpetas_para_analisis()
+    norm = _normalize_for_analysis(rows, CARPETAS_ANALISIS_COLUMNS)
+    df = pd.DataFrame(norm, columns=CARPETAS_ANALISIS_COLUMNS)
+    df.to_excel(path, index=False, sheet_name="CarpetasAnalisis")
+
+
+def export_carpetas_csv(path: str):
+    import pandas as pd
+
+    rows = ReporteController.carpetas_para_analisis()
+    norm = _normalize_for_analysis(rows, CARPETAS_ANALISIS_COLUMNS)
+    df = pd.DataFrame(norm, columns=CARPETAS_ANALISIS_COLUMNS)
+    df.to_csv(path, index=False, encoding="utf-8-sig")
