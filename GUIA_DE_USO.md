@@ -534,6 +534,34 @@ Hacer doble clic en una fila del log. Se abre un dialogo con:
 - **Tabla**: Usuario, Total, Creaciones, Ediciones, Eliminaciones, Ultima actividad.
 - **Graficos (ultimos 30 dias)**: Actividad por usuario, actividad diaria, actividad por modulo.
 
+### Seguimiento de tareas (Pestaña 3)
+
+Vista pensada para Administrador/Superusuario para controlar el ciclo completo de una tarea asignada sin salir de Auditoria.
+
+**Que muestra por cada tarea:**
+
+- Fecha de asignacion.
+- Tarea / descripcion.
+- Usuario asignado.
+- Estado de lectura: Leida o No leida.
+- Fecha de lectura (cuando la notificacion fue abierta).
+- Estado actual de la tarea.
+- Fecha de cumplimiento (cuando paso a Cumplida/Completada/Cancelada).
+- Dias sin leer (solo si sigue pendiente y no fue leida).
+
+**Filtros disponibles:**
+
+- Responsable.
+- Estado.
+- Rango de fechas de asignacion.
+
+**Uso recomendado para seguimiento diario:**
+
+1. Ir a **Auditoria -> Seguimiento de Tareas**.
+2. Filtrar por responsable.
+3. Revisar primero filas con **No leida** y mayor **Dias sin leer**.
+4. Confirmar cumplimiento con **Estado** y **Fecha de cumplimiento**.
+
 > **Nota tecnica:** La tabla de auditoria esta protegida por triggers de la base de datos que impiden modificar o eliminar registros. Esto garantiza la integridad del historial.
 
 ---

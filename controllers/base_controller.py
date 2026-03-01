@@ -128,7 +128,8 @@ class BaseController:
         from core.permissions import scope_where
         session = Session.get()
         sw, sp = scope_where(session.rol, session.username,
-                             campo_responsable, campo_secundario)
+                            campo_responsable, campo_secundario,
+                            modulo=cls.TABLE)
         if sw:
             if where:
                 where = f"({where}) AND ({sw})"

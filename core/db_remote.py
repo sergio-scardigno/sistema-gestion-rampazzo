@@ -68,6 +68,8 @@ def ensure_indexes():
     db.modelos_escrito.create_index("rama")
     db.expediente_estado_historial.create_index("id_expediente")
     db.expediente_estado_historial.create_index("responsable_username")
+    db.notificaciones.create_index("target_username")
+    db.notificaciones.create_index([("target_username", pymongo.ASCENDING), ("resuelta", pymongo.ASCENDING)])
     db.sync_conflicts.create_index("status")
     db.sync_conflicts.create_index([("table_name", pymongo.ASCENDING), ("record_id", pymongo.ASCENDING)])
     db.record_locks.create_index("expires_at", expireAfterSeconds=0)

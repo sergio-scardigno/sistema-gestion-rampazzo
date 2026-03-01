@@ -15,6 +15,7 @@ from controllers.cliente_controller import ClienteController
 from services import anses_oficinas_service
 from core.lock_manager import LockManager
 from utils.validators import format_cuil
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class ClienteFormDialog(QDialog):
@@ -79,7 +80,7 @@ class ClienteFormDialog(QDialog):
         self._txt_cuil.editingFinished.connect(self._format_cuil)
         form.addRow("CUIL:", self._txt_cuil)
 
-        self._date_nacimiento = QDateEdit()
+        self._date_nacimiento = NoWheelDateEdit()
         self._date_nacimiento.setCalendarPopup(True)
         self._date_nacimiento.setDisplayFormat("dd/MM/yyyy")
         self._date_nacimiento.setDate(QDate(1960, 1, 1))
@@ -168,9 +169,9 @@ class ClienteFormDialog(QDialog):
                 self._apply_prefill()
 
     def _load_data(self):
-        data = ClienteController.get_by_id(self._id)
+        data = ClienteController.get_by_id_scoped(self._id)
         if not data:
-            QMessageBox.warning(self, "Error", "Cliente no encontrado.")
+            QMessageBox.warning(self, "Error", "Cliente no encontrado o sin permisos de acceso.")
             self.reject()
             return
 
@@ -285,9 +286,13 @@ class ClienteFormDialog(QDialog):
 
         try:
             if self._is_edit:
-                ClienteController.update(self._id, data)
+                updated = ClienteController.update(self._id, data)
+                if not updated:
+                    QMessageBox.warning(self, "Sin permisos", "No tiene permisos para modificar este cliente.")
+                    return
             else:
                 self.created_client = ClienteController.create(data)
+                self._abrir_form_carpeta_nueva(self.created_client.get("_id", ""))
         except ValueError as e:
             QMessageBox.warning(self, "Error de validacion", str(e))
             return
@@ -311,12 +316,39 @@ class ClienteFormDialog(QDialog):
         from controllers.expediente_controller import ExpedienteController
         expedientes = ExpedienteController.get_by_cliente(self._id)
         if not expedientes:
-            QMessageBox.information(self, "Sin carpetas", "Este cliente no tiene carpetas asociadas.")
+            reply = QMessageBox.question(
+                self,
+                "Sin carpetas",
+                "Este cliente no tiene carpetas asociadas.\n\n"
+                "Desea crear una carpeta ahora para este cliente?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                from views.expedientes.expediente_form import ExpedienteFormDialog
+                dlg = ExpedienteFormDialog(cliente_id=self._id, parent=self)
+                if dlg.exec():
+                    self._abrir_ultima_carpeta_creada()
             return
         if len(expedientes) == 1:
             self._abrir_expediente(expedientes[0]["_id"])
         else:
             self._elegir_expediente(expedientes)
+
+    def _abrir_ultima_carpeta_creada(self):
+        """Abre la ultima carpeta del cliente luego de crearla desde este formulario."""
+        from controllers.expediente_controller import ExpedienteController
+        expedientes = ExpedienteController.get_by_cliente(self._id, limit=1)
+        if expedientes:
+            self._abrir_expediente(expedientes[0]["_id"])
+
+    def _abrir_form_carpeta_nueva(self, cliente_id: str):
+        """Abre nueva carpeta con el cliente ya preseleccionado."""
+        if not cliente_id:
+            return
+        from views.expedientes.expediente_form import ExpedienteFormDialog
+        dlg = ExpedienteFormDialog(cliente_id=cliente_id, parent=self)
+        dlg.exec()
 
     def _abrir_expediente(self, expediente_id: str):
         """Abrir el formulario de edicion de una carpeta."""

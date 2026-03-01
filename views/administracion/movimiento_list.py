@@ -6,6 +6,8 @@ from PySide6.QtGui import QFont
 
 from views.widgets.filterable_table import FilterableTable
 from controllers.movimiento_controller import MovimientoController
+from core.auth import Session
+from core.permissions import tiene_permiso
 
 COLUMNS = [
     ("id_movimiento", "ID"),
@@ -24,6 +26,8 @@ class MovimientoListView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 16)
         layout.setSpacing(12)
+        session = Session.get()
+        self._can_write = tiene_permiso(session.rol, "movimientos.create")
 
         header = QHBoxLayout()
         title = QLabel("Administracion - Movimientos")
@@ -45,14 +49,16 @@ class MovimientoListView(QWidget):
         self._cmb_estado.currentIndexChanged.connect(self.refresh)
         header.addWidget(self._cmb_estado)
 
-        btn_new = QPushButton("+ Nuevo Movimiento")
-        btn_new.clicked.connect(self._new_movimiento)
-        header.addWidget(btn_new)
+        self._btn_new = QPushButton("+ Nuevo Movimiento")
+        self._btn_new.clicked.connect(self._new_movimiento)
+        self._btn_new.setVisible(self._can_write)
+        header.addWidget(self._btn_new)
 
-        btn_edit = QPushButton("Editar")
-        btn_edit.setProperty("variant", "secondary")
-        btn_edit.clicked.connect(self._edit_movimiento)
-        header.addWidget(btn_edit)
+        self._btn_edit = QPushButton("Editar")
+        self._btn_edit.setProperty("variant", "secondary")
+        self._btn_edit.clicked.connect(self._edit_movimiento)
+        self._btn_edit.setVisible(self._can_write)
+        header.addWidget(self._btn_edit)
 
         layout.addLayout(header)
 
@@ -94,6 +100,9 @@ class MovimientoListView(QWidget):
         )
 
     def _new_movimiento(self):
+        if not self._can_write:
+            QMessageBox.information(self, "Solo lectura", "No tiene permisos para crear movimientos.")
+            return
         from views.administracion.movimiento_form import MovimientoFormDialog
         dlg = MovimientoFormDialog(parent=self)
         if dlg.exec():
@@ -105,12 +114,12 @@ class MovimientoListView(QWidget):
             QMessageBox.information(self, "Atencion", "Seleccione un movimiento.")
             return
         from views.administracion.movimiento_form import MovimientoFormDialog
-        dlg = MovimientoFormDialog(movimiento_id=_id, parent=self)
+        dlg = MovimientoFormDialog(movimiento_id=_id, read_only=not self._can_write, parent=self)
         if dlg.exec():
             self.refresh()
 
     def _on_double_click(self, _id):
         from views.administracion.movimiento_form import MovimientoFormDialog
-        dlg = MovimientoFormDialog(movimiento_id=_id, parent=self)
+        dlg = MovimientoFormDialog(movimiento_id=_id, read_only=not self._can_write, parent=self)
         if dlg.exec():
             self.refresh()

@@ -9,7 +9,7 @@ from PySide6.QtGui import QFont, QColor
 from views.widgets.filterable_table import FilterableTable
 from controllers.auth_controller import AuthController
 from core.auth import Session
-from core.permissions import ROLES
+from core.permissions import ROLES, ROL_ALIAS
 
 COLUMNS = [
     ("username", "Usuario"),
@@ -108,7 +108,8 @@ class UsuariosView(QWidget):
 
         # Preparar datos para la tabla
         for u in users:
-            u["rol_display"] = (u.get("rol") or "").capitalize()
+            role_key = u.get("rol") or ""
+            u["rol_display"] = ROL_ALIAS.get(role_key, role_key.capitalize())
             activo = u.get("activo") in (1, True, "1", "True")
             u["estado_display"] = "Activo" if activo else "Pausado"
             # Formatear ultimo acceso
@@ -308,7 +309,7 @@ class UserFormDialog(QDialog):
         if self._current_rol != "superusuario":
             roles_disponibles = [r for r in ROLES if r != "superusuario"]
         for r in roles_disponibles:
-            self._cmb_rol.addItem(r.capitalize(), r)
+            self._cmb_rol.addItem(ROL_ALIAS.get(r, r.capitalize()), r)
         form.addRow("Rol *:", self._cmb_rol)
 
         layout.addLayout(form)

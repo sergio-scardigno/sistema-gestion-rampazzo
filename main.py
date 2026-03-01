@@ -106,6 +106,9 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyle("Fusion")
+    from views.widgets.no_wheel_input_guard import NoWheelInputGuard
+    app._no_wheel_input_guard = NoWheelInputGuard(app)  # evitar GC
+    app.installEventFilter(app._no_wheel_input_guard)
 
     # Cargar fuente Lato y establecer como default
     lato_loaded = load_fonts()

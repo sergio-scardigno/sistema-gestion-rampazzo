@@ -16,6 +16,8 @@ from controllers.cliente_controller import ClienteController
 from controllers.notificacion_controller import NotificacionController
 from core.auth import Session
 from core.permissions import get_active_users
+from views.widgets.no_wheel_combo import NoWheelComboBox
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +31,24 @@ class TareaFormDialog(QDialog):
     def __init__(self, tarea_id: str = None, expediente_id: str = None, parent=None):
         t0 = time.perf_counter()
         super().__init__(parent)
+        self.setObjectName("tareaFormDialog")
         self._id = tarea_id
         self._is_edit = tarea_id is not None
         self._fixed_expediente = expediente_id
+        self._original_responsable_username = ""
+        self._original_responsable_display = ""
 
         self.setWindowTitle("Editar Tarea" if self._is_edit else "Nueva Tarea")
         self.setMinimumWidth(550)
+        # Forzar contraste consistente al abrir desde notificaciones.
+        self.setStyleSheet(
+            """
+            QDialog#tareaFormDialog { background-color: #f5f5f5; }
+            QDialog#tareaFormDialog QLabel { color: #1a1a1a; background: transparent; }
+            QDialog#tareaFormDialog QScrollArea { background-color: #f5f5f5; border: none; }
+            QDialog#tareaFormDialog QWidget#tareaFormContainer { background-color: #f5f5f5; }
+            """
+        )
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -48,10 +62,12 @@ class TareaFormDialog(QDialog):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         form_container = QWidget()
+        form_container.setObjectName("tareaFormContainer")
 
         form = QFormLayout(form_container)
         form.setSpacing(8)
         form.setContentsMargins(4, 4, 4, 4)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         # Carpeta selector (solo carpetas del usuario si rol restringido)
         self._cmb_expediente = QComboBox()
@@ -114,7 +130,7 @@ class TareaFormDialog(QDialog):
         self._txt_descripcion.setMaximumHeight(80)
         form.addRow("Descripcion *:", self._txt_descripcion)
 
-        self._cmb_responsable = QComboBox()
+        self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
         self._cmb_responsable.setPlaceholderText("Seleccionar responsable...")
         users = get_active_users()
@@ -123,13 +139,13 @@ class TareaFormDialog(QDialog):
             self._cmb_responsable.addItem(label, u.get("username", ""))
         form.addRow("Responsable *:", self._cmb_responsable)
 
-        self._date_inicio = QDateEdit()
+        self._date_inicio = NoWheelDateEdit()
         self._date_inicio.setCalendarPopup(True)
         self._date_inicio.setDate(QDate.currentDate())
         self._date_inicio.setDisplayFormat("dd/MM/yyyy")
         form.addRow("Fecha inicio:", self._date_inicio)
 
-        self._date_vencimiento = QDateEdit()
+        self._date_vencimiento = NoWheelDateEdit()
         self._date_vencimiento.setCalendarPopup(True)
         self._date_vencimiento.setDate(QDate.currentDate().addDays(30))
         self._date_vencimiento.setDisplayFormat("dd/MM/yyyy")
@@ -296,6 +312,8 @@ class TareaFormDialog(QDialog):
             self._cmb_responsable.setCurrentIndex(idx_r)
         elif data.get("responsable", ""):
             self._cmb_responsable.setEditText(data.get("responsable", ""))
+        self._original_responsable_username = data.get("responsable_username", "") or ""
+        self._original_responsable_display = data.get("responsable", "") or ""
         fi = data.get("fecha_inicio", "")
         if fi and len(fi) >= 10:
             self._date_inicio.setDate(QDate.fromString(fi[:10], "yyyy-MM-dd"))
@@ -315,6 +333,21 @@ class TareaFormDialog(QDialog):
         if not resp_username and not resp_display:
             QMessageBox.warning(self, "Atencion", "El responsable es obligatorio.")
             return
+
+        if self._is_edit:
+            old_key = (self._original_responsable_username or self._original_responsable_display).strip().lower()
+            new_key = (resp_username or resp_display).strip().lower()
+            if old_key and new_key and old_key != new_key:
+                resp = QMessageBox.warning(
+                    self,
+                    "Confirmar cambio de responsable",
+                    "Esta por cambiar el responsable de la tarea.\n\n"
+                    "Desea confirmar este cambio?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if resp != QMessageBox.StandardButton.Yes:
+                    return
 
         responsable_legible = resp_display.split("(")[0].strip() if resp_username else resp_display
 

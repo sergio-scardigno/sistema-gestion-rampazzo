@@ -47,7 +47,25 @@ class LockManager:
                 return True, "Bloqueo renovado"
             else:
                 locked_by = existing.get("locked_by", "otro usuario")
-                return False, f"Registro bloqueado por {locked_by}"
+                wait_msg = ""
+                expires_at_raw = existing.get("expires_at", "")
+                if expires_at_raw:
+                    try:
+                        expires_at = datetime.fromisoformat(expires_at_raw)
+                        remaining = max(0, int((expires_at - now).total_seconds()))
+                        mins = remaining // 60
+                        secs = remaining % 60
+                        if mins > 0:
+                            wait_msg = f" Espere aproximadamente {mins} min {secs:02d} s."
+                        else:
+                            wait_msg = f" Espere aproximadamente {secs} s."
+                    except Exception:
+                        wait_msg = ""
+                return (
+                    False,
+                    f'La carpeta esta bloqueada porque el usuario "{locked_by}" '
+                    f"esta trabajando sobre ella.{wait_msg}"
+                )
 
         # Create new lock
         try:

@@ -16,6 +16,7 @@ from controllers.expediente_controller import ExpedienteController
 from controllers.cliente_controller import ClienteController
 from core.auth import Session
 from core.permissions import get_active_users
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 _INITIAL_EXP_LIMIT = 50
 _SEARCH_DEBOUNCE_MS = 300
@@ -124,7 +125,7 @@ class DocumentoFormDialog(QDialog):
         form.addRow("Archivo:", archivo_layout)
 
         # Fecha
-        self._date = QDateEdit()
+        self._date = NoWheelDateEdit()
         self._date.setCalendarPopup(True)
         self._date.setDate(QDate.currentDate())
         self._date.setDisplayFormat("dd/MM/yyyy")

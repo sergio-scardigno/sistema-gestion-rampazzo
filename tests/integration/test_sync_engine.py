@@ -60,7 +60,7 @@ class TestSyncConstants:
     def test_sync_tables_covers_all_entities(self):
         expected = {"usuarios", "consultas", "clientes", "expedientes",
                     "tareas", "turnos", "comunicaciones", "movimientos",
-                    "documentos", "modelos_escrito", "escritos",
+                    "documentos", "modelos_escrito", "escritos", "notificaciones",
                     "expediente_estado_historial", "audit_log"}
         assert expected == set(SYNC_TABLES)
 

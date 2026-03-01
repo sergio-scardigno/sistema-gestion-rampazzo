@@ -11,18 +11,23 @@ from controllers.movimiento_controller import MovimientoController
 from controllers.cliente_controller import ClienteController
 from controllers.expediente_controller import ExpedienteController
 from core.auth import Session
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class MovimientoFormDialog(QDialog):
     def __init__(self, movimiento_id: str = None, expediente_id: str = None,
-                 cliente_id: str = None, parent=None):
+                 cliente_id: str = None, read_only: bool = False, parent=None):
         super().__init__(parent)
         self._id = movimiento_id
         self._is_edit = movimiento_id is not None
+        self._read_only = bool(read_only)
         self._preset_expediente = expediente_id
         self._preset_cliente = cliente_id
 
-        self.setWindowTitle("Editar Movimiento" if self._is_edit else "Nuevo Movimiento")
+        if self._read_only:
+            self.setWindowTitle("Ver Movimiento")
+        else:
+            self.setWindowTitle("Editar Movimiento" if self._is_edit else "Nuevo Movimiento")
         self.setMinimumWidth(550)
 
         layout = QVBoxLayout(self)
@@ -90,7 +95,7 @@ class MovimientoFormDialog(QDialog):
         self._spn_monto.setPrefix("$ ")
         form.addRow("Monto *:", self._spn_monto)
 
-        self._date = QDateEdit()
+        self._date = NoWheelDateEdit()
         self._date.setCalendarPopup(True)
         self._date.setDate(QDate.currentDate())
         self._date.setDisplayFormat("dd/MM/yyyy")
@@ -126,11 +131,29 @@ class MovimientoFormDialog(QDialog):
         btn_layout.addWidget(btn_cancel)
         btn_save = QPushButton("Guardar")
         btn_save.clicked.connect(self._save)
+        btn_save.setVisible(not self._read_only)
         btn_layout.addWidget(btn_save)
         layout.addLayout(btn_layout)
 
         if self._is_edit:
             self._load_data()
+        if self._read_only:
+            self._set_read_only_ui()
+
+    def _set_read_only_ui(self):
+        widgets = [
+            self._cmb_cliente,
+            self._cmb_expediente,
+            self._cmb_tipo,
+            self._spn_monto,
+            self._date,
+            self._cmb_forma_pago,
+            self._cmb_estado,
+            self._txt_comprobante,
+            self._spn_saldo,
+        ]
+        for w in widgets:
+            w.setEnabled(False)
 
     def _load_data(self):
         data = MovimientoController.get_by_id(self._id)
@@ -169,6 +192,9 @@ class MovimientoFormDialog(QDialog):
         self._spn_saldo.setValue(float(data.get("saldo", 0) or 0))
 
     def _save(self):
+        if self._read_only:
+            QMessageBox.information(self, "Solo lectura", "Este rol no puede modificar movimientos.")
+            return
         monto = self._spn_monto.value()
         if monto <= 0:
             QMessageBox.warning(self, "Atencion", "El monto debe ser mayor a 0.")

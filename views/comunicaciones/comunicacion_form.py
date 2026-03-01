@@ -10,6 +10,7 @@ from PySide6.QtGui import QFont
 from controllers.comunicacion_controller import ComunicacionController
 from controllers.expediente_controller import ExpedienteController
 from core.auth import Session
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class ComunicacionFormDialog(QDialog):
@@ -57,7 +58,7 @@ class ComunicacionFormDialog(QDialog):
                 self._cmb_expediente.addItem(label, e["_id"])
         form.addRow("Carpeta:", self._cmb_expediente)
 
-        self._date = QDateEdit()
+        self._date = NoWheelDateEdit()
         self._date.setCalendarPopup(True)
         self._date.setDate(QDate.currentDate())
         self._date.setDisplayFormat("dd/MM/yyyy")

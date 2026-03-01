@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     actividad TEXT,
     clave_mi_anses TEXT,
     clave_fiscal TEXT,
+    created_by_username TEXT DEFAULT '',
     procedencia_contacto TEXT,
     observaciones TEXT,
     is_deleted INTEGER DEFAULT 0,
@@ -306,7 +307,11 @@ CREATE TABLE IF NOT EXISTS notificaciones (
     mensaje TEXT,
     id_referencia TEXT DEFAULT '',
     created_at TEXT,
+    updated_at TEXT,
     leida INTEGER DEFAULT 0,
+    resuelta INTEGER DEFAULT 0,
+    fecha_resolucion TEXT,
+    resuelta_por_estado INTEGER DEFAULT 0,
     is_deleted INTEGER DEFAULT 0,
     deleted_at TEXT,
     deleted_by TEXT DEFAULT '',
@@ -434,6 +439,12 @@ def init_db():
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE clientes ADD COLUMN procedencia_contacto TEXT")
         conn.commit()
+    # Migracion: agregar creador en clientes
+    try:
+        conn.execute("SELECT created_by_username FROM clientes LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE clientes ADD COLUMN created_by_username TEXT DEFAULT ''")
+        conn.commit()
     # Migracion: agregar columnas clave_mi_anses y clave_fiscal a expedientes
     for col in ["clave_mi_anses", "clave_fiscal"]:
         try:
@@ -464,6 +475,7 @@ def init_db():
     # Migracion: agregar columnas responsable_username en tablas operativas
     _migrate_responsable_username(conn)
     _migrate_soft_delete_columns(conn)
+    _migrate_notificaciones_resolution(conn)
 
     # ── Reparar caracteres corruptos (U+FFFD) de importaciones previas ──
     _fix_replacement_characters(conn)
@@ -488,12 +500,15 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_clientes_dni ON clientes(dni)",
         "CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre_completo)",
         "CREATE INDEX IF NOT EXISTS idx_clientes_cuil ON clientes(cuil)",
+        "CREATE INDEX IF NOT EXISTS idx_clientes_created_by_username ON clientes(created_by_username)",
         # Indices para historial de estados de expedientes
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_inicio ON expediente_estado_historial(id_expediente, inicio_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_fin ON expediente_estado_historial(id_expediente, fin_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_responsable_inicio ON expediente_estado_historial(responsable_username, inicio_ts)",
         "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_status_detected ON sync_conflicts(status, detected_at)",
         "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_table_record ON sync_conflicts(table_name, record_id)",
+        "CREATE INDEX IF NOT EXISTS idx_notificaciones_target_created ON notificaciones(target_username, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_notificaciones_target_resuelta ON notificaciones(target_username, resuelta)",
     ]
     for idx_sql in _indices:
         conn.execute(idx_sql)
@@ -668,6 +683,21 @@ def _migrate_soft_delete_columns(conn):
             except sqlite3.OperationalError:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
                 conn.commit()
+
+
+def _migrate_notificaciones_resolution(conn):
+    """Agrega campos de estado/resolucion para notificaciones persistentes."""
+    for col, col_def in [
+        ("updated_at", "TEXT"),
+        ("resuelta", "INTEGER DEFAULT 0"),
+        ("fecha_resolucion", "TEXT"),
+        ("resuelta_por_estado", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            conn.execute(f"SELECT {col} FROM notificaciones LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute(f"ALTER TABLE notificaciones ADD COLUMN {col} {col_def}")
+            conn.commit()
 
 
 def dict_from_row(row: sqlite3.Row | None) -> dict | None:

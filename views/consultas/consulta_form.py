@@ -10,6 +10,7 @@ from PySide6.QtGui import QFont
 from controllers.consulta_controller import ConsultaController
 from services import anses_oficinas_service
 from core.auth import Session
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 # Mapeo de valores internos de estado a labels visibles en UI
 _ESTADO_LABELS = {
@@ -42,7 +43,7 @@ class ConsultaFormDialog(QDialog):
         form.setContentsMargins(4, 4, 4, 4)
         form.setSpacing(8)
 
-        self._date_ingreso = QDateEdit()
+        self._date_ingreso = NoWheelDateEdit()
         self._date_ingreso.setCalendarPopup(True)
         self._date_ingreso.setDate(QDate.currentDate())
         self._date_ingreso.setDisplayFormat("dd/MM/yyyy")

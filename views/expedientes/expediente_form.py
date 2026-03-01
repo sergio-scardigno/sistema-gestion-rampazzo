@@ -26,19 +26,47 @@ from core.lock_manager import LockManager
 from core.auth import Session
 from core.permissions import tiene_permiso, get_active_users
 from views.widgets.filterable_table import FilterableTable
+from views.widgets.no_wheel_combo import NoWheelComboBox
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class ExpedienteFormDialog(QDialog):
-    def __init__(self, expediente_id: str = None, parent=None):
+    def __init__(self, expediente_id: str = None, cliente_id: str = None, parent=None):
         super().__init__(parent)
+        self.setObjectName("expedienteFormDialog")
         self._id = expediente_id
+        self._prefill_cliente_id = cliente_id or ""
         self._is_edit = expediente_id is not None
         self._locked = False
+        self._is_read_only = False
         self._loaded_tabs: set[int] = set()
         self._tabs: QTabWidget | None = None
+        self._original_responsable_username = ""
+        self._original_responsable_display = ""
+        self._original_responsable_secundario_username = ""
+        self._original_responsable_secundario_display = ""
 
         self.setWindowTitle("Editar Carpeta" if self._is_edit else "Nueva Carpeta")
         self.setMinimumSize(800, 560)
+        # Forzar tema claro y contraste alto en todo el formulario.
+        self.setStyleSheet(
+            """
+            QDialog#expedienteFormDialog { background-color: #f5f5f5; }
+            QDialog#expedienteFormDialog QLabel { color: #1a1a1a; background: transparent; }
+            QDialog#expedienteFormDialog QScrollArea { background-color: #f5f5f5; border: none; }
+            QDialog#expedienteFormDialog QWidget { background-color: #f5f5f5; }
+            QDialog#expedienteFormDialog QLineEdit,
+            QDialog#expedienteFormDialog QTextEdit,
+            QDialog#expedienteFormDialog QComboBox,
+            QDialog#expedienteFormDialog QDateEdit {
+                background-color: #ffffff;
+                color: #1a1a1a;
+                border: 1px solid #cfcfcf;
+                border-radius: 4px;
+                padding: 4px 6px;
+            }
+            """
+        )
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -56,9 +84,9 @@ class ExpedienteFormDialog(QDialog):
         btn_cancel.setProperty("variant", "secondary")
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
-        btn_save = QPushButton("Guardar")
-        btn_save.clicked.connect(self._save)
-        btn_layout.addWidget(btn_save)
+        self._btn_save = QPushButton("Guardar")
+        self._btn_save.clicked.connect(self._save)
+        btn_layout.addWidget(self._btn_save)
         layout.addLayout(btn_layout)
 
         if self._is_edit:
@@ -328,6 +356,14 @@ class ExpedienteFormDialog(QDialog):
 
         # Ocultar claves por defecto (solo visibles para rama Previsional)
         self._set_claves_visible(False)
+        if (not self._is_edit) and self._prefill_cliente_id:
+            cliente_prefill = ClienteController.get_by_id(self._prefill_cliente_id)
+            if cliente_prefill:
+                self._add_cliente_to_combo(cliente_prefill)
+                idx_prefill = self._cmb_cliente.findData(self._prefill_cliente_id)
+                if idx_prefill >= 0:
+                    self._cmb_cliente.setCurrentIndex(idx_prefill)
+                    self._on_cliente_changed(idx_prefill)
 
         # ── Seccion: Tramite ──
         form.addRow(self._make_separator("TRAMITE"))
@@ -351,7 +387,7 @@ class ExpedienteFormDialog(QDialog):
         self._cmb_subtipo.setMinimumWidth(240)
         form.addRow("Subtipo:", self._cmb_subtipo)
 
-        self._date_apertura = QDateEdit()
+        self._date_apertura = NoWheelDateEdit()
         self._date_apertura.setCalendarPopup(True)
         self._date_apertura.setDate(QDate.currentDate())
         self._date_apertura.setDisplayFormat("dd/MM/yyyy")
@@ -387,10 +423,10 @@ class ExpedienteFormDialog(QDialog):
         # ── Seccion: Responsables ──
         form.addRow(self._make_separator("RESPONSABLES"))
 
-        self._cmb_responsable = QComboBox()
+        self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
         self._cmb_responsable.setPlaceholderText("Seleccionar responsable...")
-        self._cmb_responsable2 = QComboBox()
+        self._cmb_responsable2 = NoWheelComboBox()
         self._cmb_responsable2.setEditable(True)
         self._cmb_responsable2.setPlaceholderText("Seleccionar resp. secundario...")
         self._cmb_responsable2.addItem("-- Sin resp. secundario --", "")
@@ -440,7 +476,7 @@ class ExpedienteFormDialog(QDialog):
             self._cmb_resultado.addItem(r, r)
         form.addRow("Resultado:", self._cmb_resultado)
 
-        self._date_cierre = QDateEdit()
+        self._date_cierre = NoWheelDateEdit()
         self._date_cierre.setCalendarPopup(True)
         self._date_cierre.setDate(QDate.currentDate())
         self._date_cierre.setDisplayFormat("dd/MM/yyyy")
@@ -463,6 +499,7 @@ class ExpedienteFormDialog(QDialog):
         ok, msg = LockManager.acquire_lock("expedientes", self._id)
         if not ok:
             QMessageBox.information(self, "Registro bloqueado", msg)
+            self._set_read_only_ui()
         else:
             self._locked = True
 
@@ -520,6 +557,8 @@ class ExpedienteFormDialog(QDialog):
         elif data.get("responsable", ""):
             # Fallback: mostrar texto legacy
             self._cmb_responsable.setEditText(data.get("responsable", ""))
+        self._original_responsable_username = data.get("responsable_username", "") or ""
+        self._original_responsable_display = data.get("responsable", "") or ""
 
         resp2_uname = data.get("responsable_secundario_username", "")
         idx_r2 = self._cmb_responsable2.findData(resp2_uname)
@@ -527,6 +566,8 @@ class ExpedienteFormDialog(QDialog):
             self._cmb_responsable2.setCurrentIndex(idx_r2)
         elif data.get("responsable_secundario", ""):
             self._cmb_responsable2.setEditText(data.get("responsable_secundario", ""))
+        self._original_responsable_secundario_username = data.get("responsable_secundario_username", "") or ""
+        self._original_responsable_secundario_display = data.get("responsable_secundario", "") or ""
         self._cmb_estado.setCurrentText(data.get("estado", "Activo"))
         self._cmb_prioridad.setCurrentText(data.get("prioridad", "Normal"))
         self._txt_ubicacion.setText(data.get("ubicacion_fisica", ""))
@@ -598,6 +639,13 @@ class ExpedienteFormDialog(QDialog):
 
     def _load_tab_turnos(self):
         turnos = TurnoController.get_by_expediente(self._id)
+        expediente = ExpedienteController.get_by_id(self._id) or {}
+        expected_cliente_id = expediente.get("id_cliente", "") or ""
+        if expected_cliente_id:
+            turnos = [
+                t for t in turnos
+                if (t.get("id_cliente", "") or "") == expected_cliente_id
+            ]
         self._turnos_table.set_data(turnos)
 
     def _load_tab_comms(self):
@@ -866,6 +914,13 @@ class ExpedienteFormDialog(QDialog):
         self._cmb_resultado.setEnabled(es_cierre)
 
     def _save(self):
+        if self._is_read_only:
+            QMessageBox.warning(
+                self,
+                "Registro bloqueado",
+                "Esta carpeta esta en modo solo lectura porque se encuentra bloqueada.",
+            )
+            return
         resp_username = self._cmb_responsable.currentData() or ""
         resp_display = self._cmb_responsable.currentText().strip()
         if not resp_username and not resp_display:
@@ -873,6 +928,36 @@ class ExpedienteFormDialog(QDialog):
             return
 
         resp2_username = self._cmb_responsable2.currentData() or ""
+
+        if self._is_edit:
+            old_primary = (self._original_responsable_username or self._original_responsable_display).strip().lower()
+            new_primary = (resp_username or resp_display).strip().lower()
+            old_secondary = (
+                self._original_responsable_secundario_username
+                or self._original_responsable_secundario_display
+            ).strip().lower()
+            new_secondary = (
+                resp2_username or self._cmb_responsable2.currentText().strip()
+            ).strip().lower()
+            changed_primary = old_primary != new_primary
+            changed_secondary = old_secondary != new_secondary
+            if changed_primary or changed_secondary:
+                mensaje = "Esta por cambiar el responsable de la carpeta."
+                if changed_primary and changed_secondary:
+                    mensaje = (
+                        "Esta por cambiar el responsable principal y secundario de la carpeta."
+                    )
+                elif changed_secondary:
+                    mensaje = "Esta por cambiar el responsable secundario de la carpeta."
+                resp = QMessageBox.warning(
+                    self,
+                    "Confirmar cambio de responsable",
+                    f"{mensaje}\n\nDesea confirmar este cambio?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if resp != QMessageBox.StandardButton.Yes:
+                    return
 
         estado = self._cmb_estado.currentText()
 
@@ -974,3 +1059,12 @@ class ExpedienteFormDialog(QDialog):
         if self._locked and self._id:
             LockManager.release_lock("expedientes", self._id)
         super().reject()
+
+    def _set_read_only_ui(self):
+        """Pone el formulario en solo lectura cuando el lock no se pudo adquirir."""
+        self._is_read_only = True
+        self._btn_save.setEnabled(False)
+        self._btn_save.setToolTip("No disponible: registro bloqueado por otro usuario.")
+        widgets = self.findChildren((QLineEdit, QTextEdit, QDateEdit, QComboBox, QCheckBox))
+        for w in widgets:
+            w.setEnabled(False)

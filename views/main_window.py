@@ -5,13 +5,13 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QStackedWidget, QFrame, QMessageBox, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QIcon, QPixmap
 
 from controllers.auth_controller import AuthController
 from controllers.config_controller import ConfigController
 from core.auth import Session
-from core.permissions import modulos_permitidos
+from core.permissions import modulos_permitidos, ROL_ALIAS
 from core.session_guard import SessionGuard
 from views.widgets.sync_indicator import SyncIndicator
 from views.widgets.notification_bell import NotificationBell
@@ -50,11 +50,18 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._load_views()
         self._navigate("dashboard")
+        self._shown_assignment_popup_ids: set[str] = set()
 
         # SessionGuard: verifica periodicamente si el usuario sigue activo
         self._session_guard = SessionGuard(self)
         self._session_guard.session_invalidated.connect(self._on_session_invalidated)
         self._session_guard.start()
+
+        # Popup de alertas de tareas al iniciar sesion.
+        QTimer.singleShot(450, self._show_login_task_popup)
+        self._assignment_popup_timer = QTimer(self)
+        self._assignment_popup_timer.timeout.connect(self._poll_new_assignment_notifications)
+        self._assignment_popup_timer.start(15_000)
 
     def _build_ui(self):
         central = QWidget()
@@ -169,7 +176,8 @@ class MainWindow(QMainWindow):
         topbar_layout.addWidget(self._sync_indicator)
 
         # User info
-        user_info = QLabel(f"{session.nombre}  ({session.rol.capitalize()})")
+        rol_label = ROL_ALIAS.get(session.rol, session.rol.capitalize())
+        user_info = QLabel(f"{session.nombre}  ({rol_label})")
         user_info.setStyleSheet("color: #6b6b6b; font-size: 12px; margin-left: 16px;")
         topbar_layout.addWidget(user_info)
 
@@ -294,7 +302,7 @@ class MainWindow(QMainWindow):
         if not id_referencia:
             return
 
-        if tipo == "tarea_asignada":
+        if tipo in ("tarea_asignada", "tarea_proxima_vencer"):
             from controllers.tarea_controller import TareaController
             tarea = TareaController.get_by_id(id_referencia)
             if not tarea:
@@ -329,6 +337,105 @@ class MainWindow(QMainWindow):
             view = self._views.get("turnos")
             if view and hasattr(view, "refresh"):
                 view.refresh()
+        elif tipo == "expediente_asignado":
+            from controllers.expediente_controller import ExpedienteController
+            exp = ExpedienteController.get_by_id(id_referencia)
+            if not exp:
+                QMessageBox.information(
+                    self, "Notificacion",
+                    "La carpeta ya no existe o fue eliminada."
+                )
+                return
+            self._navigate("expedientes")
+            from views.expedientes.expediente_form import ExpedienteFormDialog
+            dlg = ExpedienteFormDialog(expediente_id=id_referencia, parent=self)
+            dlg.exec()
+            view = self._views.get("expedientes")
+            if view and hasattr(view, "refresh"):
+                view.refresh()
+
+    def _show_login_task_popup(self):
+        """Mostrar popup de tareas al iniciar sesion."""
+        try:
+            from controllers.notificacion_controller import NotificacionController
+            from views.widgets.login_task_alerts_popup import LoginTaskAlertsPopup
+
+            session = Session.get()
+            if not session.logged_in:
+                return
+
+            notifications = NotificacionController.get_login_popup_notifications(
+                session.username, due_days=3, limit=20
+            )
+            if not notifications:
+                return
+
+            dlg = LoginTaskAlertsPopup(notifications, parent=self)
+            accepted = dlg.exec()
+            selected = getattr(dlg, "selected_notification", None)
+            if accepted and isinstance(selected, dict):
+                nid = selected.get("_id", "")
+                if nid:
+                    try:
+                        NotificacionController.mark_read(nid)
+                    except Exception:
+                        pass
+                self._on_notification_clicked(
+                    selected.get("tipo", ""),
+                    selected.get("id_referencia", ""),
+                )
+
+            # Refrescar campana luego del popup inicial.
+            self._notification_bell.refresh()
+        except Exception:
+            QMessageBox.warning(
+                self,
+                "Alertas",
+                "No se pudieron cargar las alertas de inicio.",
+            )
+
+    def _poll_new_assignment_notifications(self):
+        """Mostrar popup inmediato para nuevas asignaciones de carpeta no vistas."""
+        try:
+            from controllers.notificacion_controller import NotificacionController
+            from views.widgets.login_task_alerts_popup import LoginTaskAlertsPopup
+
+            session = Session.get()
+            if not session.logged_in:
+                return
+            active = NotificacionController.get_active_for_user(session.username, limit=30)
+            pending = [
+                n for n in active
+                if n.get("tipo") == "expediente_asignado"
+                and int(n.get("leida", 0) or 0) == 0
+                and n.get("_id", "") not in self._shown_assignment_popup_ids
+            ]
+            if not pending:
+                return
+
+            for notif in pending:
+                nid = notif.get("_id", "")
+                if nid:
+                    self._shown_assignment_popup_ids.add(nid)
+
+            dlg = LoginTaskAlertsPopup(pending, parent=self)
+            accepted = dlg.exec()
+            selected = getattr(dlg, "selected_notification", None)
+            if accepted and isinstance(selected, dict):
+                nid = selected.get("_id", "")
+                if nid:
+                    try:
+                        NotificacionController.mark_read(nid)
+                    except Exception:
+                        pass
+                self._on_notification_clicked(
+                    selected.get("tipo", ""),
+                    selected.get("id_referencia", ""),
+                )
+            self._notification_bell.refresh()
+        except Exception:
+            # No bloquear UI por fallas de popup inmediato.
+            pass
 
     def set_sync_status(self, status: str, detail: str = ""):
         self._sync_indicator.set_status(status, detail)

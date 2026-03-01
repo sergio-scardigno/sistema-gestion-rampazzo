@@ -280,6 +280,10 @@ Log de auditoria inmutable para trazabilidad completa:
 - Vista de detalle campo a campo de cada cambio.
 - Estadisticas: actividad diaria, por usuario, por modulo.
 - Registro de intentos de login (exitosos y fallidos).
+- **Seguimiento de tareas para administracion (nuevo):**
+  - Pestana dedicada para ver en una sola grilla: asignada a, fecha de asignacion, leida/no leida, fecha de lectura, estado actual, fecha de cumplimiento y dias sin leer.
+  - Filtros por responsable, estado y rango de fechas.
+  - Calcula cumplimiento tomando el cambio de estado cerrado en `audit_log` (Cumplida/Completada/Cancelada).
 
 ### Gestion de empleados
 
@@ -610,6 +614,41 @@ encryption_key =             # Clave para encriptar campos sensibles (32 caracte
 ### Variables de entorno
 
 - `COMPUTERNAME` -- Se usa como identificador de maquina si no se configura en `config.ini`.
+
+### Seguridad por red (IP/WiFi) - pendiente de implementacion
+
+Actualmente la aplicacion **no valida todavia** IP o red WiFi en el login.
+La seccion `[security]` de `config.ini` solo usa:
+
+```ini
+[security]
+encryption_key =
+```
+
+Si se necesita restringir acceso desde ahora (sin cambios de codigo), usar controles de infraestructura:
+
+- MongoDB Atlas `Network Access` (permitir solo IPs/subredes autorizadas).
+- Firewall del sistema operativo para limitar ejecucion/conectividad por perfil de red.
+- VPN corporativa + whitelist de rango VPN.
+
+Diseno recomendado para una futura version avanzada:
+
+```ini
+[security]
+restrict_by_ip = true
+allowed_ips = 192.168.1.10,192.168.1.11
+allowed_networks = 192.168.1.0/24
+restrict_by_wifi = true
+allowed_wifi_ssids = OficinaRampazzo,OficinaBack
+single_session_per_machine = true
+```
+
+Criterio funcional esperado:
+
+1. En login, validar IP/red actual contra `allowed_ips`/`allowed_networks`.
+2. En Windows, si `restrict_by_wifi = true`, validar SSID activo.
+3. Si falla validacion, bloquear inicio de sesion con mensaje explicito.
+4. Mantener log de auditoria de intentos bloqueados por politica de red.
 
 ---
 

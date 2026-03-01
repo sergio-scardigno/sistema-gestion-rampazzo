@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QLabel, QHeaderView, QAbstractItemView
 )
 from PySide6.QtCore import Signal, Qt
+from typing import Callable
 
 
 class FilterableTable(QWidget):
@@ -14,7 +15,8 @@ class FilterableTable(QWidget):
 
     def __init__(self, columns: list[tuple[str, str]], parent=None,
                  search_fields: list[str] | None = None,
-                 search_placeholder: str = "Buscar..."):
+                 search_placeholder: str = "Buscar...",
+                 row_style_provider: Callable[[dict, str, QTableWidgetItem], None] | None = None):
         """
         columns: lista de (field_name, display_name)
         search_fields: campos extra sobre los que buscar (sin mostrar columna).
@@ -27,6 +29,7 @@ class FilterableTable(QWidget):
             [c[0] for c in columns] + (search_fields or [])
         )
         self._search_placeholder = search_placeholder
+        self._row_style_provider = row_style_provider
         self._data: list[dict] = []
         self._page = 0
         self._page_size = 50
@@ -126,6 +129,12 @@ class FilterableTable(QWidget):
                     val = ", ".join(str(v) for v in val)
                 item = QTableWidgetItem(str(val) if val is not None else "")
                 item.setData(Qt.ItemDataRole.UserRole, row_data.get("_id", ""))
+                if self._row_style_provider:
+                    try:
+                        self._row_style_provider(row_data, field, item)
+                    except Exception:
+                        # El estilo visual nunca debe romper el render de la tabla.
+                        pass
                 self._table.setItem(row_idx, col_idx, item)
 
         self._lbl_info.setText(f"Mostrando {start + 1}-{end} de {total}")

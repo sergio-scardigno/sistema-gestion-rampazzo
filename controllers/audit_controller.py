@@ -261,6 +261,222 @@ class AuditController:
         return [r[0] for r in rows if r[0]]
 
     @staticmethod
+    def get_responsables_tareas_asignadas() -> list[str]:
+        """Lista de usuarios con asignaciones de tareas registradas."""
+        conn = db_local.get_connection()
+        rows = conn.execute(
+            """
+            SELECT username
+            FROM (
+                SELECT DISTINCT target_username AS username
+                FROM notificaciones
+                WHERE tipo = 'tarea_asignada'
+                  AND target_username IS NOT NULL
+                  AND target_username <> ''
+
+                UNION
+
+                SELECT DISTINCT t.responsable_username AS username
+                FROM tareas t
+                INNER JOIN usuarios u ON u.username = t.responsable_username
+                WHERE COALESCE(t.responsable_username, '') <> ''
+                  AND u.rol = 'administrador'
+            )
+            WHERE username IS NOT NULL AND username <> ''
+            ORDER BY username
+            """
+        ).fetchall()
+        conn.close()
+        return [r[0] for r in rows if r[0]]
+
+    @staticmethod
+    def get_seguimiento_tareas(
+        responsable: str = "",
+        estado: str = "",
+        fecha_desde: str = "",
+        fecha_hasta: str = "",
+        limit: int = 300,
+    ) -> list[dict]:
+        """
+        Seguimiento por tarea asignada para administracion.
+
+        Fuente principal: notificaciones tipo 'tarea_asignada' (asignacion + lectura).
+        Se enriquece con tareas (estado actual) y audit_log (fecha de cumplimiento).
+        """
+        conditions = [
+            "n.tipo = 'tarea_asignada'",
+            "COALESCE(n.id_referencia, '') <> ''",
+        ]
+        params: list = []
+
+        if responsable:
+            conditions.append("n.target_username = ?")
+            params.append(responsable)
+        if estado:
+            conditions.append("COALESCE(t.estado, '') = ?")
+            params.append(estado)
+        if fecha_desde:
+            conditions.append("SUBSTR(n.created_at, 1, 10) >= ?")
+            params.append(fecha_desde)
+        if fecha_hasta:
+            conditions.append("SUBSTR(n.created_at, 1, 10) <= ?")
+            params.append(fecha_hasta)
+
+        where_sql = " AND ".join(conditions)
+        sql = f"""
+            SELECT
+                n._id AS notificacion_id,
+                n.target_username AS asignada_a,
+                n.created_at AS fecha_asignacion,
+                n.leida AS leida,
+                n.updated_at AS updated_at,
+                n.id_referencia AS tarea_ref,
+                t._id AS tarea_oid,
+                t.id_tarea AS id_tarea,
+                t.descripcion AS descripcion,
+                t.estado AS estado_actual
+            FROM notificaciones n
+            LEFT JOIN tareas t ON t._id = n.id_referencia
+            WHERE {where_sql}
+            ORDER BY n.created_at DESC
+            LIMIT ?
+        """
+        params.append(limit)
+        conn = db_local.get_connection()
+        rows = conn.execute(sql, tuple(params)).fetchall()
+
+        # Fallback: tareas asignadas a administradores sin notificacion registrada.
+        admin_conditions = ["u.rol = 'administrador'", "COALESCE(t.responsable_username, '') <> ''"]
+        admin_params: list = []
+        if responsable:
+            admin_conditions.append("t.responsable_username = ?")
+            admin_params.append(responsable)
+        if estado:
+            admin_conditions.append("COALESCE(t.estado, '') = ?")
+            admin_params.append(estado)
+        if fecha_desde:
+            admin_conditions.append("SUBSTR(COALESCE(NULLIF(t.updated_at, ''), t.fecha_inicio), 1, 10) >= ?")
+            admin_params.append(fecha_desde)
+        if fecha_hasta:
+            admin_conditions.append("SUBSTR(COALESCE(NULLIF(t.updated_at, ''), t.fecha_inicio), 1, 10) <= ?")
+            admin_params.append(fecha_hasta)
+
+        admin_where_sql = " AND ".join(admin_conditions)
+        admin_sql = f"""
+            SELECT
+                '' AS notificacion_id,
+                t.responsable_username AS asignada_a,
+                COALESCE(NULLIF(t.updated_at, ''), t.fecha_inicio) AS fecha_asignacion,
+                0 AS leida,
+                '' AS updated_at,
+                t._id AS tarea_ref,
+                t._id AS tarea_oid,
+                t.id_tarea AS id_tarea,
+                t.descripcion AS descripcion,
+                t.estado AS estado_actual
+            FROM tareas t
+            INNER JOIN usuarios u ON u.username = t.responsable_username
+            WHERE {admin_where_sql}
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM notificaciones n
+                  WHERE n.tipo = 'tarea_asignada'
+                    AND n.id_referencia = t._id
+                    AND n.target_username = t.responsable_username
+              )
+            ORDER BY fecha_asignacion DESC
+            LIMIT ?
+        """
+        admin_params.append(limit)
+        admin_rows = conn.execute(admin_sql, tuple(admin_params)).fetchall()
+        conn.close()
+        rows = list(rows) + list(admin_rows)
+
+        # Historial antiguo puede tener duplicados; se conserva el registro mas reciente por tarea+responsable.
+        deduped: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        for row in rows:
+            data = db_local.dict_from_row(row) or {}
+            key = (data.get("asignada_a", ""), data.get("tarea_ref", ""))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(data)
+        deduped.sort(key=lambda item: item.get("fecha_asignacion", ""), reverse=True)
+
+        task_ids = [r.get("tarea_oid") or r.get("tarea_ref") for r in deduped if (r.get("tarea_oid") or r.get("tarea_ref"))]
+        fecha_cierre_por_tarea = AuditController._get_fecha_cumplimiento_por_tarea(task_ids)
+
+        cierre_estados = {"Cumplida", "Completada", "Cancelada"}
+        now = datetime.now(timezone.utc)
+        result: list[dict] = []
+        for row in deduped:
+            tarea_oid = row.get("tarea_oid") or row.get("tarea_ref") or ""
+            leida = int(row.get("leida") or 0) == 1
+            fecha_asignacion = row.get("fecha_asignacion", "") or ""
+            fecha_lectura = row.get("updated_at", "") if leida else ""
+            estado_actual = row.get("estado_actual", "") or ""
+            fecha_cumplimiento = fecha_cierre_por_tarea.get(tarea_oid, "")
+
+            dias_sin_leer = 0
+            if not leida and estado_actual not in cierre_estados:
+                dt_asig = _parse_iso_datetime(fecha_asignacion)
+                if dt_asig:
+                    dias_sin_leer = max(0, (now - dt_asig).days)
+
+            result.append(
+                {
+                    "id_tarea": row.get("id_tarea", "") or "",
+                    "tarea_oid": tarea_oid,
+                    "descripcion": row.get("descripcion", "") or "",
+                    "asignada_a": row.get("asignada_a", "") or "",
+                    "fecha_asignacion": fecha_asignacion,
+                    "leida": leida,
+                    "fecha_lectura": fecha_lectura or "",
+                    "estado_actual": estado_actual,
+                    "fecha_cumplimiento": fecha_cumplimiento,
+                    "dias_sin_leer": dias_sin_leer,
+                }
+            )
+        return result
+
+    @staticmethod
+    def _get_fecha_cumplimiento_por_tarea(task_ids: list[str]) -> dict[str, str]:
+        """Busca en audit_log el ultimo momento en que una tarea paso a estado cerrado."""
+        if not task_ids:
+            return {}
+        placeholders = ",".join(["?"] * len(task_ids))
+        conn = db_local.get_connection()
+        rows = conn.execute(
+            f"""
+            SELECT documento_id, datos_anteriores, datos_nuevos, timestamp
+            FROM audit_log
+            WHERE coleccion = 'tareas'
+              AND accion = 'update'
+              AND documento_id IN ({placeholders})
+            ORDER BY timestamp DESC
+            """,
+            tuple(task_ids),
+        ).fetchall()
+        conn.close()
+
+        cierre_estados = {"Cumplida", "Completada", "Cancelada"}
+        fecha_por_tarea: dict[str, str] = {}
+        for row in rows:
+            rec = db_local.dict_from_row(row) or {}
+            tarea_id = rec.get("documento_id", "")
+            if not tarea_id or tarea_id in fecha_por_tarea:
+                continue
+
+            nuevos = _parse_json(rec.get("datos_nuevos"))
+            anteriores = _parse_json(rec.get("datos_anteriores"))
+            estado_nuevo = (nuevos or {}).get("estado")
+            estado_anterior = (anteriores or {}).get("estado")
+            if estado_nuevo in cierre_estados and estado_nuevo != estado_anterior:
+                fecha_por_tarea[tarea_id] = rec.get("timestamp", "") or ""
+        return fecha_por_tarea
+
+    @staticmethod
     def _generar_resumen(row: dict) -> str:
         """Genera un resumen legible del cambio."""
         accion = row.get("accion", "")
@@ -331,3 +547,21 @@ def _extraer_nombre(data: dict | None) -> str:
         if val:
             return str(val)[:50]
     return ""
+
+
+def _parse_iso_datetime(value: str) -> datetime | None:
+    """Parse robusto para timestamps ISO o fecha simple."""
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        try:
+            parsed = datetime.strptime(value[:10], "%Y-%m-%d")
+        except ValueError:
+            return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)

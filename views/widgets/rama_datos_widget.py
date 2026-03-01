@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QLabel, QFrame,
 )
 from PySide6.QtCore import QDate
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class RamaDatosWidget(QWidget):
@@ -46,7 +47,7 @@ class RamaDatosWidget(QWidget):
                 w.addItem(opt)
             return w
         elif tipo == "date":
-            w = QDateEdit()
+            w = NoWheelDateEdit()
             w.setCalendarPopup(True)
             w.setDisplayFormat("dd/MM/yyyy")
             w.setSpecialValueText(" ")

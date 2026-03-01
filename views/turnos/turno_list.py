@@ -4,7 +4,7 @@ import logging
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QMessageBox, QComboBox, QDateEdit, QTimeEdit, QDialog, QFormLayout,
-    QCompleter
+    QCompleter, QHeaderView
 )
 from PySide6.QtGui import QFont, QColor, QBrush
 from PySide6.QtCore import QDate, QTime, Qt, QStringListModel
@@ -12,13 +12,13 @@ from PySide6.QtCore import QDate, QTime, Qt, QStringListModel
 logger = logging.getLogger(__name__)
 
 from views.widgets.filterable_table import FilterableTable
+from views.widgets.no_wheel_datetime import NoWheelDateEdit, NoWheelTimeEdit
 from controllers.turno_controller import TurnoController
 from services import anses_oficinas_service
 from config import ANSES_PROVINCIA_DEFECTO
-from datetime import datetime
+from datetime import datetime, date
 
 COLUMNS = [
-    ("id_turno", "ID"),
     ("fecha_turno", "Fecha"),
     ("hora_turno", "Hora"),
     ("_nombre_cliente", "Cliente"),
@@ -31,6 +31,13 @@ COLUMNS = [
 
 
 class TurnoListView(QWidget):
+    BG_RED_DARK = "#e9b9c1"
+    BG_RED_SOFT = "#f5d3d8"
+    BG_GREEN_SOFT = "#d8efe3"
+    FG_DARK = "#222222"
+    FG_DARK_RED = "#4a1a22"
+    FG_DARK_GREEN = "#1f4d3a"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
@@ -81,8 +88,22 @@ class TurnoListView(QWidget):
         layout.addLayout(header)
 
         # ── Tabla ──
-        self._table = FilterableTable(COLUMNS)
+        self._table = FilterableTable(COLUMNS, row_style_provider=self._style_turno_date_cell)
         self._table.row_double_clicked.connect(self._on_double_click)
+
+        # Mejor legibilidad: mayor alto de fila, padding y columnas mas anchas.
+        table_widget = self._table._table
+        table_widget.verticalHeader().setDefaultSectionSize(36)
+        table_widget.setStyleSheet("QTableWidget::item { padding: 8px 10px; }")
+        table_widget.horizontalHeader().setStretchLastSection(False)
+        table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)          # Fecha
+        table_widget.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # Hora
+        table_widget.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)          # Cliente
+        table_widget.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents) # Tramite
+        table_widget.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents) # Oficina
+        table_widget.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents) # Estado
+        table_widget.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents) # Responsable
+        table_widget.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents) # Doc.Lista
         layout.addWidget(self._table)
 
         # ── Info inferior ──
@@ -148,6 +169,70 @@ class TurnoListView(QWidget):
         if dlg.exec():
             self.refresh()
 
+    def _style_turno_date_cell(self, row_data: dict, field: str, item):
+        if field not in ("fecha_turno", "estado", "tipo_tramite"):
+            return
+        turno_date = self._parse_ymd(row_data.get("fecha_turno", ""))
+        if not turno_date:
+            return
+        days_left = (turno_date - date.today()).days
+        estado = str(row_data.get("estado", "") or "").strip()
+        is_completed = estado == "Asistido"
+
+        bg = self.BG_GREEN_SOFT
+        fg_text = self.FG_DARK_GREEN
+        weight = QFont.Weight.DemiBold
+        italic = False
+        underline = False
+
+        if is_completed:
+            bg = self.BG_GREEN_SOFT
+            fg_text = self.FG_DARK_GREEN
+            weight = QFont.Weight.Bold
+            italic = False
+            underline = False
+        elif days_left < 0:
+            bg = self.BG_RED_DARK
+            fg_text = self.FG_DARK_RED
+            weight = QFont.Weight.Bold
+            italic = False
+        elif days_left <= 5:
+            bg = self.BG_RED_SOFT
+            fg_text = self.FG_DARK_RED
+            weight = QFont.Weight.Bold
+            italic = True
+            underline = field == "fecha_turno"
+
+        if field == "fecha_turno":
+            raw_text = str(row_data.get("fecha_turno", "") or "")
+            if is_completed:
+                item.setText(f"✓ COMPLETADO {raw_text}")
+            elif days_left < 0:
+                item.setText(f"● VENCIDA {raw_text}")
+            elif days_left <= 5:
+                item.setText(f"▲ PROXIMA {raw_text}")
+            else:
+                item.setText(f"○ EN TIEMPO {raw_text}")
+
+        item.setForeground(QBrush(QColor(fg_text if field in ("fecha_turno", "estado") else self.FG_DARK)))
+        item.setBackground(QBrush(QColor(bg)))
+
+        f = item.font()
+        f.setWeight(weight)
+        f.setItalic(italic)
+        f.setUnderline(underline)
+        item.setFont(f)
+
+    @staticmethod
+    def _parse_ymd(value: str) -> date | None:
+        if not value:
+            return None
+        raw = value[:10]
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
     def _edit_turno(self):
         _id = self._table.get_selected_id()
         if not _id:
@@ -208,13 +293,13 @@ class TurnoListView(QWidget):
         ))
 
         form = QFormLayout()
-        date_new = QDateEdit()
+        date_new = NoWheelDateEdit()
         date_new.setCalendarPopup(True)
         date_new.setDate(QDate.currentDate().addDays(7))
         date_new.setDisplayFormat("dd/MM/yyyy")
         form.addRow("Nueva fecha:", date_new)
 
-        hora_new = QTimeEdit()
+        hora_new = NoWheelTimeEdit()
         hora_new.setDisplayFormat("HH:mm")
         hora_prev = turno.get("hora_turno", "")
         if hora_prev:

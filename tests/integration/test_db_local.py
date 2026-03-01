@@ -79,6 +79,14 @@ class TestInitDb:
         assert "responsable_username" in cols
         assert "responsable_secundario_username" in cols
 
+    def test_notificaciones_resolution_columns(self):
+        """Notificaciones debe soportar leida/resuelta por separado."""
+        conn = db_local.get_connection()
+        cols = [c[1] for c in conn.execute("PRAGMA table_info(notificaciones)").fetchall()]
+        conn.close()
+        for col in ["updated_at", "resuelta", "fecha_resolucion", "resuelta_por_estado"]:
+            assert col in cols, f"Columna '{col}' no encontrada en notificaciones"
+
 
 # =====================================================================
 # CRUD helpers

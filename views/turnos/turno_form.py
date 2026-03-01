@@ -19,6 +19,8 @@ from services import anses_oficinas_service
 from config import ANSES_PROVINCIA_DEFECTO
 from core.auth import Session
 from core.permissions import get_active_users
+from views.widgets.no_wheel_combo import NoWheelComboBox
+from views.widgets.no_wheel_datetime import NoWheelDateEdit, NoWheelTimeEdit
 
 
 class TurnoFormDialog(QDialog):
@@ -29,6 +31,8 @@ class TurnoFormDialog(QDialog):
         self._is_edit = turno_id is not None
         self._fixed_cliente = cliente_id
         self._fixed_expediente = expediente_id
+        self._original_responsable_username = ""
+        self._original_responsable_display = ""
 
         self.setWindowTitle("Editar Turno" if self._is_edit else "Nuevo Turno ANSES")
         self.setMinimumWidth(600)
@@ -92,27 +96,17 @@ class TurnoFormDialog(QDialog):
                 self._cmb_expediente.setCurrentIndex(idx)
                 self._cmb_expediente.setEnabled(False)
         else:
-            exps = ExpedienteController.get_scoped(
-                where="estado NOT IN ('Cerrado','Archivado')",
-                order_by="id_expediente DESC",
-                limit=100,
-            )
-            for e in exps:
-                label = (
-                    f'Carpeta #{e.get("id_expediente", "")} - '
-                    f'{e.get("tipo_tramite", "")} ({e.get("responsable", "")})'
-                )
-                self._cmb_expediente.addItem(label, e["_id"])
+            self._reload_expedientes_for_cliente(self._cmb_cliente.currentData() or "")
         form.addRow("Carpeta:", self._cmb_expediente)
 
         # ── Fecha y hora ──
-        self._date_turno = QDateEdit()
+        self._date_turno = NoWheelDateEdit()
         self._date_turno.setCalendarPopup(True)
         self._date_turno.setDate(QDate.currentDate().addDays(7))
         self._date_turno.setDisplayFormat("dd/MM/yyyy")
         form.addRow("Fecha turno *:", self._date_turno)
 
-        self._time_hora = QTimeEdit()
+        self._time_hora = NoWheelTimeEdit()
         self._time_hora.setDisplayFormat("HH:mm")
         self._time_hora.setTime(QTime(9, 0))
         form.addRow("Hora turno *:", self._time_hora)
@@ -175,7 +169,7 @@ class TurnoFormDialog(QDialog):
         form.addRow("Estado:", self._cmb_estado)
 
         # ── Responsable ──
-        self._cmb_responsable = QComboBox()
+        self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
         self._cmb_responsable.setPlaceholderText("Quien del estudio gestiona")
         users = get_active_users()
@@ -296,8 +290,39 @@ class TurnoFormDialog(QDialog):
 
     def _on_cliente_changed(self, _index: int):
         """Cuando cambia el cliente seleccionado, sugerir oficina por localidad."""
+        if not self._fixed_expediente:
+            self._reload_expedientes_for_cliente(self._cmb_cliente.currentData() or "")
         if not self._is_edit:
             self._sugerir_oficina_por_cliente()
+
+    def _reload_expedientes_for_cliente(self, cliente_id: str, selected_expediente_id: str = ""):
+        """Recarga carpetas permitiendo solo las que pertenecen al cliente seleccionado."""
+        if self._fixed_expediente:
+            return
+        selected = selected_expediente_id or self._cmb_expediente.currentData() or ""
+        self._cmb_expediente.blockSignals(True)
+        self._cmb_expediente.clear()
+        self._cmb_expediente.addItem("-- Sin carpeta --", "")
+        if cliente_id:
+            exps = ExpedienteController.get_scoped(
+                where=(
+                    "id_cliente = ? AND estado NOT IN ('Cerrado','Archivado')"
+                ),
+                params=(cliente_id,),
+                order_by="id_expediente DESC",
+                limit=200,
+            )
+            for e in exps:
+                label = (
+                    f'Carpeta #{e.get("id_expediente", "")} - '
+                    f'{e.get("tipo_tramite", "")} ({e.get("responsable", "")})'
+                )
+                self._cmb_expediente.addItem(label, e["_id"])
+        if selected:
+            idx = self._cmb_expediente.findData(selected)
+            if idx >= 0:
+                self._cmb_expediente.setCurrentIndex(idx)
+        self._cmb_expediente.blockSignals(False)
 
     def _sugerir_oficina_por_cliente(self):
         """Intenta auto-seleccionar provincia y oficina ANSES segun la localidad del cliente.
@@ -359,6 +384,8 @@ class TurnoFormDialog(QDialog):
 
         # Carpeta (asegurar que este en el combo aunque no se haya cargado)
         id_exp = data.get("id_expediente", "")
+        if not self._fixed_expediente:
+            self._reload_expedientes_for_cliente(id_cli, selected_expediente_id=id_exp)
         idx = self._cmb_expediente.findData(id_exp)
         if idx < 0 and id_exp:
             exp_data = ExpedienteController.get_by_id(id_exp)
@@ -399,6 +426,8 @@ class TurnoFormDialog(QDialog):
             self._cmb_responsable.setCurrentIndex(idx_r)
         elif data.get("responsable", ""):
             self._cmb_responsable.setEditText(data.get("responsable", ""))
+        self._original_responsable_username = data.get("responsable_username", "") or ""
+        self._original_responsable_display = data.get("responsable", "") or ""
         self._chk_doc.setChecked(bool(data.get("documentacion_lista", 0)))
         self._txt_notas.setPlainText(data.get("notas_preparacion", ""))
         self._txt_resultado.setPlainText(data.get("resultado", ""))
@@ -419,6 +448,21 @@ class TurnoFormDialog(QDialog):
             QMessageBox.warning(self, "Atencion", "Ingrese el responsable.")
             return
 
+        if self._is_edit:
+            old_key = (self._original_responsable_username or self._original_responsable_display).strip().lower()
+            new_key = (resp_username or resp_display).strip().lower()
+            if old_key and new_key and old_key != new_key:
+                resp = QMessageBox.warning(
+                    self,
+                    "Confirmar cambio de responsable",
+                    "Esta por cambiar el responsable del turno.\n\n"
+                    "Desea confirmar este cambio?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if resp != QMessageBox.StandardButton.Yes:
+                    return
+
         oficina = self._cmb_oficina.currentText().strip()
         if not oficina:
             QMessageBox.warning(self, "Atencion", "Seleccione una oficina.")
@@ -437,7 +481,7 @@ class TurnoFormDialog(QDialog):
 
         data = {
             "id_cliente": cliente_id,
-            "id_expediente": self._cmb_expediente.currentData() or "",
+            "id_expediente": self._fixed_expediente or self._cmb_expediente.currentData() or "",
             "fecha_turno": self._date_turno.date().toString("yyyy-MM-dd"),
             "hora_turno": hora,
             "oficina_anses": oficina,
@@ -452,6 +496,22 @@ class TurnoFormDialog(QDialog):
             "requiere_nuevo_turno": 1 if self._chk_nuevo.isChecked() else 0,
             "observaciones": self._txt_observaciones.toPlainText().strip(),
         }
+
+        expediente_id = data.get("id_expediente", "")
+        if expediente_id:
+            exp_data = ExpedienteController.get_by_id(expediente_id)
+            if not exp_data:
+                QMessageBox.warning(
+                    self, "Atencion",
+                    "La carpeta seleccionada no existe. Seleccione una carpeta valida."
+                )
+                return
+            if (exp_data.get("id_cliente", "") or "") != (cliente_id or ""):
+                QMessageBox.warning(
+                    self, "Atencion",
+                    "La carpeta seleccionada no corresponde al cliente indicado."
+                )
+                return
 
         if self._is_edit:
             TurnoController.update(self._id, data)

@@ -444,7 +444,7 @@ class DashboardView(QWidget):
         try:
             session = Session.get()
             if session.logged_in:
-                notifs = NotificacionController.get_unread_for_user(session.username, limit=10)
+                notifs = NotificacionController.get_active_for_user(session.username, limit=10)
                 for n in notifs:
                     alertas.append({
                         "tipo": n.get("tipo", "tarea_asignada"),
@@ -474,6 +474,9 @@ class DashboardView(QWidget):
             elif tipo == "tarea_asignada":
                 icon = "\U0001F4CB"
                 color = "#2d6bcf"
+            elif tipo == "tarea_proxima_vencer":
+                icon = "\u23F3"
+                color = "#a07c30"
             elif tipo == "turno_asignado":
                 icon = "\u23F0"
                 color = "#c9a84c"

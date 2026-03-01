@@ -18,6 +18,7 @@ Guia tecnica para desarrolladores que necesiten configurar el entorno, ejecutar 
 10. [Distribucion e instalacion en cliente](#10-distribucion-e-instalacion-en-cliente)
 11. [Estructura del proyecto](#11-estructura-del-proyecto)
 12. [Troubleshooting](#12-troubleshooting)
+13. [Seguridad por IP/WiFi (diseno futuro)](#13-seguridad-por-ipwifi-diseno-futuro)
 
 ---
 
@@ -547,3 +548,48 @@ Compress-Archive -Path "dist\SistemaRampazzo\*" -DestinationPath "dist\SistemaRa
 ```
 
 El archivo `dist\SistemaRampazzo.zip` esta listo para distribuir.
+
+---
+
+## 13. Seguridad por IP/WiFi (diseno futuro)
+
+### Estado actual
+
+- Hoy la app no aplica validacion de IP o WiFi al iniciar sesion.
+- La seccion `[security]` en `config.ini` solo contempla `encryption_key`.
+
+### Configuracion objetivo (cuando se implemente)
+
+```ini
+[security]
+encryption_key =
+
+restrict_by_ip = true
+allowed_ips = 192.168.1.10,192.168.1.11
+allowed_networks = 192.168.1.0/24
+
+restrict_by_wifi = true
+allowed_wifi_ssids = OficinaRampazzo,OficinaBack
+
+single_session_per_machine = true
+```
+
+### Fases recomendadas de implementacion
+
+1. **Fase 1 (estable):** validacion por IP/subred (`allowed_ips`, `allowed_networks`).
+2. **Fase 2 (Windows):** validacion de WiFi por SSID/BSSID.
+3. **Fase 3 (hardening):** auditoria de bloqueos + UI de administracion en Configuracion.
+
+### Ubicacion tecnica sugerida
+
+- `config.py`: parseo de claves de seguridad.
+- `core/security.py` (nuevo): funciones de validacion de IP/red/WiFi.
+- `views/login_view.py` o `core/auth.py`: gate de validacion previo a login.
+- `core/audit.py`: registrar intentos bloqueados por politica.
+- `main.py`: validacion de instancia unica por maquina (`single_session_per_machine`).
+
+### Controles temporales (antes de implementar en app)
+
+- Restringir IPs permitidas en MongoDB Atlas (`Network Access`).
+- Reglas de Firewall del SO por perfil de red.
+- Uso obligatorio de VPN corporativa y whitelist del rango VPN.

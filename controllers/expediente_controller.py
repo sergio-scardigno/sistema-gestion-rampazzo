@@ -181,13 +181,56 @@ class ExpedienteController(BaseController):
     # ── Override create/update para registrar historial de estados ──
 
     @classmethod
+    def _is_notifiable_role_for_assignment(cls, username: str) -> bool:
+        if not username:
+            return False
+        rows = db_local.find_all(
+            "usuarios",
+            where="username = ? AND (activo = 1) AND (eliminado = 0 OR eliminado IS NULL)",
+            params=(username,),
+            limit=1,
+        )
+        if not rows:
+            return False
+        return rows[0].get("rol", "") in {"abogado", "administrador"}
+
+    @classmethod
+    def _notify_assignment_targets(
+        cls,
+        expediente: dict,
+        target_usernames: set[str],
+        actor_username: str,
+        motivo: str,
+    ):
+        from controllers.notificacion_controller import NotificacionController
+
+        exp_id = expediente.get("_id", "")
+        exp_num = expediente.get("id_expediente", "")
+        tipo_tramite = expediente.get("tipo_tramite", "")
+        for uname in target_usernames:
+            if not uname or uname == actor_username:
+                continue
+            if not cls._is_notifiable_role_for_assignment(uname):
+                continue
+            mensaje = (
+                f"Se te asigno la carpeta #{exp_num} ({tipo_tramite}). "
+                f"Motivo: {motivo}."
+            )
+            NotificacionController.create_for_expediente_asignado(
+                target_username=uname,
+                mensaje=mensaje,
+                id_referencia=exp_id,
+            )
+
+    @classmethod
     def create(cls, data: dict) -> dict:
         """Crear expediente y abrir el primer segmento de historial."""
         record = super().create(data)
+        from core.auth import Session
+        session = Session.get()
+        actor_username = session.username if session.logged_in else ""
         try:
             from controllers.expediente_estado_controller import abrir_segmento
-            from core.auth import Session
-            session = Session.get()
             usuario = session.username if session.logged_in else "sistema"
             abrir_segmento(
                 id_expediente=record["_id"],
@@ -198,6 +241,14 @@ class ExpedienteController(BaseController):
             )
         except Exception:
             logger.warning("Error al crear segmento inicial de historial", exc_info=True)
+        try:
+            targets = {
+                record.get("responsable_username", "") or "",
+                record.get("responsable_secundario_username", "") or "",
+            }
+            cls._notify_assignment_targets(record, targets, actor_username, "Alta de carpeta")
+        except Exception:
+            logger.warning("Error al notificar asignacion de carpeta (create)", exc_info=True)
         return record
 
     @classmethod
@@ -210,6 +261,9 @@ class ExpedienteController(BaseController):
         result = super().update(_id, data)
         if not result:
             return result
+        from core.auth import Session
+        session = Session.get()
+        actor_username = session.username if session.logged_in else ""
 
         try:
             old_estado = existing.get("estado", "")
@@ -219,8 +273,6 @@ class ExpedienteController(BaseController):
 
             if new_estado != old_estado or new_resp != old_resp:
                 from controllers.expediente_estado_controller import rotar_segmento
-                from core.auth import Session
-                session = Session.get()
                 usuario = session.username if session.logged_in else "sistema"
                 rotar_segmento(
                     id_expediente=_id,
@@ -231,6 +283,23 @@ class ExpedienteController(BaseController):
                 )
         except Exception:
             logger.warning("Error al rotar segmento de historial", exc_info=True)
+
+        try:
+            old_resp = existing.get("responsable_username", "") or ""
+            old_resp2 = existing.get("responsable_secundario_username", "") or ""
+            new_resp = result.get("responsable_username", "") or ""
+            new_resp2 = result.get("responsable_secundario_username", "") or ""
+            targets: set[str] = set()
+            if new_resp and new_resp != old_resp:
+                targets.add(new_resp)
+            if new_resp2 and new_resp2 != old_resp2:
+                targets.add(new_resp2)
+            if targets:
+                cls._notify_assignment_targets(
+                    result, targets, actor_username, "Cambio de responsable"
+                )
+        except Exception:
+            logger.warning("Error al notificar asignacion de carpeta (update)", exc_info=True)
 
         return result
 
@@ -303,6 +372,7 @@ class ExpedienteController(BaseController):
         sw, sp = scope_where(
             session.rol, session.username,
             "e.responsable_username", "e.responsable_secundario_username",
+            modulo="expedientes",
         )
         sql = (
             "SELECT e.*, c.numero_carpeta AS numero_carpeta_cliente, "
@@ -348,6 +418,7 @@ class ExpedienteController(BaseController):
         sw, sp = scope_where(
             session.rol, session.username,
             "e.responsable_username", "e.responsable_secundario_username",
+            modulo="expedientes",
         )
         sql = (
             "SELECT e.*, c.nombre_completo AS cli_nombre, c.dni AS cli_dni, "

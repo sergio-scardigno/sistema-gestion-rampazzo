@@ -10,7 +10,7 @@ Mapeo con el pliego tecnico:
   (adicional)       -> agente
 """
 
-ROLES = ["secretaria", "agente", "abogado", "administrador", "superusuario"]
+ROLES = ["secretaria", "agente", "abogado", "administrador", "admin_visor", "superusuario"]
 
 # Alias formales del pliego para mostrar en UI
 ROL_ALIAS = {
@@ -18,6 +18,7 @@ ROL_ALIAS = {
     "agente": "Agente",
     "abogado": "Juridico",
     "administrador": "Administracion",
+    "admin_visor": "Admin Visor",
     "superusuario": "Direccion",
 }
 
@@ -26,6 +27,7 @@ ROL_DESCRIPCION = {
     "agente": "Operacion completa de consultas, clientes, carpetas y tareas",
     "abogado": "Juridico: carpetas, documentos y tareas",
     "administrador": "Control total operativo, economico, auditoria y gestion de empleados",
+    "admin_visor": "Control administrativo con movimientos economicos en solo lectura",
     "superusuario": "Acceso total, configuracion, migracion y auditoria",
 }
 
@@ -64,6 +66,19 @@ PERMISOS: dict[str, list[str]] = {
         "documentos.*",
         "escritos.*",
         "movimientos.*",
+        "reportes.*",
+        "auditoria.*",
+        "usuarios.*",
+    ],
+    "admin_visor": [
+        "clientes.*",
+        "expedientes.*",
+        "tareas.*",
+        "turnos.*",
+        "comunicaciones.*",
+        "documentos.*",
+        "escritos.*",
+        "movimientos.read",
         "reportes.*",
         "auditoria.*",
         "usuarios.*",
@@ -120,7 +135,7 @@ def modulos_permitidos(rol: str) -> list[str]:
 
 # ── Visibilidad por asignacion ──
 
-ROLES_GLOBALES = {"administrador", "superusuario"}
+ROLES_GLOBALES = {"administrador", "admin_visor", "superusuario"}
 
 
 def es_rol_global(rol: str) -> bool:
@@ -128,8 +143,19 @@ def es_rol_global(rol: str) -> bool:
     return rol in ROLES_GLOBALES
 
 
+def es_scope_global_por_modulo(rol: str, modulo: str = "") -> bool:
+    """Define excepciones de visibilidad global por modulo."""
+    if es_rol_global(rol):
+        return True
+    # Regla solicitada por cliente:
+    # secretaria ve todos los clientes y carpetas.
+    if rol == "secretaria" and modulo in {"clientes", "expedientes"}:
+        return True
+    return False
+
+
 def scope_where(rol: str, username: str, campo: str = "responsable_username",
-                campo_secundario: str = "") -> tuple[str, tuple]:
+                campo_secundario: str = "", modulo: str = "") -> tuple[str, tuple]:
     """Genera una clausula WHERE + params para filtrar por asignacion.
 
     Si el rol es global, retorna condicion vacia (ve todo).
@@ -144,7 +170,7 @@ def scope_where(rol: str, username: str, campo: str = "responsable_username",
     Returns:
         (where_clause, params) para usar en queries
     """
-    if es_rol_global(rol):
+    if es_scope_global_por_modulo(rol, modulo):
         return "", ()
 
     if campo_secundario:

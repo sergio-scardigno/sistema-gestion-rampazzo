@@ -2,7 +2,7 @@
 import pytest
 from core.permissions import (
     ROLES, PERMISOS, tiene_permiso, modulos_permitidos,
-    es_rol_global, scope_where, ROLES_GLOBALES,
+    es_rol_global, scope_where, ROLES_GLOBALES, es_scope_global_por_modulo,
 )
 
 
@@ -18,6 +18,14 @@ class TestTienePermiso:
         assert tiene_permiso("administrador", "usuarios.create")
         assert tiene_permiso("administrador", "usuarios.delete")
         assert tiene_permiso("administrador", "auditoria.read")
+
+    def test_admin_visor_lee_movimientos_pero_no_modifica(self):
+        assert tiene_permiso("admin_visor", "movimientos.read")
+        assert not tiene_permiso("admin_visor", "movimientos.create")
+        assert not tiene_permiso("admin_visor", "movimientos.update")
+        assert not tiene_permiso("admin_visor", "movimientos.delete")
+        assert tiene_permiso("admin_visor", "usuarios.update")
+        assert tiene_permiso("admin_visor", "reportes.read")
 
     def test_abogado_tiene_expedientes_no_usuarios(self):
         assert tiene_permiso("abogado", "expedientes.create")
@@ -79,6 +87,11 @@ class TestRestriccionEconomicaYAdmin:
         assert tiene_permiso("administrador", "auditoria.read")
         assert tiene_permiso("administrador", "usuarios.read")
 
+    def test_admin_visor_tiene_acceso_lectura_economico(self):
+        assert tiene_permiso("admin_visor", "movimientos.read")
+        assert not tiene_permiso("admin_visor", "movimientos.create")
+        assert not tiene_permiso("admin_visor", "movimientos.delete")
+
     def test_superusuario_tiene_acceso_total(self):
         assert tiene_permiso("superusuario", "movimientos.read")
         assert tiene_permiso("superusuario", "reportes.read")
@@ -107,6 +120,13 @@ class TestModulosPermitidos:
         assert "auditoria" in modulos
         assert "usuarios" in modulos
 
+    def test_admin_visor_ve_modulos_admin(self):
+        modulos = modulos_permitidos("admin_visor")
+        assert "administracion" in modulos
+        assert "auditoria" in modulos
+        assert "usuarios" in modulos
+        assert "configuracion" not in modulos
+
     @pytest.mark.parametrize("rol", ["secretaria", "agente", "abogado"])
     def test_roles_restringidos_no_ven_modulos_economicos(self, rol):
         modulos = modulos_permitidos(rol)
@@ -123,11 +143,25 @@ class TestEsRolGlobal:
     def test_superusuario_es_global(self):
         assert es_rol_global("superusuario") is True
 
+    def test_admin_visor_es_global(self):
+        assert es_rol_global("admin_visor") is True
+
     def test_abogado_no_es_global(self):
         assert es_rol_global("abogado") is False
 
     def test_secretaria_no_es_global(self):
         assert es_rol_global("secretaria") is False
+
+
+class TestScopeGlobalPorModulo:
+    def test_secretaria_es_global_en_clientes(self):
+        assert es_scope_global_por_modulo("secretaria", "clientes") is True
+
+    def test_secretaria_es_global_en_expedientes(self):
+        assert es_scope_global_por_modulo("secretaria", "expedientes") is True
+
+    def test_secretaria_no_es_global_en_tareas(self):
+        assert es_scope_global_por_modulo("secretaria", "tareas") is False
 
 
 class TestScopeWhere:
@@ -155,3 +189,18 @@ class TestScopeWhere:
         where, params = scope_where("superusuario", "super1")
         assert where == ""
         assert params == ()
+
+    def test_secretaria_sin_filtro_en_expedientes(self):
+        where, params = scope_where(
+            "secretaria", "sec1",
+            campo="responsable_username",
+            campo_secundario="responsable_secundario_username",
+            modulo="expedientes",
+        )
+        assert where == ""
+        assert params == ()
+
+    def test_secretaria_filtra_en_tareas(self):
+        where, params = scope_where("secretaria", "sec1", modulo="tareas")
+        assert "responsable_username = ?" in where
+        assert params == ("sec1",)

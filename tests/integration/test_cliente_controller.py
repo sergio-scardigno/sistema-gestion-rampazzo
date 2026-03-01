@@ -1,6 +1,8 @@
 """Tests de integracion para ClienteController."""
 import pytest
 from controllers.cliente_controller import ClienteController
+from controllers.expediente_controller import ExpedienteController
+from core.auth import Session
 
 
 class TestClienteCRUD:
@@ -158,3 +160,76 @@ class TestNumeroCarpetaValidation:
         ClienteController.create({"nombre_completo": "A", "numero_carpeta": "3001"})
         ClienteController.create({"nombre_completo": "B", "numero_carpeta": "3002"})
         assert ClienteController.count() == 2
+
+
+class TestClienteScopeAbogado:
+    def _login_as_abogado(self, monkeypatch):
+        session = Session()
+        session.usuario = {
+            "_id": "abo-id",
+            "username": "abogado1",
+            "nombre_completo": "Abogado Uno",
+            "rol": "abogado",
+            "activo": 1,
+            "eliminado": 0,
+        }
+        monkeypatch.setattr(Session, "_instance", session)
+
+    def test_abogado_ve_cliente_creado_por_el(self, monkeypatch):
+        self._login_as_abogado(monkeypatch)
+        creado = ClienteController.create({"nombre_completo": "Cliente Abo", "numero_carpeta": "7001"})
+        vistos = ClienteController.get_scoped(order_by="nombre_completo ASC")
+        ids = [c["_id"] for c in vistos]
+        assert creado["_id"] in ids
+
+    def test_abogado_ve_cliente_por_carpeta_asignada(self, monkeypatch):
+        self._login_as_abogado(monkeypatch)
+        # Cliente creado por superusuario (simulado sin sesion abogado)
+        super_sess = Session()
+        super_sess.usuario = {
+            "_id": "sup-id",
+            "username": "super",
+            "nombre_completo": "Super",
+            "rol": "superusuario",
+            "activo": 1,
+            "eliminado": 0,
+        }
+        monkeypatch.setattr(Session, "_instance", super_sess)
+        cli = ClienteController.create({"nombre_completo": "Cliente Asignado", "numero_carpeta": "7002"})
+        exp_data = {
+            "id_cliente": cli["_id"],
+            "tipo_tramite": "Jubilacion",
+            "area": "Previsional",
+            "fecha_apertura": "2025-01-10",
+            "responsable": "Abogado Uno",
+            "responsable_username": "abogado1",
+            "estado": "Activo",
+            "prioridad": "Normal",
+            "observaciones": "test",
+        }
+        ExpedienteController.create(exp_data)
+        # Volver a sesion abogado y verificar visibilidad
+        self._login_as_abogado(monkeypatch)
+        vistos = ClienteController.get_scoped()
+        ids = [c["_id"] for c in vistos]
+        assert cli["_id"] in ids
+
+    def test_abogado_no_ve_ni_modifica_cliente_ajeno(self, monkeypatch):
+        self._login_as_abogado(monkeypatch)
+        # Crear cliente ajeno como superusuario
+        super_sess = Session()
+        super_sess.usuario = {
+            "_id": "sup-id2",
+            "username": "super",
+            "nombre_completo": "Super",
+            "rol": "superusuario",
+            "activo": 1,
+            "eliminado": 0,
+        }
+        monkeypatch.setattr(Session, "_instance", super_sess)
+        cli = ClienteController.create({"nombre_completo": "Cliente Ajeno", "numero_carpeta": "7003"})
+        # Sesion abogado
+        self._login_as_abogado(monkeypatch)
+        assert ClienteController.get_by_id_scoped(cli["_id"]) is None
+        assert ClienteController.update(cli["_id"], {"nombre_completo": "Hack"}) is None
+        assert ClienteController.delete(cli["_id"]) is False

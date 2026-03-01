@@ -57,7 +57,7 @@ class ClienteListView(QWidget):
         layout.addWidget(self._table)
 
     def refresh(self):
-        data = ClienteController.get_all(order_by="nombre_completo ASC")
+        data = ClienteController.get_scoped(order_by="nombre_completo ASC")
         self._table.set_data(data)
 
     def _new_cliente(self):

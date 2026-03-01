@@ -36,6 +36,9 @@ class NotificationItem(QFrame):
         if tipo == "tarea_asignada":
             icon_text = "\u2611"
             color = "#2d6bcf"
+        elif tipo == "expediente_asignado":
+            icon_text = "\u2630"
+            color = "#7b5cd6"
         elif tipo == "turno_asignado":
             icon_text = "\u23F0"
             color = "#c9a84c"
@@ -54,9 +57,14 @@ class NotificationItem(QFrame):
         mensaje = notification.get("mensaje", "Sin mensaje")
         if len(mensaje) > 100:
             mensaje = mensaje[:97] + "..."
+        leida = int(notification.get("leida", 0) or 0) == 1
+        if leida:
+            mensaje = f"{mensaje} (leida)"
         msg_lbl = QLabel(mensaje)
         msg_lbl.setWordWrap(True)
         msg_lbl.setStyleSheet(
+            "color: #6b6b6b; font-size: 11px; border: none; background: transparent;"
+            if leida else
             "color: #1a1a1a; font-size: 11px; border: none; background: transparent;"
         )
         layout.addWidget(msg_lbl, 1)
@@ -199,13 +207,15 @@ class NotificationBell(QWidget):
         self.refresh()
 
     def refresh(self):
-        """Recargar notificaciones no leidas desde la base."""
+        """Recargar notificaciones activas desde la base."""
         try:
             session = Session.get()
             if not session.logged_in:
                 return
-            self._notifications = NotificacionController.get_unread_for_user(
-                session.username, limit=20
+            # Reconciliar alertas de tareas con estado actual.
+            NotificacionController.sync_task_alerts_for_user(session.username, due_days=3)
+            self._notifications = NotificacionController.get_active_for_user(
+                session.username, limit=50
             )
         except Exception:
             logger.exception("Error al cargar notificaciones")
@@ -261,4 +271,4 @@ class NotificationBell(QWidget):
         except Exception:
             logger.exception("Error al marcar todas las notificaciones como leidas")
         self.refresh()
-        self._popup.set_notifications([])
+        self._popup.set_notifications(self._notifications)

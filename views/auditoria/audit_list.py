@@ -22,6 +22,7 @@ from controllers.audit_controller import (
     AuditController, COLECCION_LABELS, ACCION_LABELS
 )
 from views.auditoria.audit_detail import AuditDetailDialog
+from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 
 class AuditListView(QWidget):
@@ -52,6 +53,7 @@ class AuditListView(QWidget):
         self._tabs = QTabWidget()
         self._build_tab_log()
         self._build_tab_stats()
+        self._build_tab_task_tracking()
         self._main_layout.addWidget(self._tabs)
 
         scroll.setWidget(content)
@@ -107,7 +109,7 @@ class AuditListView(QWidget):
 
         # Fecha desde
         filter_layout.addWidget(QLabel("Desde:"))
-        self._date_desde = QDateEdit()
+        self._date_desde = NoWheelDateEdit()
         self._date_desde.setCalendarPopup(True)
         self._date_desde.setDate(QDate.currentDate().addDays(-30))
         self._date_desde.setDisplayFormat("dd/MM/yyyy")
@@ -115,7 +117,7 @@ class AuditListView(QWidget):
 
         # Fecha hasta
         filter_layout.addWidget(QLabel("Hasta:"))
-        self._date_hasta = QDateEdit()
+        self._date_hasta = NoWheelDateEdit()
         self._date_hasta.setCalendarPopup(True)
         self._date_hasta.setDate(QDate.currentDate())
         self._date_hasta.setDisplayFormat("dd/MM/yyyy")
@@ -276,6 +278,111 @@ class AuditListView(QWidget):
         self._tabs.addTab(tab, "Estadisticas por Empleado")
 
     # ══════════════════════════════════════════════
+    #  TAB 3: Seguimiento de Tareas
+    # ══════════════════════════════════════════════
+
+    def _build_tab_task_tracking(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(12)
+
+        filter_frame = QFrame()
+        filter_frame.setStyleSheet(
+            """
+            QFrame {
+                background-color: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 12px;
+            }
+            """
+        )
+        filter_layout = QHBoxLayout(filter_frame)
+        filter_layout.setSpacing(10)
+
+        filter_layout.addWidget(QLabel("Responsable:"))
+        self._cmb_seg_responsable = QComboBox()
+        self._cmb_seg_responsable.addItem("Todos", "")
+        self._cmb_seg_responsable.setMinimumWidth(150)
+        filter_layout.addWidget(self._cmb_seg_responsable)
+
+        filter_layout.addWidget(QLabel("Estado:"))
+        self._cmb_seg_estado = QComboBox()
+        self._cmb_seg_estado.addItem("Todos", "")
+        for estado in ("Pendiente", "En curso", "En espera", "Cumplida", "Completada", "Cancelada"):
+            self._cmb_seg_estado.addItem(estado, estado)
+        self._cmb_seg_estado.setMinimumWidth(130)
+        filter_layout.addWidget(self._cmb_seg_estado)
+
+        filter_layout.addWidget(QLabel("Asignada desde:"))
+        self._date_seg_desde = NoWheelDateEdit()
+        self._date_seg_desde.setCalendarPopup(True)
+        self._date_seg_desde.setDate(QDate.currentDate().addDays(-30))
+        self._date_seg_desde.setDisplayFormat("dd/MM/yyyy")
+        filter_layout.addWidget(self._date_seg_desde)
+
+        filter_layout.addWidget(QLabel("Hasta:"))
+        self._date_seg_hasta = NoWheelDateEdit()
+        self._date_seg_hasta.setCalendarPopup(True)
+        self._date_seg_hasta.setDate(QDate.currentDate())
+        self._date_seg_hasta.setDisplayFormat("dd/MM/yyyy")
+        filter_layout.addWidget(self._date_seg_hasta)
+
+        btn_filtrar = QPushButton("Filtrar")
+        btn_filtrar.clicked.connect(self._apply_task_tracking_filters)
+        filter_layout.addWidget(btn_filtrar)
+
+        btn_limpiar = QPushButton("Limpiar")
+        btn_limpiar.setProperty("variant", "secondary")
+        btn_limpiar.clicked.connect(self._clear_task_tracking_filters)
+        filter_layout.addWidget(btn_limpiar)
+
+        filter_layout.addStretch()
+        layout.addWidget(filter_frame)
+
+        self._task_tracking_table = QTableWidget()
+        self._task_tracking_table.setColumnCount(9)
+        self._task_tracking_table.setHorizontalHeaderLabels(
+            [
+                "Fecha Asignacion",
+                "Tarea",
+                "Descripcion",
+                "Asignada a",
+                "Leida",
+                "Fecha Lectura",
+                "Estado",
+                "Fecha Cumplimiento",
+                "Dias sin leer",
+            ]
+        )
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.horizontalHeader().setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)
+        self._task_tracking_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._task_tracking_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._task_tracking_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._task_tracking_table.setAlternatingRowColors(True)
+        self._task_tracking_table.verticalHeader().setVisible(False)
+        self._task_tracking_table.doubleClicked.connect(self._on_task_tracking_double_click)
+        layout.addWidget(self._task_tracking_table)
+
+        bottom_bar = QHBoxLayout()
+        self._lbl_task_tracking_count = QLabel("")
+        self._lbl_task_tracking_count.setStyleSheet("color: #6b6b6b; font-size: 12px;")
+        bottom_bar.addWidget(self._lbl_task_tracking_count)
+        bottom_bar.addStretch()
+        layout.addLayout(bottom_bar)
+
+        self._tabs.addTab(tab, "Seguimiento de Tareas")
+
+    # ══════════════════════════════════════════════
     #  REFRESH y Carga de datos
     # ══════════════════════════════════════════════
 
@@ -284,6 +391,8 @@ class AuditListView(QWidget):
         self._load_filter_options()
         self._apply_filters()
         self._load_stats()
+        self._load_task_tracking_filter_options()
+        self._apply_task_tracking_filters()
 
     def _load_filter_options(self):
         """Carga opciones dinamicas para los filtros."""
@@ -322,6 +431,38 @@ class AuditListView(QWidget):
         self._date_desde.setDate(QDate.currentDate().addDays(-30))
         self._date_hasta.setDate(QDate.currentDate())
         self._apply_filters()
+
+    def _load_task_tracking_filter_options(self):
+        """Carga filtros dinamicos del seguimiento de tareas."""
+        self._cmb_seg_responsable.clear()
+        self._cmb_seg_responsable.addItem("Todos", "")
+        for username in AuditController.get_responsables_tareas_asignadas():
+            self._cmb_seg_responsable.addItem(username, username)
+
+    def _apply_task_tracking_filters(self):
+        """Filtra y carga tabla de seguimiento de tareas asignadas."""
+        responsable = self._cmb_seg_responsable.currentData() or ""
+        estado = self._cmb_seg_estado.currentData() or ""
+        fecha_desde = self._date_seg_desde.date().toString("yyyy-MM-dd")
+        fecha_hasta = self._date_seg_hasta.date().toString("yyyy-MM-dd")
+
+        data = AuditController.get_seguimiento_tareas(
+            responsable=responsable,
+            estado=estado,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            limit=300,
+        )
+        self._populate_task_tracking_table(data)
+        self._lbl_task_tracking_count.setText(f"{len(data)} tareas encontradas (max 300)")
+
+    def _clear_task_tracking_filters(self):
+        """Restablece filtros del tab de seguimiento."""
+        self._cmb_seg_responsable.setCurrentIndex(0)
+        self._cmb_seg_estado.setCurrentIndex(0)
+        self._date_seg_desde.setDate(QDate.currentDate().addDays(-30))
+        self._date_seg_hasta.setDate(QDate.currentDate())
+        self._apply_task_tracking_filters()
 
     def _populate_log_table(self, data: list[dict]):
         """Llena la tabla de log con los datos."""
@@ -366,6 +507,117 @@ class AuditListView(QWidget):
             # Resumen
             self._log_table.setItem(i, 5, QTableWidgetItem(row.get("resumen", "")))
 
+    def _populate_task_tracking_table(self, data: list[dict]):
+        """Llena la tabla de seguimiento de tareas."""
+        self._task_tracking_data = data
+        self._task_tracking_table.setRowCount(len(data))
+
+        for i, row in enumerate(data):
+            fecha_asig = self._fmt_ts(row.get("fecha_asignacion", ""))
+            fecha_lectura = self._fmt_ts(row.get("fecha_lectura", ""))
+            fecha_cump = self._fmt_ts(row.get("fecha_cumplimiento", ""))
+            id_tarea = row.get("id_tarea", "")
+            tarea_label = f"#{id_tarea}" if id_tarea not in ("", None) else row.get("tarea_oid", "")
+            estado = row.get("estado_actual", "") or "-"
+            leida = bool(row.get("leida", False))
+            dias = row.get("dias_sin_leer", 0)
+            dias_txt = str(dias) if isinstance(dias, int) and dias > 0 else "-"
+
+            self._task_tracking_table.setItem(i, 0, QTableWidgetItem(fecha_asig))
+            self._task_tracking_table.setItem(i, 1, QTableWidgetItem(tarea_label))
+            self._task_tracking_table.setItem(i, 2, QTableWidgetItem(row.get("descripcion", "")))
+            self._task_tracking_table.setItem(i, 3, QTableWidgetItem(row.get("asignada_a", "")))
+
+            leida_item = QTableWidgetItem("Leida" if leida else "No leida")
+            if leida:
+                leida_item.setBackground(QColor("#1f3d1f"))
+                leida_item.setForeground(QColor("#8aff8a"))
+            else:
+                leida_item.setBackground(QColor("#3d3520"))
+                leida_item.setForeground(QColor("#ffd166"))
+            leida_item.setFont(QFont("Lato", 10, QFont.Weight.Bold))
+            self._task_tracking_table.setItem(i, 4, leida_item)
+
+            self._task_tracking_table.setItem(i, 5, QTableWidgetItem(fecha_lectura))
+
+            estado_item = QTableWidgetItem(estado)
+            if estado in ("Cumplida", "Completada"):
+                estado_item.setBackground(QColor("#1f3d1f"))
+                estado_item.setForeground(QColor("#8aff8a"))
+            elif estado == "Cancelada":
+                estado_item.setBackground(QColor("#3d1f1f"))
+                estado_item.setForeground(QColor("#ff8a8a"))
+            self._task_tracking_table.setItem(i, 6, estado_item)
+
+            self._task_tracking_table.setItem(i, 7, QTableWidgetItem(fecha_cump))
+            self._task_tracking_table.setItem(i, 8, QTableWidgetItem(dias_txt))
+
+    def _on_task_tracking_double_click(self, index):
+        """Abrir carpeta y tarea asociadas desde Seguimiento de Tareas."""
+        row_idx = index.row()
+        if not hasattr(self, "_task_tracking_data") or not (0 <= row_idx < len(self._task_tracking_data)):
+            return
+
+        row = self._task_tracking_data[row_idx]
+        tarea_oid = row.get("tarea_oid", "")
+        if not tarea_oid:
+            QMessageBox.information(
+                self,
+                "Seguimiento de tareas",
+                "No se encontro el identificador interno de la tarea.",
+            )
+            return
+
+        try:
+            from controllers.tarea_controller import TareaController
+            from views.expedientes.expediente_form import ExpedienteFormDialog
+            from views.tareas.tarea_form import TareaFormDialog
+
+            tarea = TareaController.get_by_id(tarea_oid)
+            if not tarea:
+                QMessageBox.information(
+                    self,
+                    "Seguimiento de tareas",
+                    "La tarea ya no existe o fue eliminada.",
+                )
+                return
+
+            exp_id = tarea.get("id_expediente", "") or ""
+            main = self.window()
+
+            # Paso 1: abrir carpeta correspondiente.
+            if exp_id:
+                try:
+                    if hasattr(main, "_navigate"):
+                        main._navigate("expedientes")
+                except Exception:
+                    pass
+                dlg_exp = ExpedienteFormDialog(expediente_id=exp_id, parent=self)
+                dlg_exp.exec()
+
+            # Paso 2: abrir la tarea en su formulario.
+            try:
+                if hasattr(main, "_navigate"):
+                    main._navigate("tareas")
+            except Exception:
+                pass
+            dlg_tarea = TareaFormDialog(tarea_id=tarea_oid, parent=self)
+            dlg_tarea.exec()
+
+            # Refrescar seguimiento y listas relacionadas.
+            self._apply_task_tracking_filters()
+            if hasattr(main, "_views"):
+                for key in ("tareas", "expedientes"):
+                    view = main._views.get(key)
+                    if view and hasattr(view, "refresh"):
+                        view.refresh()
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Seguimiento de tareas",
+                f"No se pudo abrir la carpeta y la tarea.\n\nDetalle: {e}",
+            )
+
     def _on_log_double_click(self, index):
         """Abre el dialogo de detalle al hacer doble clic."""
         row_idx = index.row()
@@ -374,6 +626,12 @@ class AuditListView(QWidget):
             if audit_id:
                 dlg = AuditDetailDialog(audit_id, parent=self)
                 dlg.exec()
+
+    @staticmethod
+    def _fmt_ts(value: str) -> str:
+        if value and len(value) >= 19:
+            return value[:10] + " " + value[11:19]
+        return value or "-"
 
     # ══════════════════════════════════════════════
     #  Estadisticas
