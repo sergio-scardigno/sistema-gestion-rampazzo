@@ -2,7 +2,8 @@
 from datetime import date, datetime
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QComboBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QComboBox,
+    QFrame, QGridLayout
 )
 from PySide6.QtGui import QFont
 
@@ -13,6 +14,7 @@ COLUMNS = [
     ("id_expediente", "ID"),
     ("numero_carpeta_cliente", "N° Carpeta Cliente"),
     ("rama", "Rama"),
+    ("modalidad", "Modalidad"),
     ("subtipo", "Subtipo"),
     ("tipo_tramite", "Tipo Tramite"),
     ("estado", "Estado"),
@@ -22,6 +24,46 @@ COLUMNS = [
     ("dias_abierta", "Dias"),
     ("numero_expediente_anses", "Nro Tramite ANSES"),
 ]
+
+
+class MetricStatusCard(QFrame):
+    def __init__(self, titulo: str, etiqueta: str, color_etiqueta: str, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #0f213b;
+                border: 1px solid #1f3658;
+                border-radius: 10px;
+            }
+        """)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(4)
+
+        top = QHBoxLayout()
+        top.setContentsMargins(0, 0, 0, 0)
+        top.setSpacing(8)
+
+        self._lbl_titulo = QLabel(titulo)
+        self._lbl_titulo.setStyleSheet("color: #dce8ff; font-size: 12px; font-weight: 600;")
+        top.addWidget(self._lbl_titulo)
+        top.addStretch()
+
+        self._lbl_etiqueta = QLabel(etiqueta)
+        self._lbl_etiqueta.setStyleSheet(
+            f"background: {color_etiqueta}; color: #ffffff; border-radius: 8px; "
+            "padding: 3px 8px; font-size: 10px; font-weight: 700;"
+        )
+        top.addWidget(self._lbl_etiqueta)
+        layout.addLayout(top)
+
+        self._lbl_valor = QLabel("0")
+        self._lbl_valor.setFont(QFont("Lato", 18, QFont.Weight.Bold))
+        self._lbl_valor.setStyleSheet("color: #ffffff;")
+        layout.addWidget(self._lbl_valor)
+
+    def set_valor(self, valor: int):
+        self._lbl_valor.setText(str(valor))
 
 
 class ExpedienteListView(QWidget):
@@ -54,6 +96,14 @@ class ExpedienteListView(QWidget):
         self._cmb_estado.currentIndexChanged.connect(self.refresh)
         header.addWidget(self._cmb_estado)
 
+        # Filtro modalidad
+        self._cmb_modalidad = QComboBox()
+        self._cmb_modalidad.addItem("Todas las modalidades", "")
+        for modalidad in ExpedienteController.MODALIDADES:
+            self._cmb_modalidad.addItem(modalidad, modalidad)
+        self._cmb_modalidad.currentIndexChanged.connect(self.refresh)
+        header.addWidget(self._cmb_modalidad)
+
         btn_new = QPushButton("+ Nueva Carpeta")
         btn_new.clicked.connect(self._new_expediente)
         header.addWidget(btn_new)
@@ -70,11 +120,29 @@ class ExpedienteListView(QWidget):
 
         layout.addLayout(header)
 
+        # Tarjetas de métricas de carpetas
+        metrics_layout = QGridLayout()
+        metrics_layout.setContentsMargins(0, 0, 0, 0)
+        metrics_layout.setHorizontalSpacing(10)
+        metrics_layout.setVerticalSpacing(10)
+        self._metric_cards: dict[str, MetricStatusCard] = {}
+        cards_cfg = [
+            ("activos", "Carpetas activas", "Activos", "#0f6be5"),
+            ("urgentes", "Con alerta de tarea", "Urgente", "#c93333"),
+            ("semana", "Turnos de la semana", "Semana", "#2d8f4e"),
+            ("pendientes", "Con tareas pendientes", "Pendiente", "#b8963c"),
+        ]
+        for idx, (key, titulo, etiqueta, color) in enumerate(cards_cfg):
+            card = MetricStatusCard(titulo, etiqueta, color)
+            self._metric_cards[key] = card
+            metrics_layout.addWidget(card, 0, idx)
+        layout.addLayout(metrics_layout)
+
         # Table (search_fields extra permiten buscar por nombre/DNI del cliente)
         self._table = FilterableTable(
             COLUMNS,
-            search_fields=["cli_nombre", "cli_dni"],
-            search_placeholder="Buscar por N\u00b0 carpeta, DNI o nombre del cliente...",
+            search_fields=["cli_nombre", "cli_dni", "cli_cuil"],
+            search_placeholder="Buscar por N\u00b0 carpeta, DNI/CUIL o nombre del cliente...",
         )
         self._table.row_double_clicked.connect(self._open_detail)
         layout.addWidget(self._table)
@@ -90,11 +158,22 @@ class ExpedienteListView(QWidget):
         if rama:
             conditions.append("e.rama = ?")
             params += (rama,)
+        modalidad = self._cmb_modalidad.currentData()
+        if modalidad:
+            conditions.append("e.modalidad = ?")
+            params += (modalidad,)
         where = " AND ".join(conditions)
         data = ExpedienteController.get_scoped_with_cliente(
             where=where, params=params, order_by="e.fecha_apertura DESC"
         )
         self._calcular_dias(data)
+        expediente_ids = [row.get("_id", "") for row in data if row.get("_id")]
+        metricas_rel = ExpedienteController.get_metricas_relacionadas(expediente_ids)
+        activos = sum(1 for row in data if row.get("estado", "") not in ExpedienteController.ESTADOS_CIERRE)
+        self._metric_cards["activos"].set_valor(activos)
+        self._metric_cards["urgentes"].set_valor(metricas_rel.get("urgentes", 0))
+        self._metric_cards["semana"].set_valor(metricas_rel.get("semana", 0))
+        self._metric_cards["pendientes"].set_valor(metricas_rel.get("pendientes", 0))
         self._table.set_data(data)
 
     @staticmethod

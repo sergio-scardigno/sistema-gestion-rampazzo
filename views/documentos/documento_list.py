@@ -1,5 +1,5 @@
 """Vista principal de Gestion Documental."""
-import os
+from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QComboBox,
     QMessageBox, QFileDialog
@@ -69,9 +69,14 @@ class DocumentoListView(QWidget):
         # Acciones
         actions = QHBoxLayout()
         if tiene_permiso(session.rol, "documentos.update"):
-            btn_ver = QPushButton("Ver / Abrir")
+            btn_ver = QPushButton("Ver")
             btn_ver.clicked.connect(self._open_document)
             actions.addWidget(btn_ver)
+
+            btn_descargar = QPushButton("Descargar")
+            btn_descargar.setProperty("variant", "secondary")
+            btn_descargar.clicked.connect(self._download_document)
+            actions.addWidget(btn_descargar)
 
             btn_version = QPushButton("Nueva Version")
             btn_version.setProperty("variant", "secondary")
@@ -83,6 +88,11 @@ class DocumentoListView(QWidget):
             btn_historial.setProperty("variant", "secondary")
             btn_historial.clicked.connect(self._show_versiones)
             actions.addWidget(btn_historial)
+        if session.rol in {"administrador", "superusuario"}:
+            btn_delete = QPushButton("Eliminar")
+            btn_delete.setProperty("variant", "secondary")
+            btn_delete.clicked.connect(self._delete_document)
+            actions.addWidget(btn_delete)
 
         actions.addStretch()
         layout.addLayout(actions)
@@ -152,11 +162,44 @@ class DocumentoListView(QWidget):
         if not doc:
             return
         ruta = doc.get("ruta_archivo", "")
-        if ruta and os.path.exists(ruta):
-            os.startfile(ruta)
+        if not ruta:
+            QMessageBox.warning(self, "Error", "El documento no tiene archivo asociado.")
+            return
+
+        local_path = DocumentoController.ensure_local_file(doc_id)
+        if local_path and local_path.is_file():
+            from views.documentos.documento_viewer import DocumentoViewerDialog
+            dlg = DocumentoViewerDialog(local_path, self)
+            dlg.exec()
         else:
-            QMessageBox.warning(self, "Error",
-                                f"Archivo no encontrado:\n{ruta}")
+            QMessageBox.warning(
+                self, "Error",
+                f"No se pudo obtener el archivo.\n"
+                f"No existe localmente ni se pudo descargar del servidor.\n\n"
+                f"Ruta registrada: {ruta}",
+            )
+
+    def _download_document(self):
+        doc_id = self._selected_id()
+        if not doc_id:
+            QMessageBox.information(self, "Atencion", "Seleccione un documento.")
+            return
+        doc = DocumentoController.get_by_id(doc_id)
+        if not doc:
+            return
+        ruta = doc.get("ruta_archivo", "")
+        local_path = DocumentoController.ensure_local_file(doc_id)
+        if not local_path or not local_path.is_file():
+            QMessageBox.warning(self, "Error", f"No se pudo descargar el archivo:\n{ruta}")
+            return
+        destino, _ = QFileDialog.getSaveFileName(self, "Guardar archivo como", Path(local_path).name)
+        if not destino:
+            return
+        try:
+            Path(destino).write_bytes(Path(local_path).read_bytes())
+            QMessageBox.information(self, "Ok", "Archivo descargado correctamente.")
+        except Exception as exc:
+            QMessageBox.warning(self, "Error", f"No se pudo guardar el archivo:\n{exc}")
 
     def _new_document(self):
         from views.documentos.documento_form import DocumentoFormDialog
@@ -182,3 +225,22 @@ class DocumentoListView(QWidget):
         from views.documentos.documento_form import VersionesDialog
         dlg = VersionesDialog(doc_id, parent=self)
         dlg.exec()
+
+    def _delete_document(self):
+        doc_id = self._selected_id()
+        if not doc_id:
+            QMessageBox.information(self, "Atencion", "Seleccione un documento.")
+            return
+        ok = QMessageBox.question(
+            self,
+            "Confirmar",
+            "Eliminar este documento? Esta accion ocultara el documento del sistema.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if ok != QMessageBox.StandardButton.Yes:
+            return
+        if DocumentoController.delete(doc_id):
+            QMessageBox.information(self, "Ok", "Documento eliminado correctamente.")
+            self.refresh()
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el documento.")

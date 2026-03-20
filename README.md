@@ -403,6 +403,40 @@ python main.py --import-backup "C:\ruta\backup_bundle.zip" --no-remote
 
 ---
 
+## Servidor de documentos en VPS
+
+Para compartir archivos entre multiples PCs, el proyecto incluye un servidor de archivos en `server/` (FastAPI).
+
+### Que resuelve
+
+- Guarda binarios en el VPS en lugar de rutas locales de cada PC.
+- Permite `upload`, `download`, `delete` y vista de estadisticas.
+- Limita tipo y tamaño de archivo en servidor.
+- Incluye backup semanal comprimido con rotacion automatica.
+
+### Ruta de documentacion especifica
+
+- Ver `server/README.md` para instalacion completa, endpoints, backup y recuperacion.
+
+### Endpoints principales
+
+- `GET /health`
+- `POST /upload/{file_path}`
+- `GET /download/{file_path}`
+- `DELETE /delete/{file_path}`
+- `GET /stats`
+- `GET /backups`
+
+### Backup semanal de archivos del VPS
+
+- Script: `server/backup.sh`
+- Destino por defecto: `/opt/rampazzo/backups`
+- Formato: `docs_backup_YYYYMMDD_HHMMSS.tar.zst`
+- Retencion: `RAMPAZZO_BACKUP_RETENTION_WEEKS` (default 4)
+- Cron semanal instalado por `server/setup.sh`: domingo 03:00
+
+---
+
 ## Instalacion y configuracion
 
 ### Requisitos previos

@@ -1,6 +1,7 @@
 """
 Ventana principal con sidebar dinamico segun rol + area de contenido + barra superior.
 """
+
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QStackedWidget, QFrame, QMessageBox, QSizePolicy
@@ -15,7 +16,7 @@ from core.permissions import modulos_permitidos, ROL_ALIAS
 from core.session_guard import SessionGuard
 from views.widgets.sync_indicator import SyncIndicator
 from views.widgets.notification_bell import NotificationBell
-from config import APP_NAME, APP_VERSION, APP_FULL_VERSION
+from config import APP_NAME, APP_VERSION
 
 
 # Mapeo de modulos a iconos (unicode simples)
@@ -23,6 +24,7 @@ MODULO_CONFIG = {
     "dashboard":      {"label": "  Dashboard",       "icon": "\u2302"},
     "clientes":       {"label": "  Clientes",        "icon": "\u263A"},
     "expedientes":    {"label": "  Carpetas",        "icon": "\u2630"},
+    "carpetas_iniciadas": {"label": "  Carpetas Iniciadas", "icon": "+"},
     "tareas":         {"label": "  Tareas",          "icon": "\u2611"},
     "turnos":         {"label": "  Turnos ANSES",    "icon": "\u23F0"},
     "comunicaciones": {"label": "  Comunicaciones",  "icon": "\u2709"},
@@ -39,7 +41,7 @@ MODULO_CONFIG = {
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"{APP_NAME} v{APP_FULL_VERSION}")
+        self.setWindowTitle(f"{APP_NAME} v{APP_VERSION}")
         self.setMinimumSize(1100, 700)
         self.showMaximized()
 
@@ -122,7 +124,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addStretch()
 
         # Version label en sidebar
-        version_sidebar = QLabel(f"v{APP_FULL_VERSION}")
+        version_sidebar = QLabel(f"v{APP_VERSION}")
         version_sidebar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_sidebar.setStyleSheet(
             "color: #555555; font-size: 10px; padding: 4px; "
@@ -182,7 +184,7 @@ class MainWindow(QMainWindow):
         topbar_layout.addWidget(user_info)
 
         # Version en topbar
-        version_topbar = QLabel(f"v{APP_FULL_VERSION}")
+        version_topbar = QLabel(f"v{APP_VERSION}")
         version_topbar.setStyleSheet("color: #aaaaaa; font-size: 10px; margin-left: 12px;")
         topbar_layout.addWidget(version_topbar)
 
@@ -214,6 +216,9 @@ class MainWindow(QMainWindow):
         elif key == "expedientes":
             from views.expedientes.expediente_list import ExpedienteListView
             self._register_view(key, ExpedienteListView())
+        elif key == "carpetas_iniciadas":
+            from views.expedientes.carpetas_iniciadas_view import CarpetasIniciadasView
+            self._register_view(key, CarpetasIniciadasView())
         elif key == "tareas":
             from views.tareas.tarea_list import TareaListView
             self._register_view(key, TareaListView())

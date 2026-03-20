@@ -35,3 +35,9 @@ lock_expiry_minutes = 15
 [paths]
 ; Directorio de documentos adjuntos (por defecto: data/documentos)
 ; docs_dir = data/documentos
+
+[file_server]
+; URL del servidor de archivos (VPS) para compartir documentos entre PCs
+; url = http://tu-vps:8443
+; API key de autenticacion (la genera setup.sh en el servidor)
+; api_key = tu-api-key-aqui

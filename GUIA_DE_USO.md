@@ -39,8 +39,9 @@ Esta guia esta dividida en dos partes:
     - [Pausar o dar de baja un empleado](#114-pausar-o-dar-de-baja-un-empleado)
 12. [Migracion desde Excel / CSV](#12-migracion-desde-excel--csv)
 13. [Exportar / Importar sistema completo](#13-exportar--importar-sistema-completo)
-14. [Sincronizacion y trabajo offline](#14-sincronizacion-y-trabajo-offline)
-15. [Referencia tecnica](#15-referencia-tecnica)
+14. [Backups de documentos en VPS](#14-backups-de-documentos-en-vps)
+15. [Sincronizacion y trabajo offline](#15-sincronizacion-y-trabajo-offline)
+16. [Referencia tecnica](#16-referencia-tecnica)
 
 ---
 
@@ -804,7 +805,53 @@ Esta funcion permite exportar **todo** el estado del sistema en un unico ZIP (ba
 
 ---
 
-## 14. Sincronizacion y trabajo offline
+## 14. Backups de documentos en VPS
+
+Esta seccion aplica cuando el estudio usa el servidor de archivos de `server/` en un VPS.
+
+### Para que sirve
+
+- Tener una copia semanal comprimida de todos los archivos subidos (PDF, imagenes, textos).
+- Poder recuperar los documentos si hay daño de datos o incidente en la base.
+
+### Donde se guarda
+
+- Carpeta por defecto: `/opt/rampazzo/backups`
+- Nombre de archivo: `docs_backup_YYYYMMDD_HHMMSS.tar.zst`
+
+### Frecuencia
+
+- Automatica por cron: domingo 03:00 AM (usuario `rampazzo`).
+
+### Quien debe controlarlo
+
+- Administrador tecnico o Superusuario con acceso al VPS.
+
+### Como verificar rapidamente
+
+```bash
+ls -lh /opt/rampazzo/backups
+```
+
+Y desde API:
+
+```bash
+API_KEY=$(grep RAMPAZZO_API_KEY /opt/rampazzo/server/.env | cut -d= -f2)
+curl -H "x-api-key: $API_KEY" http://localhost:8443/backups
+```
+
+### Recuperacion de emergencia
+
+```bash
+cd /opt/rampazzo
+tar --zstd -xf backups/docs_backup_YYYYMMDD_HHMMSS.tar.zst -C /
+```
+
+Esto restaura la estructura completa de `/opt/rampazzo/documentos/`.
+
+---
+
+## 15. Sincronizacion y trabajo offline
 
 ### Como funciona
 
@@ -846,7 +893,7 @@ Si un registro fue modificado localmente y tambien en MongoDB:
 
 ---
 
-## 15. Referencia tecnica
+## 16. Referencia tecnica
 
 ### Tabla completa de permisos por rol
 

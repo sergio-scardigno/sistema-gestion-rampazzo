@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS expedientes (
     responsable_secundario_username TEXT DEFAULT '',
     estado TEXT DEFAULT 'Activo',
     prioridad TEXT DEFAULT 'Normal',
+    modalidad TEXT,
     ubicacion_fisica TEXT,
     link_drive TEXT,
     fecha_cierre TEXT,
@@ -459,6 +460,12 @@ def init_db():
         except sqlite3.OperationalError:
             conn.execute(f"ALTER TABLE expedientes ADD COLUMN {col} TEXT")
             conn.commit()
+    # Migracion: agregar columna modalidad a expedientes
+    try:
+        conn.execute("SELECT modalidad FROM expedientes LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE expedientes ADD COLUMN modalidad TEXT")
+        conn.commit()
     # Indice unico para evitar carpetas duplicadas
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_numero_carpeta "

@@ -41,6 +41,7 @@ class ExpedienteFormDialog(QDialog):
         self._is_read_only = False
         self._loaded_tabs: set[int] = set()
         self._tabs: QTabWidget | None = None
+        self._suspend_rama_rebuild = False
         self._original_responsable_username = ""
         self._original_responsable_display = ""
         self._original_responsable_secundario_username = ""
@@ -149,6 +150,7 @@ class ExpedienteFormDialog(QDialog):
             ("estado", "Estado"),
             ("responsable", "Responsable"),
         ])
+        self._turnos_table.row_double_clicked.connect(self._edit_turno)
         turnos_layout.addWidget(self._turnos_table)
         btn_new_turno = QPushButton("+ Nuevo Turno")
         btn_new_turno.clicked.connect(self._new_turno)
@@ -172,6 +174,8 @@ class ExpedienteFormDialog(QDialog):
         comms_layout.addWidget(btn_new_comm, alignment=Qt.AlignmentFlag.AlignLeft)
         tabs.addTab(comms_widget, "Comunicaciones")
 
+        session = Session.get()
+
         # Tab 4 – Documentos
         docs_widget = QWidget()
         docs_layout = QVBoxLayout(docs_widget)
@@ -186,9 +190,14 @@ class ExpedienteFormDialog(QDialog):
         btn_new_doc = QPushButton("+ Nuevo Documento")
         btn_new_doc.clicked.connect(self._new_documento)
         docs_layout.addWidget(btn_new_doc, alignment=Qt.AlignmentFlag.AlignLeft)
+        self._can_delete_docs = session.rol in {"administrador", "superusuario"}
+        if self._can_delete_docs:
+            btn_del_doc = QPushButton("Eliminar Documento")
+            btn_del_doc.setProperty("variant", "secondary")
+            btn_del_doc.clicked.connect(self._delete_documento)
+            docs_layout.addWidget(btn_del_doc, alignment=Qt.AlignmentFlag.AlignLeft)
         tabs.addTab(docs_widget, "Documentos")
 
-        session = Session.get()
         self._can_read_escritos = tiene_permiso(session.rol, "escritos.read")
         self._can_edit_escritos = tiene_permiso(session.rol, "escritos.update")
         self._can_create_escritos = tiene_permiso(session.rol, "escritos.create")
@@ -380,6 +389,14 @@ class ExpedienteFormDialog(QDialog):
         self._cmb_rama.currentTextChanged.connect(self._on_rama_changed)
         form.addRow("Rama:", self._cmb_rama)
 
+        self._lbl_modalidad = QLabel("Modalidad de inicio:")
+        self._cmb_modalidad = QComboBox()
+        for modalidad in ExpedienteController.MODALIDADES:
+            self._cmb_modalidad.addItem(modalidad)
+        self._lbl_modalidad.setVisible(False)
+        self._cmb_modalidad.setVisible(False)
+        form.addRow(self._lbl_modalidad, self._cmb_modalidad)
+
         self._cmb_subtipo = QComboBox()
         self._cmb_subtipo.addItem("-- Seleccionar subtipo --")
         self._cmb_subtipo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -404,6 +421,7 @@ class ExpedienteFormDialog(QDialog):
         self._rama_datos_widget: RamaDatosWidget | None = None
         self._rama_datos_container.setVisible(False)
         form.addRow(self._rama_datos_container)
+        self._cmb_modalidad.currentTextChanged.connect(self._on_modalidad_changed)
 
         # ── Seccion: Modulo Judicial ──
         form.addRow(self._make_separator("MODULO JUDICIAL"))
@@ -518,8 +536,17 @@ class ExpedienteFormDialog(QDialog):
 
         # Cargar rama y subtipo
         rama = data.get("rama", "") or ""
+        modalidad = (data.get("modalidad", "") or "").strip()
         if rama:
+            # Evita doble rebuild en apertura de edición (rama->modalidad)
+            self._suspend_rama_rebuild = True
             self._cmb_rama.setCurrentText(rama)
+            if rama in ExpedienteController.RAMAS_CON_MODALIDAD and modalidad in ExpedienteController.MODALIDADES:
+                self._cmb_modalidad.setCurrentText(modalidad)
+            elif rama in ExpedienteController.RAMAS_CON_MODALIDAD:
+                self._cmb_modalidad.setCurrentText(ExpedienteController.MODALIDADES[0])
+            self._suspend_rama_rebuild = False
+            self._rebuild_rama_datos_widget(preserve_data=False)
         subtipo = data.get("subtipo", "") or ""
         if subtipo:
             self._cmb_subtipo.setCurrentText(subtipo)
@@ -796,6 +823,13 @@ class ExpedienteFormDialog(QDialog):
         if dlg.exec():
             self._load_tab_turnos()
 
+    def _edit_turno(self, turno_id: str):
+        """Editar un turno ANSES existente desde la pestaña de la carpeta."""
+        from views.turnos.turno_form import TurnoFormDialog
+        dlg = TurnoFormDialog(turno_id=turno_id, parent=self)
+        if dlg.exec():
+            self._load_tab_turnos()
+
     def _new_comunicacion(self):
         """Crear una nueva comunicacion pre-vinculada a este expediente."""
         from views.comunicaciones.comunicacion_form import ComunicacionFormDialog
@@ -823,6 +857,29 @@ class ExpedienteFormDialog(QDialog):
         dlg = DocumentoFormDialog(doc_id=doc_id, parent=self)
         if dlg.exec():
             self._load_tab_docs()
+
+    def _delete_documento(self):
+        """Eliminar (soft delete) un documento de la carpeta actual."""
+        if not getattr(self, "_can_delete_docs", False):
+            QMessageBox.warning(self, "Sin permisos", "No tiene permisos para eliminar documentos.")
+            return
+        doc_id = self._docs_table.get_selected_id()
+        if not doc_id:
+            QMessageBox.information(self, "Atencion", "Seleccione un documento.")
+            return
+        ok = QMessageBox.question(
+            self,
+            "Confirmar",
+            "Eliminar este documento? Esta accion ocultara el documento del sistema.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if ok != QMessageBox.StandardButton.Yes:
+            return
+        if DocumentoController.delete(doc_id):
+            QMessageBox.information(self, "Ok", "Documento eliminado correctamente.")
+            self._load_tab_docs()
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el documento.")
 
     def _new_escrito(self):
         """Crear un escrito desde un modelo y abrir editor rich text."""
@@ -887,15 +944,47 @@ class ExpedienteFormDialog(QDialog):
         # Claves ANSES/Fiscal solo para rama Previsional
         self._set_claves_visible(rama == "Previsional")
 
+        self._update_modalidad_visibility(rama)
+        if not self._suspend_rama_rebuild:
+            self._rebuild_rama_datos_widget(preserve_data=False)
+
+    def _on_modalidad_changed(self, _modalidad: str):
+        """Regenera campos de rama para aplicar campos exclusivos virtuales."""
+        if not self._suspend_rama_rebuild:
+            self._rebuild_rama_datos_widget(preserve_data=True)
+
+    def _update_modalidad_visibility(self, rama: str):
+        mostrar = rama in ExpedienteController.RAMAS_CON_MODALIDAD
+        self._lbl_modalidad.setVisible(mostrar)
+        self._cmb_modalidad.setVisible(mostrar)
+        if mostrar and self._cmb_modalidad.currentText() not in ExpedienteController.MODALIDADES:
+            self._cmb_modalidad.setCurrentText(ExpedienteController.MODALIDADES[0])
+
+    def _get_rama_fields_for_current_context(self, rama: str) -> list[dict]:
+        campos = ExpedienteController.CAMPOS_POR_RAMA.get(rama, [])
+        if rama not in ExpedienteController.RAMAS_CON_MODALIDAD:
+            return campos
+        if self._cmb_modalidad.currentText() == "Virtual":
+            return campos
+        return [c for c in campos if not c.get("solo_virtual")]
+
+    def _rebuild_rama_datos_widget(self, preserve_data: bool):
+        previous_data = {}
+        if preserve_data and self._rama_datos_widget:
+            previous_data = self._rama_datos_widget.get_data()
+
         # Regenerar widget de datos específicos
         if self._rama_datos_widget:
             self._rama_datos_layout.removeWidget(self._rama_datos_widget)
             self._rama_datos_widget.deleteLater()
             self._rama_datos_widget = None
 
-        campos = ExpedienteController.CAMPOS_POR_RAMA.get(rama, [])
+        rama = self._cmb_rama.currentText().strip()
+        campos = self._get_rama_fields_for_current_context(rama)
         if campos:
             self._rama_datos_widget = RamaDatosWidget(campos)
+            if previous_data:
+                self._rama_datos_widget.set_data(previous_data)
             self._rama_datos_layout.addWidget(self._rama_datos_widget)
             self._rama_datos_container.setVisible(True)
             self._rama_separator.setVisible(True)
@@ -1000,6 +1089,16 @@ class ExpedienteFormDialog(QDialog):
         datos_rama = {}
         if self._rama_datos_widget:
             datos_rama = self._rama_datos_widget.get_data()
+        modalidad = ""
+        if rama in ExpedienteController.RAMAS_CON_MODALIDAD:
+            modalidad = self._cmb_modalidad.currentText().strip() or ExpedienteController.MODALIDADES[0]
+            if modalidad != "Virtual":
+                virtual_keys = {
+                    c["key"]
+                    for c in ExpedienteController.CAMPOS_POR_RAMA.get(rama, [])
+                    if c.get("solo_virtual")
+                }
+                datos_rama = {k: v for k, v in datos_rama.items() if k not in virtual_keys}
 
         # Recolectar datos judiciales
         datos_judicial = {}
@@ -1013,6 +1112,7 @@ class ExpedienteFormDialog(QDialog):
             "rama": rama,
             "subtipo": subtipo,
             "datos_rama": datos_rama,
+            "modalidad": modalidad,
             "datos_judicial": datos_judicial if datos_judicial else "",
             "fecha_apertura": self._date_apertura.date().toString("yyyy-MM-dd"),
             "responsable": responsable_legible.upper(),

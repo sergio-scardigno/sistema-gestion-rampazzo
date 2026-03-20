@@ -15,13 +15,36 @@ from controllers.documento_controller import DocumentoController
 from controllers.expediente_controller import ExpedienteController
 from controllers.cliente_controller import ClienteController
 from core.auth import Session
+from core import file_service
 from core.permissions import get_active_users
+from config import FILE_SERVER_URL
 from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
 _INITIAL_EXP_LIMIT = 50
 _SEARCH_DEBOUNCE_MS = 300
 _SEARCH_MIN_CHARS = 2
 _SEARCH_RESULT_LIMIT = 50
+_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt"}
+_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+_FILE_DIALOG_FILTER = "Imagenes (*.png *.jpg *.jpeg);;PDF (*.pdf);;Texto (*.txt)"
+
+
+def _validate_selected_file(path: str, allow_repo_relative: bool = False) -> tuple[bool, str]:
+    """Valida extension y tamano del archivo segun politicas de documentos."""
+    if not path:
+        return True, ""
+    p = Path(path)
+    if allow_repo_relative and not p.is_absolute() and p.suffix.lower() in _ALLOWED_EXTENSIONS:
+        return True, ""
+    if not p.is_file():
+        return False, "El archivo seleccionado no existe."
+    ext = p.suffix.lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        return False, "Tipo de archivo no permitido. Solo: PDF, PNG, JPG, JPEG, TXT."
+    size = p.stat().st_size
+    if size > _MAX_FILE_SIZE_BYTES:
+        return False, "El archivo excede el maximo permitido de 5 MB."
+    return True, ""
 
 
 class DocumentoFormDialog(QDialog):
@@ -32,6 +55,8 @@ class DocumentoFormDialog(QDialog):
         self._id = doc_id
         self._is_edit = doc_id is not None
         self._expediente_id_preset = expediente_id
+        self._ruta_db_original = ""
+        self._ruta_server_display = ""
 
         self.setWindowTitle("Editar Documento" if self._is_edit else "Nuevo Documento")
         self.setMinimumSize(550, 500)
@@ -122,6 +147,10 @@ class DocumentoFormDialog(QDialog):
         btn_browse = QPushButton("Examinar...")
         btn_browse.clicked.connect(self._browse_file)
         archivo_layout.addWidget(btn_browse)
+        btn_view = QPushButton("Ver")
+        btn_view.setProperty("variant", "secondary")
+        btn_view.clicked.connect(self._view_file)
+        archivo_layout.addWidget(btn_view)
         form.addRow("Archivo:", archivo_layout)
 
         # Fecha
@@ -261,9 +290,13 @@ class DocumentoFormDialog(QDialog):
     def _browse_file(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Seleccionar Documento", "",
-            "Todos los archivos (*.*)"
+            _FILE_DIALOG_FILTER
         )
         if path:
+            ok, msg = _validate_selected_file(path)
+            if not ok:
+                QMessageBox.warning(self, "Archivo no valido", msg)
+                return
             self._txt_ruta.setText(path)
 
     def _load_data(self):
@@ -284,7 +317,18 @@ class DocumentoFormDialog(QDialog):
         self._cmb_categoria.setCurrentText(data.get("categoria", ""))
         self._cmb_subcategoria.setCurrentText(data.get("subcategoria", ""))
         self._txt_descripcion.setPlainText(data.get("descripcion", ""))
-        self._txt_ruta.setText(data.get("ruta_archivo", ""))
+        self._ruta_db_original = data.get("ruta_archivo", "")
+        self._ruta_server_display = ""
+        if self._ruta_db_original and not Path(self._ruta_db_original).is_absolute() and FILE_SERVER_URL:
+            self._ruta_server_display = f"{FILE_SERVER_URL}/download/{self._ruta_db_original}"
+            self._txt_ruta.setText(self._ruta_server_display)
+            self._txt_ruta.setToolTip(
+                "Mostrando URL del servidor para chequeo.\n"
+                "La ruta real guardada en DB se mantiene."
+            )
+        else:
+            self._txt_ruta.setText(self._ruta_db_original)
+            self._txt_ruta.setToolTip("")
         fd = data.get("fecha", "")
         if fd and len(fd) >= 10:
             self._date.setDate(QDate.fromString(fd[:10], "yyyy-MM-dd"))
@@ -295,6 +339,21 @@ class DocumentoFormDialog(QDialog):
         elif data.get("responsable", ""):
             self._cmb_responsable.setEditText(data.get("responsable", ""))
 
+    def _view_file(self):
+        ruta = self._txt_ruta.text().strip()
+        if self._is_edit and self._ruta_server_display and ruta == self._ruta_server_display:
+            ruta = self._ruta_db_original
+        if not ruta:
+            QMessageBox.information(self, "Atencion", "Este documento no tiene archivo asociado.")
+            return
+        local_path = file_service.resolve_local_path(ruta)
+        if not local_path or not local_path.is_file():
+            QMessageBox.warning(self, "Error", "No se pudo obtener el archivo para visualizar.")
+            return
+        from views.documentos.documento_viewer import DocumentoViewerDialog
+        dlg = DocumentoViewerDialog(local_path, self)
+        dlg.exec()
+
     def _save(self):
         nombre = self._txt_nombre.text().strip()
         if not nombre:
@@ -302,11 +361,20 @@ class DocumentoFormDialog(QDialog):
             return
 
         ruta = self._txt_ruta.text().strip()
+        if self._is_edit and self._ruta_server_display and ruta == self._ruta_server_display:
+            ruta = self._ruta_db_original
+        ok, msg = _validate_selected_file(ruta, allow_repo_relative=self._is_edit)
+        if not ok:
+            QMessageBox.warning(self, "Archivo no valido", msg)
+            return
 
         # Calcular tamano
         tamano = 0
         if ruta and Path(ruta).exists():
             tamano = Path(ruta).stat().st_size
+        elif self._is_edit and ruta:
+            existing = DocumentoController.get_by_id(self._id)
+            tamano = int(existing.get("tamano_bytes", 0) or 0) if existing else 0
 
         data = {
             "id_expediente": self._cmb_expediente.currentData() or "",
@@ -324,9 +392,17 @@ class DocumentoFormDialog(QDialog):
         }
 
         if self._is_edit:
-            DocumentoController.update(self._id, data)
+            try:
+                DocumentoController.update(self._id, data)
+            except ValueError as exc:
+                QMessageBox.warning(self, "Archivo no valido", str(exc))
+                return
         else:
-            DocumentoController.create(data)
+            try:
+                DocumentoController.create(data)
+            except ValueError as exc:
+                QMessageBox.warning(self, "Archivo no valido", str(exc))
+                return
         self.accept()
 
 
@@ -391,9 +467,13 @@ class NuevaVersionDialog(QDialog):
     def _browse_file(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Seleccionar Nuevo Archivo", "",
-            "Todos los archivos (*.*)"
+            _FILE_DIALOG_FILTER
         )
         if path:
+            ok, msg = _validate_selected_file(path)
+            if not ok:
+                QMessageBox.warning(self, "Archivo no valido", msg)
+                return
             self._txt_ruta.setText(path)
 
     def _save(self):
@@ -405,12 +485,16 @@ class NuevaVersionDialog(QDialog):
         session = Session.get()
         resp = session.username if session.logged_in else ""
 
-        result = DocumentoController.crear_nueva_version(
-            self._doc_id,
-            ruta,
-            notas=self._txt_notas.toPlainText().strip(),
-            responsable=resp,
-        )
+        try:
+            result = DocumentoController.crear_nueva_version(
+                self._doc_id,
+                ruta,
+                notas=self._txt_notas.toPlainText().strip(),
+                responsable=resp,
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Archivo no valido", str(exc))
+            return
         if result:
             QMessageBox.information(self, "Exito", "Nueva version creada correctamente.")
             self.accept()

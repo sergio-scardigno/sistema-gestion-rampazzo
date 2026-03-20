@@ -16,6 +16,8 @@ venv/
 .venv/
 env/
 
+server/.env 
+
 # Data local
 data/local.db
 data/*.db

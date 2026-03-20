@@ -98,6 +98,29 @@ function Test-RemoteBranch {
     return ($LASTEXITCODE -eq 0)
 }
 
+function Get-RemoteAppVersion {
+    param(
+        [string]$GhPath,
+        [string]$Repository,
+        [string]$BranchName
+    )
+    try {
+        $raw = & $GhPath api "repos/$Repository/contents/config.py?ref=$BranchName" 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($raw)) { return "" }
+        $obj = $raw | ConvertFrom-Json
+        if (-not $obj.content) { return "" }
+        $b64 = [string]$obj.content
+        $b64 = $b64 -replace "\s", ""
+        $bytes = [System.Convert]::FromBase64String($b64)
+        $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+        $m = [regex]::Match($text, 'APP_VERSION\s*=\s*"([^"]+)"')
+        if ($m.Success) { return $m.Groups[1].Value }
+        return ""
+    } catch {
+        return ""
+    }
+}
+
 Write-Host "============================================"
 Write-Host "  Sistema Rampazzo - Build Multiplataforma"
 Write-Host "  (orquestado con GitHub Actions)"
@@ -164,6 +187,20 @@ if (-not (Test-RemoteBranch -GhPath $gh -Repository $Repo -BranchName $Branch)) 
 }
 Write-Host "      Repo: $Repo"
 Write-Host "      Rama: $Branch"
+Write-Host ""
+
+Step "[2.2/8] Validando APP_VERSION remota contra version solicitada..."
+$remoteAppVersion = Get-RemoteAppVersion -GhPath $gh -Repository $Repo -BranchName $Branch
+if ([string]::IsNullOrWhiteSpace($remoteAppVersion)) {
+    throw "No se pudo detectar APP_VERSION en config.py de '$Repo@$Branch'."
+}
+if ($remoteAppVersion -ne $Version) {
+    throw (
+        "Version inconsistente: solicitaste '$Version' pero la rama remota '$Branch' tiene APP_VERSION='$remoteAppVersion'. " +
+        "Actualizar config.py en esa rama, push y reintentar."
+    )
+}
+Write-Host "      OK (APP_VERSION remota = $remoteAppVersion)"
 Write-Host ""
 
 if ($PurgeArtifactsBeforeRun) {

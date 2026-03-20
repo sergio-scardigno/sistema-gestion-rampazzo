@@ -12,6 +12,7 @@ Guia tecnica para desarrolladores que necesiten configurar el entorno, ejecutar 
 4. [Testing](#4-testing)
 5. [Sincronizacion reforzada](#5-sincronizacion-reforzada)
 6. [Backup manual completo (UI y CLI)](#6-backup-manual-completo-ui-y-cli)
+   - [6.4 Servidor de archivos VPS y backup semanal](#64-servidor-de-archivos-vps-y-backup-semanal)
 7. [Build del ejecutable](#7-build-del-ejecutable)
 8. [Generar ZIP distribuible](#8-generar-zip-distribuible)
 9. [Estructura del ZIP resultante](#9-estructura-del-zip-resultante)
@@ -194,6 +195,48 @@ python main.py --import-backup "C:\ruta\backup_bundle.zip" --no-remote
 - `local/sqlite.db`
 - `local/documentos/`
 - `remote/mongo_dump/*.jsonl`
+
+### 6.4 Servidor de archivos VPS y backup semanal
+
+El proyecto incluye una carpeta `server/` para alojar documentos compartidos en VPS.
+
+Componentes:
+
+- `server/file_server.py`: API de archivos (upload/download/delete/stats/backups).
+- `server/setup.sh`: instala servicio systemd, dependencias y cron.
+- `server/backup.sh`: backup `tar.zst` con retencion por semanas.
+- `server/.env.example`: variables de configuracion.
+
+Instalacion recomendada en Ubuntu:
+
+```bash
+cd server
+chmod +x setup.sh backup.sh
+sed -i 's/\r$//' setup.sh backup.sh
+sudo ./setup.sh
+```
+
+Puntos importantes:
+
+- El setup instala `cron` y `zstd` si faltan.
+- El cron se registra como:
+  `0 3 * * 0 /usr/bin/env bash /opt/rampazzo/server/backup.sh >/dev/null 2>&1`
+- Los backups se guardan en `/opt/rampazzo/backups` (default).
+- Endpoint de monitoreo: `GET /backups` con `x-api-key`.
+
+Comandos de verificacion:
+
+```bash
+systemctl status rampazzo-files
+sudo -u rampazzo /usr/bin/env bash /opt/rampazzo/server/backup.sh
+ls -lh /opt/rampazzo/backups
+```
+
+Troubleshooting CRLF (si aparece `bash\r` o `pipefail`):
+
+```bash
+sed -i 's/\r$//' /opt/rampazzo/server/setup.sh /opt/rampazzo/server/backup.sh
+```
 
 ---
 
@@ -519,6 +562,27 @@ Si no estas en un repo git local o queres apuntar a otro repo/rama:
 
 ```bat
 build_multiplataforma.bat 1.2.0 owner/repo main
+```
+
+### Release unificada (version + git + build)
+
+Para mantener **la misma version en Git y en los builds**, usar:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\release_multiplataforma.ps1 -Version 1.6.1
+```
+
+Este flujo hace:
+
+1. Actualiza `APP_VERSION` en `config.py`.
+2. Crea commit solo de `config.py` y hace push de la rama actual.
+3. Ejecuta build local (`build.py`).
+4. Ejecuta build multiplataforma (`build_multiplataforma.ps1`) con la misma version.
+
+Wrapper `.bat` equivalente:
+
+```bat
+release_multiplataforma.bat 1.6.1
 ```
 
 Resultado:

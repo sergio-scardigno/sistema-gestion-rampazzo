@@ -93,6 +93,7 @@ MODULO_PERMISOS = {
     "dashboard": "clientes.read",
     "clientes": "clientes.read",
     "expedientes": "expedientes.read",
+    "carpetas_iniciadas": "expedientes.read",
     "tareas": "tareas.read",
     "turnos": "turnos.read",
     "comunicaciones": "comunicaciones.read",

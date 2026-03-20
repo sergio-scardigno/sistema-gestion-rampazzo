@@ -1,4 +1,5 @@
 """Pantalla de Login."""
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QMessageBox, QFrame, QGraphicsDropShadowEffect
@@ -8,7 +9,7 @@ from PySide6.QtGui import QFont, QColor, QPixmap
 
 from controllers.auth_controller import AuthController
 from controllers.config_controller import ConfigController
-from config import APP_NAME, APP_VERSION, APP_FULL_VERSION
+from config import APP_NAME, APP_VERSION
 
 
 class LoginView(QWidget):
@@ -17,7 +18,7 @@ class LoginView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(460, 620)
-        self.setWindowTitle(f"{APP_NAME} v{APP_FULL_VERSION} - Iniciar Sesion")
+        self.setWindowTitle(f"{APP_NAME} v{APP_VERSION} - Iniciar Sesion")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         # Fondo oscuro elegante para la ventana de login
@@ -157,7 +158,7 @@ class LoginView(QWidget):
 
         # ─── Version ───
         card_layout.addSpacing(16)
-        version_lbl = QLabel(f"v{APP_FULL_VERSION}")
+        version_lbl = QLabel(f"v{APP_VERSION}")
         version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_lbl.setStyleSheet("color: #555555; font-size: 11px;")
         card_layout.addWidget(version_lbl)

@@ -88,7 +88,12 @@ class TurnoListView(QWidget):
         layout.addLayout(header)
 
         # ── Tabla ──
-        self._table = FilterableTable(COLUMNS, row_style_provider=self._style_turno_date_cell)
+        self._table = FilterableTable(
+            COLUMNS,
+            search_fields=["_dni_cliente", "_numero_carpeta_cliente"],
+            search_placeholder="Buscar por cliente, DNI o N° de carpeta...",
+            row_style_provider=self._style_turno_date_cell,
+        )
         self._table.row_double_clicked.connect(self._on_double_click)
 
         # Mejor legibilidad: mayor alto de fila, padding y columnas mas anchas.
@@ -133,13 +138,16 @@ class TurnoListView(QWidget):
 
         # Enriquecer con nombre de cliente
         from controllers.cliente_controller import ClienteController
-        clientes_cache = {}
+        clientes_cache: dict[str, dict] = {}
         for d in data:
             cid = d.get("id_cliente", "")
             if cid and cid not in clientes_cache:
                 cli = ClienteController.get_by_id(cid)
-                clientes_cache[cid] = cli.get("nombre_completo", "") if cli else ""
-            d["_nombre_cliente"] = clientes_cache.get(cid, "")
+                clientes_cache[cid] = cli or {}
+            cliente = clientes_cache.get(cid, {})
+            d["_nombre_cliente"] = cliente.get("nombre_completo", "")
+            d["_dni_cliente"] = cliente.get("dni", "")
+            d["_numero_carpeta_cliente"] = cliente.get("numero_carpeta", "")
             # Formatear documentacion_lista
             d["documentacion_lista"] = "Si" if d.get("documentacion_lista") else "No"
 

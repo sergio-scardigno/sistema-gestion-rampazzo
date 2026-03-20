@@ -1,0 +1,18 @@
+[Unit]
+Description=Rampazzo File Server
+After=network.target
+
+[Service]
+Type=simple
+User=rampazzo
+Group=rampazzo
+WorkingDirectory=/opt/rampazzo/server
+EnvironmentFile=/opt/rampazzo/server/.env
+ExecStart=/opt/rampazzo/server/venv/bin/python file_server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

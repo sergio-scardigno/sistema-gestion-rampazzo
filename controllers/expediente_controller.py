@@ -22,6 +22,8 @@ class ExpedienteController(BaseController):
     ]
     ESTADOS_CIERRE = ["Cerrado", "Archivado"]
     PRIORIDADES = ["Alta", "Normal", "Baja"]
+    MODALIDADES = ["Presencial", "Virtual"]
+    RAMAS_CON_MODALIDAD = ["Previsional"]
 
     # ── Ramas jurídicas ──
 
@@ -75,7 +77,7 @@ class ExpedienteController(BaseController):
             {"key": "categoria", "label": "Categoria", "tipo": "text"},
             {"key": "convenio_colectivo", "label": "Convenio colectivo", "tipo": "text"},
             {"key": "jornada", "label": "Jornada", "tipo": "text"},
-            {"key": "salario_mensual", "label": "Salario mensual", "tipo": "number"},
+            {"key": "salario_mensual", "label": "Salario mensual", "tipo": "number", "prefijo": "$ "},
             {"key": "antiguedad", "label": "Antiguedad", "tipo": "text"},
             {"key": "lugar_prestacion", "label": "Lugar de prestacion", "tipo": "text"},
             {"key": "carta_documento_enviada", "label": "Carta documento enviada", "tipo": "boolean"},
@@ -83,7 +85,7 @@ class ExpedienteController(BaseController):
             {"key": "seclo_iniciado", "label": "SECLO iniciado", "tipo": "boolean"},
             {"key": "fecha_seclo", "label": "Fecha SECLO", "tipo": "date"},
             {"key": "acuerdo_seclo", "label": "Acuerdo SECLO", "tipo": "boolean"},
-            {"key": "monto_acuerdo_seclo", "label": "Monto acuerdo SECLO", "tipo": "number"},
+            {"key": "monto_acuerdo_seclo", "label": "Monto acuerdo SECLO", "tipo": "number", "prefijo": "$ "},
         ],
         "ART": [
             {"key": "art_interviniente", "label": "ART interviniente", "tipo": "text"},
@@ -96,21 +98,30 @@ class ExpedienteController(BaseController):
             {"key": "dictamen", "label": "Dictamen", "tipo": "text"},
             {"key": "porcentaje_incapacidad", "label": "% Incapacidad", "tipo": "number"},
             {"key": "baremo_aplicado", "label": "Baremo aplicado", "tipo": "text"},
-            {"key": "ingreso_base_mensual", "label": "Ingreso base mensual", "tipo": "number"},
-            {"key": "monto_indemnizacion_estimado", "label": "Monto indemnizacion estimado", "tipo": "number"},
+            {"key": "ingreso_base_mensual", "label": "Ingreso base mensual", "tipo": "number", "prefijo": "$ "},
+            {"key": "monto_indemnizacion_estimado", "label": "Monto indemnizacion estimado", "tipo": "number", "prefijo": "$ "},
             {"key": "rechazo_art", "label": "Rechazo ART", "tipo": "boolean"},
         ],
         "Previsional": [
             {"key": "historia_laboral_cargada", "label": "Historia laboral cargada", "tipo": "boolean"},
-            {"key": "anios_con_aportes", "label": "Años con aportes", "tipo": "number"},
+            {"key": "anios_con_aportes", "label": "Años con aportes", "tipo": "integer", "maximo": 60},
             {"key": "servicios_insalubres", "label": "Servicios insalubres", "tipo": "boolean"},
             {"key": "regimen_especial", "label": "Regimen especial", "tipo": "text"},
             {"key": "fecha_solicitud_anses", "label": "Fecha solicitud ANSES", "tipo": "date"},
             {"key": "estado_tramite_anses", "label": "Estado tramite ANSES", "tipo": "combo",
              "opciones": ["Iniciado", "En analisis", "Observado", "Aprobado", "Rechazado"]},
             {"key": "resolucion_dictada", "label": "Resolucion dictada", "tipo": "text"},
-            {"key": "haber_inicial", "label": "Haber inicial", "tipo": "number"},
-            {"key": "diferencias_estimadas", "label": "Diferencias estimadas", "tipo": "number"},
+            {"key": "haber_inicial", "label": "Haber inicial", "tipo": "number", "prefijo": "$ "},
+            {"key": "diferencias_estimadas", "label": "Diferencias estimadas", "tipo": "number", "prefijo": "$ "},
+            {"key": "plataforma_virtual", "label": "Plataforma virtual", "tipo": "combo",
+             "opciones": ["Zoom", "Google Meet", "Teams", "WhatsApp", "Otro"], "solo_virtual": True},
+            {"key": "link_reunion", "label": "Link de reunion", "tipo": "text", "solo_virtual": True},
+            {"key": "fecha_reunion_virtual", "label": "Fecha reunion virtual", "tipo": "date", "solo_virtual": True},
+            {"key": "hora_reunion_virtual", "label": "Hora reunion virtual", "tipo": "text", "solo_virtual": True},
+            {"key": "documentos_enviados_digitalmente", "label": "Documentos enviados digitalmente",
+             "tipo": "boolean", "solo_virtual": True},
+            {"key": "detalle_documentos_digitales", "label": "Detalle documentos digitales",
+             "tipo": "text", "solo_virtual": True},
         ],
         "Amparos": [
             {"key": "derecho_afectado", "label": "Derecho afectado", "tipo": "text"},
@@ -135,10 +146,10 @@ class ExpedienteController(BaseController):
             {"key": "tipo_conflicto_familia", "label": "Tipo conflicto", "tipo": "combo",
              "opciones": ["Alimentos", "Regimen de comunicacion", "Cuidado personal",
                           "Divorcio", "Compensacion economica"]},
-            {"key": "hijos_cantidad", "label": "Cantidad de hijos", "tipo": "number"},
+            {"key": "hijos_cantidad", "label": "Cantidad de hijos", "tipo": "integer", "maximo": 20},
             {"key": "hijos_edades", "label": "Edades hijos", "tipo": "text"},
-            {"key": "ingresos_parte_actora", "label": "Ingresos parte actora", "tipo": "number"},
-            {"key": "ingresos_parte_demandada", "label": "Ingresos parte demandada", "tipo": "number"},
+            {"key": "ingresos_parte_actora", "label": "Ingresos parte actora", "tipo": "number", "prefijo": "$ "},
+            {"key": "ingresos_parte_demandada", "label": "Ingresos parte demandada", "tipo": "number", "prefijo": "$ "},
             {"key": "conviven", "label": "Conviven actualmente", "tipo": "boolean"},
             {"key": "acuerdo_previo", "label": "Acuerdo previo existente", "tipo": "boolean"},
             {"key": "violencia", "label": "Situacion de violencia", "tipo": "boolean"},
@@ -155,11 +166,11 @@ class ExpedienteController(BaseController):
             {"key": "seguro_tercero", "label": "Seguro del tercero", "tipo": "text"},
             {"key": "lesiones", "label": "Lesiones sufridas", "tipo": "text"},
             {"key": "porcentaje_incapacidad_danos", "label": "% Incapacidad", "tipo": "number"},
-            {"key": "dano_material", "label": "Daño material estimado", "tipo": "number"},
-            {"key": "dano_moral", "label": "Daño moral estimado", "tipo": "number"},
-            {"key": "gastos_medicos", "label": "Gastos medicos", "tipo": "number"},
+            {"key": "dano_material", "label": "Daño material estimado", "tipo": "number", "prefijo": "$ "},
+            {"key": "dano_moral", "label": "Daño moral estimado", "tipo": "number", "prefijo": "$ "},
+            {"key": "gastos_medicos", "label": "Gastos medicos", "tipo": "number", "prefijo": "$ "},
             {"key": "reclamo_aseguradora", "label": "Reclamo aseguradora presentado", "tipo": "boolean"},
-            {"key": "oferta_aseguradora", "label": "Oferta aseguradora", "tipo": "number"},
+            {"key": "oferta_aseguradora", "label": "Oferta aseguradora", "tipo": "number", "prefijo": "$ "},
         ],
     }
 
@@ -376,7 +387,7 @@ class ExpedienteController(BaseController):
         )
         sql = (
             "SELECT e.*, c.numero_carpeta AS numero_carpeta_cliente, "
-            "c.nombre_completo AS cli_nombre, c.dni AS cli_dni "
+            "c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil "
             "FROM expedientes e "
             "LEFT JOIN clientes c ON c._id = e.id_cliente"
         )
@@ -400,6 +411,78 @@ class ExpedienteController(BaseController):
         return db_local.rows_to_list(rows)
 
     @classmethod
+    def _count_distinct_expedientes_in_table(
+        cls,
+        table: str,
+        expediente_ids: list[str],
+        extra_where: str,
+        extra_params: tuple = (),
+    ) -> int:
+        """Cuenta expedientes distintos en una tabla relacionada, por lotes."""
+        ids = [eid for eid in expediente_ids if eid]
+        if not ids:
+            return 0
+
+        total_ids: set[str] = set()
+        chunk_size = 900  # Evita limite de placeholders de SQLite.
+        conn = db_local.get_connection()
+        try:
+            for i in range(0, len(ids), chunk_size):
+                chunk = ids[i:i + chunk_size]
+                placeholders = ",".join(["?"] * len(chunk))
+                sql = (
+                    f"SELECT DISTINCT id_expediente FROM {table} "
+                    f"WHERE id_expediente IN ({placeholders}) AND {extra_where}"
+                )
+                rows = conn.execute(sql, tuple(chunk) + extra_params).fetchall()
+                total_ids.update(r[0] for r in rows if r and r[0])
+        finally:
+            conn.close()
+        return len(total_ids)
+
+    @classmethod
+    def get_metricas_relacionadas(
+        cls,
+        expediente_ids: list[str],
+        dias_urgencia: int = 3,
+        dias_semana: int = 7,
+    ) -> dict[str, int]:
+        """Retorna métricas de pendientes/urgentes/semana para carpetas dadas."""
+        if not expediente_ids:
+            return {"urgentes": 0, "semana": 0, "pendientes": 0}
+
+        hoy = date.today().isoformat()
+        limite_urgencia = (date.today() + timedelta(days=max(1, dias_urgencia))).isoformat()
+        limite_semana = (date.today() + timedelta(days=max(1, dias_semana))).isoformat()
+
+        pendientes = cls._count_distinct_expedientes_in_table(
+            table="tareas",
+            expediente_ids=expediente_ids,
+            extra_where="estado IN ('Pendiente','En curso','En espera')",
+        )
+        urgentes = cls._count_distinct_expedientes_in_table(
+            table="tareas",
+            expediente_ids=expediente_ids,
+            extra_where=(
+                "estado IN ('Pendiente','En curso','En espera') "
+                "AND fecha_vencimiento IS NOT NULL AND fecha_vencimiento != '' "
+                "AND fecha_vencimiento <= ?"
+            ),
+            extra_params=(limite_urgencia,),
+        )
+        semana = cls._count_distinct_expedientes_in_table(
+            table="turnos",
+            expediente_ids=expediente_ids,
+            extra_where=(
+                "estado IN ('Pendiente','Confirmado') "
+                "AND fecha_turno IS NOT NULL AND fecha_turno != '' "
+                "AND fecha_turno >= ? AND fecha_turno <= ?"
+            ),
+            extra_params=(hoy, limite_semana),
+        )
+        return {"urgentes": urgentes, "semana": semana, "pendientes": pendientes}
+
+    @classmethod
     def search_scoped_with_cliente(cls, text: str = "", where: str = "",
                                    params: tuple = (), order_by: str = "",
                                    limit: int = 50) -> list[dict]:
@@ -421,7 +504,7 @@ class ExpedienteController(BaseController):
             modulo="expedientes",
         )
         sql = (
-            "SELECT e.*, c.nombre_completo AS cli_nombre, c.dni AS cli_dni, "
+            "SELECT e.*, c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil, "
             "c.numero_carpeta AS numero_carpeta_cliente "
             "FROM expedientes e "
             "LEFT JOIN clientes c ON c._id = e.id_cliente"
@@ -445,10 +528,11 @@ class ExpedienteController(BaseController):
                 " OR e.responsable LIKE ?"
                 " OR c.nombre_completo LIKE ?"
                 " OR c.dni LIKE ?"
+                " OR c.cuil LIKE ?"
                 " OR c.numero_carpeta LIKE ?)"
             )
             conditions.append(search_cond)
-            all_params += (text_param,) * 9
+            all_params += (text_param,) * 10
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
         if order_by:

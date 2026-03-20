@@ -101,13 +101,18 @@ class FilterableTable(QWidget):
                         best = max(best, 2)
                     elif search_text in val:
                         best = max(best, 1)
-                    if search_digits and field in ("cli_dni", "dni"):
+                    if search_digits and field in (
+                        "cli_dni", "dni", "cli_cuil", "cuil",
+                        "_dni_cliente", "_numero_carpeta_cliente", "numero_carpeta",
+                    ):
                         val_digits = _re.sub(r'[^\d]', '', val)
+                        if not val_digits:
+                            continue
                         if val_digits == search_digits:
                             best = max(best, 3)
-                        elif val_digits.startswith(search_digits):
+                        elif val_digits.startswith(search_digits) or search_digits.startswith(val_digits):
                             best = max(best, 2)
-                        elif search_digits in val_digits:
+                        elif search_digits in val_digits or val_digits in search_digits:
                             best = max(best, 1)
                 if best > 0:
                     scored.append((best, idx, row))
