@@ -10,9 +10,12 @@ from PySide6.QtWidgets import (
 )
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz  # PyMuPDF (nombre moderno)
 except Exception:  # pragma: no cover
-    fitz = None
+    try:
+        import fitz  # PyMuPDF (compatibilidad versiones previas)
+    except Exception:  # pragma: no cover
+        fitz = None
 
 
 class DocumentoViewerDialog(QDialog):

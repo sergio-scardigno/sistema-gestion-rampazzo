@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS expedientes (
     fecha_cierre TEXT,
     resultado TEXT,
     numero_expediente_anses TEXT,
+    calculo_derecho_nota TEXT DEFAULT '',
     clave_mi_anses TEXT,
     clave_fiscal TEXT,
     observaciones TEXT,
@@ -465,6 +466,12 @@ def init_db():
         conn.execute("SELECT modalidad FROM expedientes LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE expedientes ADD COLUMN modalidad TEXT")
+        conn.commit()
+    # Migracion: agregar nota de calculo derecho a expedientes
+    try:
+        conn.execute("SELECT calculo_derecho_nota FROM expedientes LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE expedientes ADD COLUMN calculo_derecho_nota TEXT DEFAULT ''")
         conn.commit()
     # Indice unico para evitar carpetas duplicadas
     conn.execute(

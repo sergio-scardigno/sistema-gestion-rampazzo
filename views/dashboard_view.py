@@ -297,7 +297,7 @@ class DashboardView(QWidget):
         self._table_vencidas = QTableWidget()
         self._table_vencidas.setColumnCount(5)
         self._table_vencidas.setHorizontalHeaderLabels([
-            "Tarea", "Carpeta", "Responsable", "Vencimiento", "Estado"
+            "Tarea", "Cliente", "Responsable", "Vencimiento", "Estado"
         ])
         self._table_vencidas.horizontalHeader().setStretchLastSection(True)
         self._table_vencidas.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -416,10 +416,24 @@ class DashboardView(QWidget):
         vencidas = TareaController.get_scoped(
             where="estado IN ('Pendiente','En curso') AND fecha_vencimiento < ?",
             params=(today,), order_by="fecha_vencimiento ASC")
+        expediente_cache: dict[str, dict | None] = {}
+        cliente_cache_vencidas: dict[str, dict | None] = {}
         self._table_vencidas.setRowCount(len(vencidas[:20]))
         for i, t in enumerate(vencidas[:20]):
             self._table_vencidas.setItem(i, 0, QTableWidgetItem(t.get("descripcion", "")))
-            self._table_vencidas.setItem(i, 1, QTableWidgetItem(str(t.get("id_expediente", ""))))
+            expediente_oid = t.get("id_expediente", "") or ""
+            nombre_cliente = ""
+            if expediente_oid:
+                if expediente_oid not in expediente_cache:
+                    expediente_cache[expediente_oid] = ExpedienteController.get_by_id(expediente_oid)
+                exp = expediente_cache.get(expediente_oid)
+                cliente_oid = exp.get("id_cliente", "") if exp else ""
+                if cliente_oid:
+                    if cliente_oid not in cliente_cache_vencidas:
+                        cliente_cache_vencidas[cliente_oid] = ClienteController.get_by_id(cliente_oid)
+                    cli = cliente_cache_vencidas.get(cliente_oid)
+                    nombre_cliente = cli.get("nombre_completo", "") if cli else ""
+            self._table_vencidas.setItem(i, 1, QTableWidgetItem(nombre_cliente))
             self._table_vencidas.setItem(i, 2, QTableWidgetItem(t.get("responsable", "")))
             self._table_vencidas.setItem(i, 3, QTableWidgetItem(t.get("fecha_vencimiento", "")))
             self._table_vencidas.setItem(i, 4, QTableWidgetItem(t.get("estado", "")))
@@ -664,7 +678,7 @@ class DashboardView(QWidget):
             table = QTableWidget()
             table.setColumnCount(6)
             table.setHorizontalHeaderLabels([
-                "ID", "Tipo Tramite", "Estado", "Responsable", "Nro ANSES", ""
+                "Cliente", "Tipo Tramite", "Estado", "Responsable", "Nro ANSES", ""
             ])
             table.horizontalHeader().setStretchLastSection(True)
             table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -697,7 +711,7 @@ class DashboardView(QWidget):
             """)
 
             for i, exp in enumerate(expedientes):
-                table.setItem(i, 0, QTableWidgetItem(str(exp.get("id_expediente", ""))))
+                table.setItem(i, 0, QTableWidgetItem(cliente.get("nombre_completo", "")))
                 table.setItem(i, 1, QTableWidgetItem(exp.get("tipo_tramite", "")))
                 table.setItem(i, 2, QTableWidgetItem(exp.get("estado", "")))
                 table.setItem(i, 3, QTableWidgetItem(exp.get("responsable", "")))
@@ -773,7 +787,7 @@ class DashboardView(QWidget):
         table = QTableWidget()
         table.setColumnCount(6)
         table.setHorizontalHeaderLabels([
-            "ID", "Tipo Tramite", "Estado", "Responsable", "Nro ANSES", ""
+            "Cliente", "Tipo Tramite", "Estado", "Responsable", "Nro ANSES", ""
         ])
         table.horizontalHeader().setStretchLastSection(True)
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -795,7 +809,7 @@ class DashboardView(QWidget):
         """)
 
         for i, exp in enumerate(expedientes):
-            table.setItem(i, 0, QTableWidgetItem(str(exp.get("id_expediente", ""))))
+            table.setItem(i, 0, QTableWidgetItem(cliente.get("nombre_completo", "")))
             table.setItem(i, 1, QTableWidgetItem(exp.get("tipo_tramite", "")))
             table.setItem(i, 2, QTableWidgetItem(exp.get("estado", "")))
             table.setItem(i, 3, QTableWidgetItem(exp.get("responsable", "")))

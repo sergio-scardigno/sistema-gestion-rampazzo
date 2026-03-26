@@ -23,7 +23,7 @@ HOST = os.environ.get("RAMPAZZO_HOST", "0.0.0.0")
 PORT = int(os.environ.get("RAMPAZZO_PORT", "8443"))
 MAX_FILE_SIZE_MB = int(os.environ.get("RAMPAZZO_MAX_FILE_SIZE_MB", "5"))
 BACKUP_DIR = Path(os.environ.get("RAMPAZZO_BACKUP_DIR", "/opt/rampazzo/backups"))
-ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
 
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 

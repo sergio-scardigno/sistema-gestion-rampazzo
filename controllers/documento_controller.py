@@ -18,13 +18,14 @@ logger = logging.getLogger(__name__)
 class DocumentoController(BaseController):
     TABLE = "documentos"
     ID_FIELD = ""
-    ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt"}
+    ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
     MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
     # Categorias del pliego tecnico
     CATEGORIAS = [
         "Identidad", "Laboral", "Medicos", "Judiciales",
         "Administrativos", "Resoluciones", "Escritos",
+        "Calculo Derecho",
         "Notificaciones", "Comunicaciones", "Otro"
     ]
 
@@ -37,6 +38,7 @@ class DocumentoController(BaseController):
         "Administrativos": ["Expediente ANSES", "Resolucion", "Recurso admin.", "Dictamen", "Otro"],
         "Resoluciones": ["Favorable", "Desfavorable", "Parcial", "Otro"],
         "Escritos": ["Inicio", "Ampliacion", "Alegato", "Memorial", "Otro"],
+        "Calculo Derecho": ["Liquidacion", "Pericia", "Otro"],
         "Notificaciones": ["Cedula", "Carta documento", "Telegrama", "Otro"],
         "Comunicaciones": ["Email", "Nota", "Informe", "Otro"],
         "Otro": ["General"],

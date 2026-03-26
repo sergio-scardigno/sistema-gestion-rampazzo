@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QTabWidget, QWidget, QCompleter, QScrollArea, QFrame, QCheckBox,
 )
 from PySide6.QtCore import Qt, QDate, QTimer
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QColor
 
 logger = logging.getLogger(__name__)
 
@@ -133,11 +133,12 @@ class ExpedienteFormDialog(QDialog):
             ("fecha_vencimiento", "Vencimiento"),
             ("estado", "Estado"),
         ])
+        self._tareas_table.row_double_clicked.connect(self._edit_tarea)
         tareas_layout.addWidget(self._tareas_table)
         btn_new_tarea = QPushButton("+ Nueva Tarea")
         btn_new_tarea.clicked.connect(self._new_tarea)
         tareas_layout.addWidget(btn_new_tarea, alignment=Qt.AlignmentFlag.AlignLeft)
-        tabs.addTab(tareas_widget, "Tareas")
+        tabs.addTab(tareas_widget, "Movimientos")
 
         # Tab 2 – Turnos ANSES
         turnos_widget = QWidget()
@@ -198,6 +199,35 @@ class ExpedienteFormDialog(QDialog):
             docs_layout.addWidget(btn_del_doc, alignment=Qt.AlignmentFlag.AlignLeft)
         tabs.addTab(docs_widget, "Documentos")
 
+        # Tab 5 - Calculo Derecho
+        calc_widget = QWidget()
+        calc_layout = QVBoxLayout(calc_widget)
+        self._txt_calculo_nota = QTextEdit()
+        self._txt_calculo_nota.setMaximumHeight(80)
+        self._txt_calculo_nota.setPlaceholderText(
+            "Breve descripcion del calculo de derecho (monto estimado, criterios, etc.)."
+        )
+        calc_layout.addWidget(self._txt_calculo_nota)
+        self._calc_docs_table = FilterableTable([
+            ("nombre", "Nombre"),
+            ("categoria", "Categoria"),
+            ("fecha", "Fecha"),
+            ("responsable", "Responsable"),
+        ])
+        self._calc_docs_table.row_double_clicked.connect(self._edit_calculo_documento)
+        calc_layout.addWidget(self._calc_docs_table)
+        btn_new_calc_doc = QPushButton("+ Nuevo Documento")
+        btn_new_calc_doc.clicked.connect(self._new_calculo_documento)
+        calc_layout.addWidget(btn_new_calc_doc, alignment=Qt.AlignmentFlag.AlignLeft)
+        if self._can_delete_docs:
+            btn_del_calc_doc = QPushButton("Eliminar Documento")
+            btn_del_calc_doc.setProperty("variant", "secondary")
+            btn_del_calc_doc.clicked.connect(self._delete_calculo_documento)
+            calc_layout.addWidget(btn_del_calc_doc, alignment=Qt.AlignmentFlag.AlignLeft)
+        idx_calc = tabs.count()
+        tabs.addTab(calc_widget, "Calculo Derecho")
+        tabs.tabBar().setTabTextColor(idx_calc, QColor("#c9a84c"))
+
         self._can_read_escritos = tiene_permiso(session.rol, "escritos.read")
         self._can_edit_escritos = tiene_permiso(session.rol, "escritos.update")
         self._can_create_escritos = tiene_permiso(session.rol, "escritos.create")
@@ -241,7 +271,7 @@ class ExpedienteFormDialog(QDialog):
             btn_new_mov.clicked.connect(self._new_movimiento)
             movs_layout.addWidget(btn_new_mov, alignment=Qt.AlignmentFlag.AlignLeft)
             idx_movs = tabs.count()
-            tabs.addTab(movs_widget, "Movimientos")
+            tabs.addTab(movs_widget, "Contable")
             self._tab_map[idx_movs] = "movimientos"
 
         # Tab Tiempos
@@ -275,14 +305,46 @@ class ExpedienteFormDialog(QDialog):
             self._historial_table.row_double_clicked.connect(self._on_historial_double_click)
             historial_layout.addWidget(self._historial_table)
             idx_hist = tabs.count()
-            tabs.addTab(historial_widget, "Historial de Cambios")
+            tabs.addTab(historial_widget, "Historial de tiempos")
             self._tab_map[idx_hist] = "historial"
             self._has_historial = True
         else:
             self._has_historial = False
 
+        self._reorder_tabs(tabs)
         tabs.currentChanged.connect(self._on_tab_changed)
         parent_layout.addWidget(tabs)
+
+    def _reorder_tabs(self, tabs: QTabWidget):
+        desired_order = [
+            "Datos",
+            "Movimientos",
+            "Calculo Derecho",
+            "Turnos ANSES",
+            "Documentos",
+            "Comunicaciones",
+            "Escritos",
+            "Contable",
+            "Tiempos",
+            "Historial de tiempos",
+        ]
+        for target_idx, target_name in enumerate(desired_order):
+            current_idx = next(
+                (i for i in range(tabs.count()) if tabs.tabText(i) == target_name),
+                -1,
+            )
+            if current_idx >= 0 and current_idx != target_idx:
+                tab_widget = tabs.widget(current_idx)
+                icon = tabs.tabIcon(current_idx)
+                tab_text = tabs.tabText(current_idx)
+                tooltip = tabs.tabToolTip(current_idx)
+                whats_this = tabs.tabWhatsThis(current_idx)
+                text_color = tabs.tabBar().tabTextColor(current_idx)
+                tabs.removeTab(current_idx)
+                tabs.insertTab(target_idx, tab_widget, icon, tab_text)
+                tabs.setTabToolTip(target_idx, tooltip)
+                tabs.setTabWhatsThis(target_idx, whats_this)
+                tabs.tabBar().setTabTextColor(target_idx, text_color)
 
     def _make_separator(self, text: str = "") -> QFrame:
         """Crea un separador visual horizontal con label opcional."""
@@ -600,6 +662,8 @@ class ExpedienteFormDialog(QDialog):
         self._txt_ubicacion.setText(data.get("ubicacion_fisica", ""))
         self._txt_link_drive.setText(data.get("link_drive", ""))
         self._txt_nro_exp.setText(data.get("numero_expediente_anses", ""))
+        if hasattr(self, "_txt_calculo_nota"):
+            self._txt_calculo_nota.setPlainText(data.get("calculo_derecho_nota", "") or "")
         resultado = data.get("resultado", "") or ""
         idx_res = self._cmb_resultado.findData(resultado)
         if idx_res >= 0:
@@ -639,26 +703,28 @@ class ExpedienteFormDialog(QDialog):
             return
         self._loaded_tabs.add(index)
 
-        # Tabs fijos (indices 0-4 siempre presentes)
-        if index == 1:
+        if not self._tabs:
+            return
+        tab_name = self._tabs.tabText(index)
+
+        if tab_name == "Movimientos":
             self._load_tab_tareas()
-        elif index == 2:
+        elif tab_name == "Turnos ANSES":
             self._load_tab_turnos()
-        elif index == 3:
+        elif tab_name == "Comunicaciones":
             self._load_tab_comms()
-        elif index == 4:
+        elif tab_name == "Documentos":
             self._load_tab_docs()
-        else:
-            # Tabs dinamicos (movimientos, tiempos, historial)
-            tab_name = self._tab_map.get(index)
-            if tab_name == "escritos":
-                self._load_tab_escritos()
-            elif tab_name == "movimientos":
-                self._load_tab_movs()
-            elif tab_name == "tiempos":
-                self._load_tab_tiempos()
-            elif tab_name == "historial":
-                self._load_tab_historial()
+        elif tab_name == "Calculo Derecho":
+            self._load_tab_calculo_derecho()
+        elif tab_name == "Escritos":
+            self._load_tab_escritos()
+        elif tab_name == "Contable":
+            self._load_tab_movs()
+        elif tab_name == "Tiempos":
+            self._load_tab_tiempos()
+        elif tab_name == "Historial de tiempos":
+            self._load_tab_historial()
 
     def _load_tab_tareas(self):
         tareas = TareaController.get_by_expediente(self._id)
@@ -682,6 +748,11 @@ class ExpedienteFormDialog(QDialog):
     def _load_tab_docs(self):
         docs = DocumentoController.get_by_expediente(self._id)
         self._docs_table.set_data(docs)
+
+    def _load_tab_calculo_derecho(self):
+        docs = DocumentoController.get_by_expediente(self._id)
+        calculos = [d for d in docs if (d.get("categoria", "") or "").strip() == "Calculo Derecho"]
+        self._calc_docs_table.set_data(calculos)
 
     def _load_tab_escritos(self):
         escritos = EscritoController.get_by_expediente(self._id)
@@ -811,6 +882,13 @@ class ExpedienteFormDialog(QDialog):
         if dlg.exec():
             self._load_tab_tareas()
 
+    def _edit_tarea(self, tarea_id: str):
+        """Editar una tarea existente desde la pestana de la carpeta."""
+        from views.tareas.tarea_form import TareaFormDialog
+        dlg = TareaFormDialog(tarea_id=tarea_id, parent=self)
+        if dlg.exec():
+            self._load_tab_tareas()
+
     def _new_turno(self):
         """Crear un nuevo turno pre-vinculado a este expediente."""
         from views.turnos.turno_form import TurnoFormDialog
@@ -878,6 +956,53 @@ class ExpedienteFormDialog(QDialog):
         if DocumentoController.delete(doc_id):
             QMessageBox.information(self, "Ok", "Documento eliminado correctamente.")
             self._load_tab_docs()
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el documento.")
+
+    def _new_calculo_documento(self):
+        """Crear documento en categoria fija Calculo Derecho."""
+        from views.documentos.documento_form import DocumentoFormDialog
+        dlg = DocumentoFormDialog(
+            expediente_id=self._id,
+            categoria_preset="Calculo Derecho",
+            lock_categoria=True,
+            parent=self,
+        )
+        if dlg.exec():
+            self._load_tab_calculo_derecho()
+
+    def _edit_calculo_documento(self, doc_id: str):
+        """Editar un documento de Calculo Derecho."""
+        from views.documentos.documento_form import DocumentoFormDialog
+        dlg = DocumentoFormDialog(
+            doc_id=doc_id,
+            categoria_preset="Calculo Derecho",
+            lock_categoria=True,
+            parent=self,
+        )
+        if dlg.exec():
+            self._load_tab_calculo_derecho()
+
+    def _delete_calculo_documento(self):
+        """Eliminar documento seleccionado en Calculo Derecho."""
+        if not getattr(self, "_can_delete_docs", False):
+            QMessageBox.warning(self, "Sin permisos", "No tiene permisos para eliminar documentos.")
+            return
+        doc_id = self._calc_docs_table.get_selected_id()
+        if not doc_id:
+            QMessageBox.information(self, "Atencion", "Seleccione un documento.")
+            return
+        ok = QMessageBox.question(
+            self,
+            "Confirmar",
+            "Eliminar este documento? Esta accion ocultara el documento del sistema.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if ok != QMessageBox.StandardButton.Yes:
+            return
+        if DocumentoController.delete(doc_id):
+            QMessageBox.information(self, "Ok", "Documento eliminado correctamente.")
+            self._load_tab_calculo_derecho()
         else:
             QMessageBox.warning(self, "Error", "No se pudo eliminar el documento.")
 
@@ -1124,6 +1249,11 @@ class ExpedienteFormDialog(QDialog):
             "ubicacion_fisica": self._txt_ubicacion.text().strip(),
             "link_drive": self._txt_link_drive.text().strip(),
             "numero_expediente_anses": self._txt_nro_exp.text().strip(),
+            "calculo_derecho_nota": (
+                self._txt_calculo_nota.toPlainText().strip()
+                if hasattr(self, "_txt_calculo_nota")
+                else ""
+            ),
             "clave_mi_anses": clave_mi_anses,
             "clave_fiscal": clave_fiscal,
             "observaciones": self._txt_obs.toPlainText().strip(),

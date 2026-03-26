@@ -11,7 +11,7 @@ from views.widgets.filterable_table import FilterableTable
 from controllers.expediente_controller import ExpedienteController
 
 COLUMNS = [
-    ("id_expediente", "ID"),
+    ("cli_nombre", "Cliente"),
     ("numero_carpeta_cliente", "N° Carpeta Cliente"),
     ("rama", "Rama"),
     ("modalidad", "Modalidad"),

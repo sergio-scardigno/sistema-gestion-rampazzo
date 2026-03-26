@@ -24,9 +24,11 @@ _INITIAL_EXP_LIMIT = 50
 _SEARCH_DEBOUNCE_MS = 300
 _SEARCH_MIN_CHARS = 2
 _SEARCH_RESULT_LIMIT = 50
-_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt"}
+_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
 _MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
-_FILE_DIALOG_FILTER = "Imagenes (*.png *.jpg *.jpeg);;PDF (*.pdf);;Texto (*.txt)"
+_FILE_DIALOG_FILTER = (
+    "Imagenes (*.png *.jpg *.jpeg);;PDF (*.pdf);;Word (*.doc *.docx);;Texto (*.txt)"
+)
 
 
 def _validate_selected_file(path: str, allow_repo_relative: bool = False) -> tuple[bool, str]:
@@ -40,7 +42,7 @@ def _validate_selected_file(path: str, allow_repo_relative: bool = False) -> tup
         return False, "El archivo seleccionado no existe."
     ext = p.suffix.lower()
     if ext not in _ALLOWED_EXTENSIONS:
-        return False, "Tipo de archivo no permitido. Solo: PDF, PNG, JPG, JPEG, TXT."
+        return False, "Tipo de archivo no permitido. Solo: PDF, PNG, JPG, JPEG, TXT, DOC, DOCX."
     size = p.stat().st_size
     if size > _MAX_FILE_SIZE_BYTES:
         return False, "El archivo excede el maximo permitido de 5 MB."
@@ -50,11 +52,20 @@ def _validate_selected_file(path: str, allow_repo_relative: bool = False) -> tup
 class DocumentoFormDialog(QDialog):
     """Formulario para crear/editar un documento."""
 
-    def __init__(self, doc_id: str = None, expediente_id: str = None, parent=None):
+    def __init__(
+        self,
+        doc_id: str = None,
+        expediente_id: str = None,
+        categoria_preset: str = "",
+        lock_categoria: bool = False,
+        parent=None,
+    ):
         super().__init__(parent)
         self._id = doc_id
         self._is_edit = doc_id is not None
         self._expediente_id_preset = expediente_id
+        self._categoria_preset = categoria_preset or ""
+        self._lock_categoria = lock_categoria
         self._ruta_db_original = ""
         self._ruta_server_display = ""
 
@@ -131,6 +142,12 @@ class DocumentoFormDialog(QDialog):
         self._cmb_subcategoria = QComboBox()
         self._on_categoria_changed(self._cmb_categoria.currentText())
         form.addRow("Subcategoria:", self._cmb_subcategoria)
+        if self._categoria_preset:
+            idx_cat = self._cmb_categoria.findText(self._categoria_preset)
+            if idx_cat >= 0:
+                self._cmb_categoria.setCurrentIndex(idx_cat)
+            self._cmb_categoria.setEnabled(not self._lock_categoria)
+            self._cmb_subcategoria.setEnabled(not self._lock_categoria)
 
         # Descripcion
         self._txt_descripcion = QTextEdit()
