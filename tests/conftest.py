@@ -220,6 +220,7 @@ def sample_movimiento():
         "forma_pago": "Transferencia",
         "estado": "Pendiente",
         "saldo": 50000.0,
+        "observaciones": "",
         "responsable_username": "testsuper",
     }
 

@@ -168,5 +168,6 @@ class TurnoController(BaseController):
             "documentacion_lista": existing.get("documentacion_lista", 0),
             "notas_preparacion": existing.get("notas_preparacion", ""),
             "observaciones": f"Reprogramado desde turno #{existing.get('id_turno', '')}",
+            "id_constancia_doc": "",
         }
         return cls.create(nuevo)

@@ -9,14 +9,18 @@ Mapeo con el pliego tecnico:
   Direccion         -> superusuario
   (adicional)       -> agente
 """
+import logging
 
-ROLES = ["secretaria", "agente", "abogado", "administrador", "admin_visor", "superusuario"]
+logger = logging.getLogger(__name__)
+
+ROLES = ["secretaria", "agente", "abogado", "analisis", "administrador", "admin_visor", "superusuario"]
 
 # Alias formales del pliego para mostrar en UI
 ROL_ALIAS = {
     "secretaria": "Recepcion",
     "agente": "Agente",
     "abogado": "Juridico",
+    "analisis": "Analisis",
     "administrador": "Administracion",
     "admin_visor": "Admin Visor",
     "superusuario": "Direccion",
@@ -26,6 +30,7 @@ ROL_DESCRIPCION = {
     "secretaria": "Lectura de clientes, carpetas, tareas, turnos y comunicaciones",
     "agente": "Operacion completa de consultas, clientes, carpetas y tareas",
     "abogado": "Juridico: carpetas, documentos y tareas",
+    "analisis": "Analisis: carpetas, documentos y tareas",
     "administrador": "Control total operativo, economico, auditoria y gestion de empleados",
     "admin_visor": "Control administrativo con movimientos economicos en solo lectura",
     "superusuario": "Acceso total, configuracion, migracion y auditoria",
@@ -49,6 +54,15 @@ PERMISOS: dict[str, list[str]] = {
         "escritos.read",
     ],
     "abogado": [
+        "clientes.*",
+        "expedientes.*",
+        "tareas.*",
+        "turnos.*",
+        "comunicaciones.*",
+        "documentos.*",
+        "escritos.*",
+    ],
+    "analisis": [
         "clientes.*",
         "expedientes.*",
         "tareas.*",
@@ -190,3 +204,19 @@ def get_active_users() -> list[dict]:
         where="(activo = 1) AND (eliminado = 0 OR eliminado IS NULL)",
         order_by="nombre_completo ASC",
     )
+
+
+def get_active_users_fresh() -> list[dict]:
+    """Como get_active_users, pero intenta traer usuarios nuevos desde Atlas antes.
+
+    Evita que en formularios (tareas, carpetas, etc.) no figuren personas dadas
+    de alta en otro equipo hasta una sincronizacion manual completa.
+    """
+    try:
+        from core.db_remote import is_connected
+        from core.sync_engine import pull_usuarios_from_remote
+        if is_connected():
+            pull_usuarios_from_remote()
+    except Exception:
+        logger.exception("get_active_users_fresh: pull opcional fallo; se usa cache local")
+    return get_active_users()

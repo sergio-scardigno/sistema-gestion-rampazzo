@@ -16,6 +16,7 @@ from services import anses_oficinas_service
 from core.lock_manager import LockManager
 from utils.validators import format_cuil
 from views.widgets.no_wheel_datetime import NoWheelDateEdit
+from views.widgets.click_copy_line_edit import ClickCopyLineEdit, CLICK_COPY_CLAVE_STYLESHEET
 
 
 class ClienteFormDialog(QDialog):
@@ -24,6 +25,7 @@ class ClienteFormDialog(QDialog):
         self._id = cliente_id
         self._is_edit = cliente_id is not None
         self._locked = False
+        self._read_only_lock = False  # otro usuario o sin bloqueo Mongo: no guardar
         self._prefill = prefill_data
         self.created_client = None  # almacena el cliente creado (para flujo de conversion)
 
@@ -130,12 +132,16 @@ class ClienteFormDialog(QDialog):
         sep_claves.setStyleSheet("color: #e0e0e0; margin: 4px 0;")
         form.addRow(sep_claves)
 
-        self._txt_clave_mi_anses = QLineEdit()
+        self._txt_clave_mi_anses = ClickCopyLineEdit()
         self._txt_clave_mi_anses.setPlaceholderText("Clave de Mi ANSES")
+        self._txt_clave_mi_anses.setFixedHeight(30)
+        self._txt_clave_mi_anses.setStyleSheet(CLICK_COPY_CLAVE_STYLESHEET)
         form.addRow("Clave Mi ANSES:", self._txt_clave_mi_anses)
 
-        self._txt_clave_fiscal = QLineEdit()
+        self._txt_clave_fiscal = ClickCopyLineEdit()
         self._txt_clave_fiscal.setPlaceholderText("Clave fiscal AFIP")
+        self._txt_clave_fiscal.setFixedHeight(30)
+        self._txt_clave_fiscal.setStyleSheet(CLICK_COPY_CLAVE_STYLESHEET)
         form.addRow("Clave Fiscal:", self._txt_clave_fiscal)
 
         self._txt_observaciones = QTextEdit()
@@ -153,9 +159,9 @@ class ClienteFormDialog(QDialog):
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
 
-        btn_save = QPushButton("Guardar")
-        btn_save.clicked.connect(self._save)
-        btn_layout.addWidget(btn_save)
+        self._btn_save = QPushButton("Guardar")
+        self._btn_save.clicked.connect(self._save)
+        btn_layout.addWidget(self._btn_save)
         layout.addLayout(btn_layout)
 
         # Load data if editing, o sugerir numero de carpeta si es nuevo
@@ -178,9 +184,16 @@ class ClienteFormDialog(QDialog):
         # Try to acquire lock
         ok, msg = LockManager.acquire_lock("clientes", self._id)
         if not ok:
-            QMessageBox.information(self, "Registro bloqueado", msg)
-            # Load as read-only
+            intro = (
+                "No podes editar este cliente en este momento (otro usuario lo esta editando, "
+                "o no hay conexion para tomar el bloqueo). "
+                "Podes revisar los datos en solo lectura.\n\n"
+            )
+            QMessageBox.information(self, "Solo lectura", intro + msg)
+            self._read_only_lock = True
             self._set_readonly(True)
+            self._btn_save.setEnabled(False)
+            self._btn_save.setToolTip("No disponible: registro en solo lectura.")
         else:
             self._locked = True
 
@@ -250,6 +263,13 @@ class ClienteFormDialog(QDialog):
             self._txt_cuil.setText(formatted)
 
     def _save(self):
+        if self._read_only_lock:
+            QMessageBox.warning(
+                self,
+                "Solo lectura",
+                "No puede guardar: el cliente esta en modo solo lectura.",
+            )
+            return
         numero_carpeta = self._txt_numero_carpeta.text().strip()
         if not numero_carpeta:
             QMessageBox.warning(self, "Atencion", "El numero de carpeta es obligatorio.")

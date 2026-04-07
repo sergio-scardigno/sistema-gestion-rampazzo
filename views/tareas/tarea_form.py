@@ -1,5 +1,6 @@
 """Formulario de alta/edicion de Tarea."""
 import logging
+import re
 import time
 
 from PySide6.QtWidgets import (
@@ -15,7 +16,7 @@ from controllers.expediente_controller import ExpedienteController
 from controllers.cliente_controller import ClienteController
 from controllers.notificacion_controller import NotificacionController
 from core.auth import Session
-from core.permissions import get_active_users
+from core.permissions import get_active_users_fresh
 from views.widgets.no_wheel_combo import NoWheelComboBox
 from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
@@ -132,11 +133,21 @@ class TareaFormDialog(QDialog):
 
         self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
-        self._cmb_responsable.setPlaceholderText("Seleccionar responsable...")
-        users = get_active_users()
+        self._cmb_responsable.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self._cmb_responsable.setPlaceholderText("Buscar por nombre o usuario...")
+        users = get_active_users_fresh()
+        self._users_cache = list(users)
         for u in users:
             label = f'{u.get("nombre_completo", "")} ({u.get("username", "")})'
             self._cmb_responsable.addItem(label, u.get("username", ""))
+        resp_completer = QCompleter(self)
+        resp_completer.setModel(self._cmb_responsable.model())
+        resp_completer.setCompletionColumn(0)
+        resp_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        resp_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        resp_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        resp_completer.activated[str].connect(self._on_responsable_completer)
+        self._cmb_responsable.setCompleter(resp_completer)
         form.addRow("Responsable *:", self._cmb_responsable)
 
         self._date_inicio = NoWheelDateEdit()
@@ -251,6 +262,12 @@ class TareaFormDialog(QDialog):
         if idx >= 0:
             self._cmb_expediente.setCurrentIndex(idx)
 
+    def _on_responsable_completer(self, text: str):
+        """Al elegir del popup de autocompletado, fijar el item del combo (username en data)."""
+        idx = self._cmb_responsable.findText(text)
+        if idx >= 0:
+            self._cmb_responsable.setCurrentIndex(idx)
+
     def _actualizar_btn_expediente(self):
         """Mostrar u ocultar el boton 'Ir a la Carpeta' segun la seleccion."""
         exp_id = self._cmb_expediente.currentData()
@@ -289,6 +306,59 @@ class TareaFormDialog(QDialog):
         self._cmb_expediente.addItem(label, exp_data["_id"])
         return self._cmb_expediente.findData(exp_data["_id"])
 
+    @staticmethod
+    def _label_usuario(u: dict) -> str:
+        return f'{u.get("nombre_completo", "").strip()} ({u.get("username", "")})'.strip()
+
+    def _resolve_responsable(self) -> tuple[str, str]:
+        """Devuelve (username, etiqueta) a partir del combo; resuelve si solo se escribio texto."""
+        username = self._cmb_responsable.currentData() or ""
+        text = self._cmb_responsable.currentText().strip()
+        if username:
+            return username, text
+        if not text:
+            return "", ""
+        # Coincidencia exacta con algun item del combo
+        for i in range(self._cmb_responsable.count()):
+            if self._cmb_responsable.itemText(i).strip().lower() == text.lower():
+                un = self._cmb_responsable.itemData(i)
+                if un:
+                    return str(un), self._cmb_responsable.itemText(i)
+        # Patron "... (usuario)"
+        m = re.search(r"\(\s*([^)]+)\s*\)\s*$", text)
+        if m:
+            u_try = m.group(1).strip().lower()
+            for u in self._users_cache:
+                if (u.get("username") or "").lower() == u_try:
+                    return u.get("username", "") or "", self._label_usuario(u)
+        t = text.lower()
+        for u in self._users_cache:
+            if (u.get("username") or "").lower() == t:
+                return u.get("username", "") or "", self._label_usuario(u)
+        for u in self._users_cache:
+            nc = (u.get("nombre_completo") or "").strip().lower()
+            if nc and nc == t:
+                return u.get("username", "") or "", self._label_usuario(u)
+        candidates = []
+        for u in self._users_cache:
+            nc = (u.get("nombre_completo") or "").strip().lower()
+            if not nc:
+                continue
+            if t in nc or nc.startswith(t):
+                candidates.append(u)
+        if len(candidates) == 1:
+            u = candidates[0]
+            return u.get("username", "") or "", self._label_usuario(u)
+        if len(candidates) > 1:
+            starts = [
+                u for u in candidates
+                if (u.get("nombre_completo") or "").strip().lower().startswith(t)
+            ]
+            if len(starts) == 1:
+                u = starts[0]
+                return u.get("username", "") or "", self._label_usuario(u)
+        return "", text
+
     # ------------------------------------------------------------------
     # Carga / guardado
     # ------------------------------------------------------------------
@@ -325,14 +395,22 @@ class TareaFormDialog(QDialog):
 
     def _save(self):
         desc = self._txt_descripcion.toPlainText().strip()
-        resp_username = self._cmb_responsable.currentData() or ""
+        resp_username, resp_resolved_label = self._resolve_responsable()
         resp_display = self._cmb_responsable.currentText().strip()
         if not desc:
             QMessageBox.warning(self, "Atencion", "La descripcion es obligatoria.")
             return
-        if not resp_username and not resp_display:
-            QMessageBox.warning(self, "Atencion", "El responsable es obligatorio.")
+        if not resp_username:
+            QMessageBox.warning(
+                self,
+                "Atencion",
+                "No se encontro un usuario activo para el responsable.\n\n"
+                "Escriba para buscar y elija de la lista, o nombre completo "
+                "como figura en el sistema (entre varias personas, elija de la lista).",
+            )
             return
+        if resp_resolved_label:
+            resp_display = resp_resolved_label
 
         if self._is_edit:
             old_key = (self._original_responsable_username or self._original_responsable_display).strip().lower()

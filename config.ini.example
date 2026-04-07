@@ -7,8 +7,8 @@ database = gestion
 [sync]
 ; Intervalo de sincronizacion en segundos (300 = 5 minutos)
 interval_seconds = 300
-; Tiempo de expiracion de bloqueos en minutos
-lock_expiry_minutes = 15
+; Tiempo de expiracion de bloqueos al editar carpeta/cliente (Mongo), en segundos (default 30)
+lock_expiry_seconds = 30
 
 [machine]
 ; Identificador unico de esta maquina (se auto-detecta si no se configura)

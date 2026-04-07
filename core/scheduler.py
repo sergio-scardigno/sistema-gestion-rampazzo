@@ -15,6 +15,7 @@ from pathlib import Path
 
 from apscheduler.schedulers.qt import QtScheduler
 from config import SYNC_INTERVAL_SECONDS, SQLITE_PATH, BACKUP_DIR, BACKUP_RETENTION_DAYS
+from core import db_local
 
 logger = logging.getLogger("scheduler")
 
@@ -187,6 +188,51 @@ def auto_archivar_expedientes():
         logger.exception("Error en auto-archivado de expedientes")
 
 
+def check_recordatorios_expedientes():
+    """Dispara notificaciones por recordatorios programados de carpetas."""
+    try:
+        from controllers.notificacion_controller import NotificacionController
+        from controllers.expediente_controller import ExpedienteController
+        hoy = date.today().isoformat()
+        rows = db_local.find_all(
+            "expediente_recordatorios",
+            where=(
+                "fecha_disparo <= ? AND (disparado_en IS NULL OR disparado_en = '') "
+                "AND (is_deleted IS NULL OR is_deleted = 0)"
+            ),
+            params=(hoy,),
+            order_by="fecha_disparo ASC",
+            limit=200,
+        )
+        for rec in rows:
+            exp = ExpedienteController.get_by_id(rec.get("id_expediente", ""))
+            if not exp:
+                continue
+            target = rec.get("notificar_a_username", "") or exp.get("responsable_secundario_username", "") or exp.get("responsable_username", "")
+            if not target:
+                continue
+            pref = "[PLAZO CRITICO] " if int(rec.get("es_critico", 0) or 0) else ""
+            mensaje = (
+                f"{pref}Recordatorio de carpeta #{exp.get('id_expediente', '')}: "
+                f"{rec.get('titulo', 'Accion pendiente')}. {rec.get('mensaje', '')}".strip()
+            )
+            NotificacionController.create_for_recordatorio_expediente(
+                target_username=target,
+                mensaje=mensaje,
+                id_referencia=exp.get("_id", ""),
+            )
+            db_local.update("expediente_recordatorios", rec["_id"], {
+                "disparado_en": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "version": int(rec.get("version", 1) or 1) + 1,
+                "sync_status": "pending",
+            })
+        if rows:
+            logger.info("Recordatorios de expedientes disparados: %d", len(rows))
+    except Exception:
+        logger.exception("Error al procesar recordatorios de expedientes")
+
+
 # ── Configurar todos los jobs ──
 
 def setup_all_jobs(sync_engine=None):
@@ -220,11 +266,16 @@ def setup_all_jobs(sync_engine=None):
     sched.add_job(auto_archivar_expedientes, 'cron', hour=3, minute=0,
                   id='auto_archivar_job', replace_existing=True)
 
+    # Recordatorios de expedientes (1 vez al dia a las 08:00)
+    sched.add_job(check_recordatorios_expedientes, 'cron', hour=8, minute=0,
+                  id='recordatorios_expedientes_job', replace_existing=True)
+
     # Ejecutar checks iniciales
     try:
         check_tareas_vencidas()
         check_turnos_proximos()
         check_expedientes_sin_tarea()
+        check_recordatorios_expedientes()
     except Exception:
         logger.exception("Error en checks iniciales del scheduler")
 

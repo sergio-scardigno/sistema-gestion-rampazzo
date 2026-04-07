@@ -21,9 +21,34 @@ class ExpedienteController(BaseController):
         "Desfavorable", "Favorable", "Cerrado", "Archivado"
     ]
     ESTADOS_CIERRE = ["Cerrado", "Archivado"]
+    ETAPAS = [
+        {"codigo": "para_citar_o_videollamada", "titulo": "Para citar o videollamada", "color": "#f4b400", "instruccion_corta": "Coordinar contacto inicial y agenda."},
+        {"codigo": "para_analizar", "titulo": "Para analizar", "color": "#ff9800", "instruccion_corta": "Analizar el caso y documentación."},
+        {"codigo": "en_espera_condicion", "titulo": "En espera / Aguardando condición", "color": "#9e9e9e", "instruccion_corta": "Registrar hitos y recordatorios (ej. fecha de jubilación); revisar cuando venza el plazo."},
+        {"codigo": "para_citar", "titulo": "Para citar", "color": "#ffd54f", "instruccion_corta": "Citar al cliente o parte involucrada."},
+        {"codigo": "pendiente_turno", "titulo": "Pendiente de Turno", "color": "#8bc34a", "instruccion_corta": "Gestionar solicitud y fecha de turno."},
+        {"codigo": "turno", "titulo": "Turno", "color": "#4caf50", "instruccion_corta": "Preparar y asistir al turno asignado."},
+        {"codigo": "enviada_iniciar", "titulo": "Enviada para Iniciar", "color": "#26c6da", "instruccion_corta": "Enviar para comienzo formal del trámite."},
+        {"codigo": "iniciada_virtual", "titulo": "INICIADA - Virtual", "color": "#00acc1", "instruccion_corta": "Gestionar acciones de iniciada virtual."},
+        {"codigo": "iniciada_presencial", "titulo": "INICIADA - Presencial", "color": "#29b6f6", "instruccion_corta": "Gestionar acciones de iniciada presencial."},
+        {"codigo": "req_analizar", "titulo": "Requerimientos - Analizar", "color": "#ab47bc", "instruccion_corta": "Resolver requerimiento de análisis."},
+        {"codigo": "req_migraciones", "titulo": "Requerimientos - Migraciones", "color": "#7e57c2", "instruccion_corta": "Resolver requerimiento de migraciones."},
+        {"codigo": "req_citar", "titulo": "Requerimientos - Citar", "color": "#5c6bc0", "instruccion_corta": "Resolver requerimiento de citación."},
+        {"codigo": "citado_anses", "titulo": "Citado por ANSES", "color": "#42a5f5", "instruccion_corta": "Preparar gestión por citación ANSES."},
+        {"codigo": "favorable", "titulo": "Favorable", "color": "#2e7d32", "instruccion_corta": "Registrar resolución favorable."},
+        {"codigo": "desfavorable", "titulo": "Desfavorable", "color": "#c62828", "instruccion_corta": "Registrar resolución desfavorable."},
+        {"codigo": "enviar_notificarse", "titulo": "Enviar a notificarse", "color": "#78909c", "instruccion_corta": "Enviar para notificación final."},
+    ]
     PRIORIDADES = ["Alta", "Normal", "Baja"]
     MODALIDADES = ["Presencial", "Virtual"]
     RAMAS_CON_MODALIDAD = ["Previsional"]
+
+    @classmethod
+    def etapa_por_codigo(cls, codigo: str) -> dict:
+        for etapa in cls.ETAPAS:
+            if etapa["codigo"] == codigo:
+                return etapa
+        return cls.ETAPAS[0]
 
     # ── Ramas jurídicas ──
 
@@ -189,7 +214,29 @@ class ExpedienteController(BaseController):
                       "Alegatos", "Sentencia", "Ejecucion", "Cobro"]},
     ]
 
+    # Referencias de expediente (datos_rama): lista en clave expedientes_referencia; legacy: una clave por tipo.
+    TIPOS_EXPEDIENTE_REF = (
+        ("anses", "ANSES"),
+        ("ips", "IPS"),
+        ("srt", "SRT"),
+        ("judicial", "Judicial"),
+    )
+    LEGACY_KEY_TO_TIPO_EXPEDIENTE = {
+        "expediente_anses": "anses",
+        "expediente_ips": "ips",
+        "expediente_srt": "srt",
+        "expediente_judicial": "judicial",
+    }
+    KEYS_REFERENCIA_EXPEDIENTES = frozenset({"expedientes_referencia"})
+    KEYS_REFERENCIA_EXPEDIENTES_LEGACY = frozenset(LEGACY_KEY_TO_TIPO_EXPEDIENTE.keys())
+    KEYS_TODAS_REFERENCIAS_EXPEDIENTE_RAMA = (
+        KEYS_REFERENCIA_EXPEDIENTES | KEYS_REFERENCIA_EXPEDIENTES_LEGACY
+    )
+
     # ── Override create/update para registrar historial de estados ──
+
+    _ROLES_PRINCIPAL_NOTIF = {"abogado", "analisis", "administrador"}
+    _ROLES_SECUNDARIO_NOTIF = {"abogado", "analisis", "administrador", "secretaria"}
 
     @classmethod
     def _is_notifiable_role_for_assignment(cls, username: str) -> bool:
@@ -203,32 +250,57 @@ class ExpedienteController(BaseController):
         )
         if not rows:
             return False
-        return rows[0].get("rol", "") in {"abogado", "administrador"}
+        return rows[0].get("rol", "") in cls._ROLES_PRINCIPAL_NOTIF
+
+    @classmethod
+    def _is_notifiable_for_secondary_assignment(cls, username: str) -> bool:
+        """Roles que reciben notificacion como responsable secundario (incluye secretaria)."""
+        if not username:
+            return False
+        rows = db_local.find_all(
+            "usuarios",
+            where="username = ? AND (activo = 1) AND (eliminado = 0 OR eliminado IS NULL)",
+            params=(username,),
+            limit=1,
+        )
+        if not rows:
+            return False
+        return rows[0].get("rol", "") in cls._ROLES_SECUNDARIO_NOTIF
 
     @classmethod
     def _notify_assignment_targets(
         cls,
         expediente: dict,
-        target_usernames: set[str],
         actor_username: str,
         motivo: str,
+        *,
+        primary_username: str = "",
+        secondary_username: str = "",
     ):
         from controllers.notificacion_controller import NotificacionController
 
         exp_id = expediente.get("_id", "")
         exp_num = expediente.get("id_expediente", "")
         tipo_tramite = expediente.get("tipo_tramite", "")
-        for uname in target_usernames:
-            if not uname or uname == actor_username:
-                continue
-            if not cls._is_notifiable_role_for_assignment(uname):
-                continue
+        pu = (primary_username or "").strip()
+        su = (secondary_username or "").strip()
+        if pu and pu != actor_username and cls._is_notifiable_role_for_assignment(pu):
             mensaje = (
-                f"Se te asigno la carpeta #{exp_num} ({tipo_tramite}). "
+                f"Se te asigno como responsable principal la carpeta #{exp_num} ({tipo_tramite}). "
                 f"Motivo: {motivo}."
             )
             NotificacionController.create_for_expediente_asignado(
-                target_username=uname,
+                target_username=pu,
+                mensaje=mensaje,
+                id_referencia=exp_id,
+            )
+        if su and su != actor_username and cls._is_notifiable_for_secondary_assignment(su):
+            mensaje = (
+                f"Se te designo responsable secundario de la carpeta #{exp_num} ({tipo_tramite}). "
+                f"Motivo: {motivo}."
+            )
+            NotificacionController.create_for_expediente_asignado(
+                target_username=su,
                 mensaje=mensaje,
                 id_referencia=exp_id,
             )
@@ -236,6 +308,14 @@ class ExpedienteController(BaseController):
     @classmethod
     def create(cls, data: dict) -> dict:
         """Crear expediente y abrir el primer segmento de historial."""
+        data = dict(data)
+        if not data.get("etapa_codigo"):
+            data["etapa_codigo"] = "para_citar_o_videollamada"
+        etapa = data.get("etapa_codigo", "para_citar_o_videollamada")
+        if etapa == "iniciada_virtual":
+            data["modalidad"] = "Virtual"
+        elif etapa == "iniciada_presencial":
+            data["modalidad"] = "Presencial"
         record = super().create(data)
         from core.auth import Session
         session = Session.get()
@@ -245,19 +325,37 @@ class ExpedienteController(BaseController):
             usuario = session.username if session.logged_in else "sistema"
             abrir_segmento(
                 id_expediente=record["_id"],
-                estado=record.get("estado", "Activo"),
+                estado=record.get("etapa_codigo", "para_citar_o_videollamada"),
                 responsable_username=record.get("responsable_username", ""),
+                encargado_username=record.get("responsable_secundario_username", ""),
+                etapa_anterior="",
                 usuario=usuario,
                 origen="manual",
             )
         except Exception:
             logger.warning("Error al crear segmento inicial de historial", exc_info=True)
         try:
-            targets = {
-                record.get("responsable_username", "") or "",
-                record.get("responsable_secundario_username", "") or "",
-            }
-            cls._notify_assignment_targets(record, targets, actor_username, "Alta de carpeta")
+            from controllers.notificacion_controller import NotificacionController
+            cls._notify_assignment_targets(
+                record,
+                actor_username,
+                "Alta de carpeta",
+                primary_username=record.get("responsable_username", "") or "",
+                secondary_username=record.get("responsable_secundario_username", "") or "",
+            )
+            encargado = record.get("responsable_secundario_username", "") or ""
+            if encargado and encargado != actor_username and cls._is_notifiable_for_secondary_assignment(encargado):
+                etapa_meta = cls.etapa_por_codigo(record.get("etapa_codigo", ""))
+                mensaje = (
+                    f"Como responsable secundario, tenes a cargo la gestion de la etapa "
+                    f"'{etapa_meta.get('titulo', '')}' en la carpeta #{record.get('id_expediente', '')}. "
+                    f"{etapa_meta.get('instruccion_corta', '')}"
+                )
+                NotificacionController.create_for_expediente_etapa_encargado(
+                    target_username=encargado,
+                    mensaje=mensaje,
+                    id_referencia=record.get("_id", ""),
+                )
         except Exception:
             logger.warning("Error al notificar asignacion de carpeta (create)", exc_info=True)
         return record
@@ -269,26 +367,39 @@ class ExpedienteController(BaseController):
         if not existing:
             return None
 
-        result = super().update(_id, data)
+        payload = dict(data)
+        observacion_transicion = (payload.pop("observacion_transicion", None) or "").strip()
+        if payload.get("etapa_codigo") == "iniciada_virtual":
+            payload["modalidad"] = "Virtual"
+        elif payload.get("etapa_codigo") == "iniciada_presencial":
+            payload["modalidad"] = "Presencial"
+        result = super().update(_id, payload)
         if not result:
             return result
         from core.auth import Session
         session = Session.get()
         actor_username = session.username if session.logged_in else ""
 
-        try:
-            old_estado = existing.get("estado", "")
-            old_resp = existing.get("responsable_username", "")
-            new_estado = data.get("estado", old_estado)
-            new_resp = data.get("responsable_username", old_resp)
+        old_etapa = existing.get("etapa_codigo", "para_citar_o_videollamada")
+        old_resp = (existing.get("responsable_username", "") or "")
+        old_encargado = (existing.get("responsable_secundario_username", "") or "")
+        new_etapa = result.get("etapa_codigo", old_etapa)
+        new_resp = (result.get("responsable_username", old_resp) or "")
+        new_encargado = (result.get("responsable_secundario_username", old_encargado) or "")
+        hubo_cambio_gestion = (
+            new_etapa != old_etapa or new_resp != old_resp or new_encargado != old_encargado
+        )
 
-            if new_estado != old_estado or new_resp != old_resp:
+        try:
+            if hubo_cambio_gestion:
                 from controllers.expediente_estado_controller import rotar_segmento
                 usuario = session.username if session.logged_in else "sistema"
                 rotar_segmento(
                     id_expediente=_id,
-                    nuevo_estado=new_estado,
+                    nuevo_estado=new_etapa,
                     nuevo_responsable=new_resp,
+                    nuevo_encargado=new_encargado,
+                    observacion_transicion=observacion_transicion,
                     usuario=usuario,
                     origen="manual",
                 )
@@ -296,21 +407,66 @@ class ExpedienteController(BaseController):
             logger.warning("Error al rotar segmento de historial", exc_info=True)
 
         try:
-            old_resp = existing.get("responsable_username", "") or ""
-            old_resp2 = existing.get("responsable_secundario_username", "") or ""
-            new_resp = result.get("responsable_username", "") or ""
-            new_resp2 = result.get("responsable_secundario_username", "") or ""
-            targets: set[str] = set()
-            if new_resp and new_resp != old_resp:
-                targets.add(new_resp)
-            if new_resp2 and new_resp2 != old_resp2:
-                targets.add(new_resp2)
-            if targets:
-                cls._notify_assignment_targets(
-                    result, targets, actor_username, "Cambio de responsable"
-                )
+            if hubo_cambio_gestion:
+                from controllers.notificacion_controller import NotificacionController
+                etapa_meta = cls.etapa_por_codigo(new_etapa)
+                exp_num = result.get("id_expediente", "")
+                obs_show = observacion_transicion
+                if len(obs_show) > 800:
+                    obs_show = obs_show[:800] + "..."
+                obs_suffix = f" Indicaciones: {obs_show}" if obs_show else ""
+
+                targets = {new_resp, new_encargado} - {""}
+                for uname in targets:
+                    if uname == actor_username:
+                        continue
+                    if uname == new_encargado and new_encargado:
+                        if not cls._is_notifiable_for_secondary_assignment(uname):
+                            continue
+                        secparts: list[str] = []
+                        if new_encargado != old_encargado:
+                            secparts.append(
+                                f"Te designaron responsable secundario de la carpeta #{exp_num}."
+                            )
+                        if new_resp != old_resp:
+                            secparts.append(
+                                "La carpeta tiene nuevo responsable principal. "
+                                "Seguis como responsable secundario."
+                            )
+                        if new_etapa != old_etapa:
+                            secparts.append(
+                                f"Etapa: {etapa_meta.get('titulo', '')}. "
+                                f"{etapa_meta.get('instruccion_corta', '')} "
+                                f"(gestion como responsable secundario)."
+                            )
+                        if not secparts:
+                            continue
+                        mensaje = " ".join(secparts) + obs_suffix
+                    elif uname == new_resp and new_resp:
+                        if not cls._is_notifiable_role_for_assignment(uname):
+                            continue
+                        prparts: list[str] = []
+                        if new_resp != old_resp:
+                            prparts.append(
+                                f"Te asignaron como responsable principal la carpeta #{exp_num}."
+                            )
+                        if new_etapa != old_etapa:
+                            prparts.append(
+                                f"Etapa: {etapa_meta.get('titulo', '')}. "
+                                f"{etapa_meta.get('instruccion_corta', '')}"
+                            )
+                        if not prparts:
+                            continue
+                        mensaje = " ".join(prparts) + obs_suffix
+                    else:
+                        continue
+                    NotificacionController.create_for_expediente_etapa_encargado(
+                        target_username=uname,
+                        mensaje=mensaje,
+                        id_referencia=result.get("_id", ""),
+                    )
         except Exception:
-            logger.warning("Error al notificar asignacion de carpeta (update)", exc_info=True)
+            logger.warning("Error al notificar cambio de etapa o responsables (update)", exc_info=True)
 
         return result
 
@@ -349,8 +505,22 @@ class ExpedienteController(BaseController):
     def search_expedientes(cls, text: str) -> list[dict]:
         return cls.search(text, [
             "id_expediente", "tipo_tramite", "rama", "subtipo",
-            "estado", "responsable", "numero_expediente_anses", "observaciones"
+            "estado", "etapa_codigo", "responsable", "numero_expediente_anses", "observaciones"
         ])
+
+    @classmethod
+    def get_pendientes_etapa_para_usuario(
+        cls, username: str, etapa_codigo: str = "", limit: int = 200
+    ) -> list[dict]:
+        where = (
+            "(e.responsable_username = ? OR COALESCE(NULLIF(TRIM(ee.responsable_secundario_username), ''), "
+            "e.responsable_secundario_username) = ?) AND e.estado NOT IN ('Cerrado','Archivado')"
+        )
+        params: tuple = (username, username)
+        if etapa_codigo:
+            where += " AND e.etapa_codigo = ?"
+            params += (etapa_codigo,)
+        return cls.get_scoped_with_cliente(where=where, params=params, order_by="e.updated_at DESC", limit=limit)
 
     @classmethod
     def get_by_cliente(cls, id_cliente: str, limit: int = 0) -> list[dict]:
@@ -361,54 +531,127 @@ class ExpedienteController(BaseController):
     def count_by_cliente(cls, id_cliente: str) -> int:
         return db_local.count("expedientes", "id_cliente = ?", (id_cliente,))
 
+    _JOIN_ETAPA_ENCARGADO = (
+        "LEFT JOIN expediente_etapa_responsables ee ON ee.id_expediente = e._id "
+        "AND ee.etapa_codigo = e.etapa_codigo AND (ee.is_deleted IS NULL OR ee.is_deleted = 0)"
+    )
+
+    @staticmethod
+    def _qualify_order_exp(order_by: str) -> str:
+        if not (order_by or "").strip():
+            return ""
+        parts_out: list[str] = []
+        for part in order_by.split(","):
+            p = part.strip()
+            if not p:
+                continue
+            tokens = p.split()
+            col = tokens[0]
+            if not col.startswith("e.") and "." not in col:
+                col = f"e.{col}"
+            tokens[0] = col
+            parts_out.append(" ".join(tokens))
+        return ", ".join(parts_out)
+
+    @classmethod
+    def _scope_expediente_efectivo_sql(cls, session) -> tuple[str, tuple]:
+        """Visibilidad: principal o encargado secundario efectivo por etapa actual."""
+        from core.permissions import es_scope_global_por_modulo
+        if es_scope_global_por_modulo(session.rol, "expedientes"):
+            return "", ()
+        return (
+            "(e.responsable_username = ? OR COALESCE(NULLIF(TRIM(ee.responsable_secundario_username), ''), "
+            "e.responsable_secundario_username) = ?)",
+            (session.username, session.username),
+        )
+
+    @classmethod
+    def secundario_efectivo_username(cls, expediente: dict, overrides: dict[str, str] | None = None) -> str:
+        """Encargado para la etapa actual: override por etapa o global en expediente."""
+        etapa = (expediente or {}).get("etapa_codigo", "") or ""
+        if overrides is not None and etapa in overrides:
+            return (overrides.get(etapa) or "").strip()
+        exp_id = (expediente or {}).get("_id", "")
+        if exp_id and not overrides:
+            rows = db_local.find_all(
+                "expediente_etapa_responsables",
+                where="id_expediente = ? AND etapa_codigo = ? AND (is_deleted IS NULL OR is_deleted = 0)",
+                params=(exp_id, etapa),
+                limit=1,
+            )
+            if rows and (rows[0].get("responsable_secundario_username") or "").strip():
+                return rows[0]["responsable_secundario_username"].strip()
+        return ((expediente or {}).get("responsable_secundario_username") or "").strip()
+
     @classmethod
     def get_scoped(cls, where: str = "", params: tuple = (),
                    order_by: str = "", limit: int = 0,
                    campo_responsable: str = "responsable_username",
                    campo_secundario: str = "responsable_secundario_username") -> list[dict]:
-        """Override: expedientes tiene dos campos de responsable."""
-        return super().get_scoped(
-            where=where, params=params, order_by=order_by, limit=limit,
-            campo_responsable=campo_responsable,
-            campo_secundario=campo_secundario,
+        """Visibilidad por responsable principal o encargado efectivo segun etapa (JOIN ee)."""
+        del campo_responsable, campo_secundario  # compatibilidad con firma base
+        from core.auth import Session
+        session = Session.get()
+        conditions: list[str] = ["(e.is_deleted IS NULL OR e.is_deleted = 0)"]
+        all_params: list = []
+        if where:
+            conditions.append(f"({where})")
+            all_params.extend(params)
+        sw, sp = cls._scope_expediente_efectivo_sql(session)
+        if sw:
+            conditions.append(f"({sw})")
+            all_params.extend(sp)
+        sql = (
+            "SELECT e.* FROM expedientes e "
+            + cls._JOIN_ETAPA_ENCARGADO
+            + " WHERE " + " AND ".join(conditions)
         )
+        if order_by:
+            sql += f" ORDER BY {cls._qualify_order_exp(order_by)}"
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+        conn = db_local.get_connection()
+        rows = conn.execute(sql, tuple(all_params)).fetchall()
+        conn.close()
+        result = db_local.rows_to_list(rows)
+        for r in result:
+            cls._deserialize(r)
+        return result
 
     @classmethod
     def get_scoped_with_cliente(cls, where: str = "", params: tuple = (),
                                 order_by: str = "", limit: int = 0) -> list[dict]:
-        """get_scoped + LEFT JOIN clientes para traer numero_carpeta en una sola query."""
+        """get_scoped + LEFT JOIN clientes; encargado efectivo por etapa en el scope."""
         from core.auth import Session
-        from core.permissions import scope_where
         session = Session.get()
-        sw, sp = scope_where(
-            session.rol, session.username,
-            "e.responsable_username", "e.responsable_secundario_username",
-            modulo="expedientes",
-        )
+        conditions: list[str] = ["(e.is_deleted IS NULL OR e.is_deleted = 0)"]
+        all_params: list = []
+        if where:
+            conditions.append(f"({where})")
+            all_params.extend(params)
+        sw, sp = cls._scope_expediente_efectivo_sql(session)
+        if sw:
+            conditions.append(f"({sw})")
+            all_params.extend(sp)
         sql = (
             "SELECT e.*, c.numero_carpeta AS numero_carpeta_cliente, "
             "c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil "
             "FROM expedientes e "
-            "LEFT JOIN clientes c ON c._id = e.id_cliente"
+            "LEFT JOIN clientes c ON c._id = e.id_cliente "
+            + cls._JOIN_ETAPA_ENCARGADO
+            + " WHERE " + " AND ".join(conditions)
         )
-        all_params: tuple = ()
-        conditions: list[str] = []
-        if where:
-            conditions.append(f"({where})")
-            all_params += params
-        if sw:
-            conditions.append(f"({sw})")
-            all_params += sp
-        if conditions:
-            sql += " WHERE " + " AND ".join(conditions)
         if order_by:
             sql += f" ORDER BY {order_by}"
         if limit:
-            sql += f" LIMIT {limit}"
+            sql += f" LIMIT {int(limit)}"
         conn = db_local.get_connection()
-        rows = conn.execute(sql, all_params).fetchall()
+        rows = conn.execute(sql, tuple(all_params)).fetchall()
         conn.close()
-        return db_local.rows_to_list(rows)
+        result = db_local.rows_to_list(rows)
+        for r in result:
+            cls._deserialize(r)
+        return result
 
     @classmethod
     def _count_distinct_expedientes_in_table(
@@ -496,27 +739,23 @@ class ExpedienteController(BaseController):
         Los campos de WHERE deben usar prefijo 'e.' para expedientes.
         """
         from core.auth import Session
-        from core.permissions import scope_where
         session = Session.get()
-        sw, sp = scope_where(
-            session.rol, session.username,
-            "e.responsable_username", "e.responsable_secundario_username",
-            modulo="expedientes",
-        )
+        sw, sp = cls._scope_expediente_efectivo_sql(session)
         sql = (
             "SELECT e.*, c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil, "
             "c.numero_carpeta AS numero_carpeta_cliente "
             "FROM expedientes e "
-            "LEFT JOIN clientes c ON c._id = e.id_cliente"
+            "LEFT JOIN clientes c ON c._id = e.id_cliente "
+            + cls._JOIN_ETAPA_ENCARGADO
         )
-        all_params: tuple = ()
-        conditions: list[str] = []
+        all_params: list = []
+        conditions: list[str] = ["(e.is_deleted IS NULL OR e.is_deleted = 0)"]
         if where:
             conditions.append(f"({where})")
-            all_params += params
+            all_params.extend(params)
         if sw:
             conditions.append(f"({sw})")
-            all_params += sp
+            all_params.extend(sp)
         if text.strip():
             text_param = f"%{text.strip()}%"
             search_cond = (
@@ -533,16 +772,107 @@ class ExpedienteController(BaseController):
             )
             conditions.append(search_cond)
             all_params += (text_param,) * 10
-        if conditions:
-            sql += " WHERE " + " AND ".join(conditions)
+        sql += " WHERE " + " AND ".join(conditions)
         if order_by:
             sql += f" ORDER BY {order_by}"
         if limit:
             sql += f" LIMIT {limit}"
         conn = db_local.get_connection()
-        rows = conn.execute(sql, all_params).fetchall()
+        rows = conn.execute(sql, tuple(all_params)).fetchall()
+        conn.close()
+        result = db_local.rows_to_list(rows)
+        for r in result:
+            cls._deserialize(r)
+        return result
+
+    @classmethod
+    def list_recordatorios_agenda_scoped(
+        cls,
+        fecha_desde: str,
+        fecha_hasta: str,
+        *,
+        solo_pendientes_disparo: bool = True,
+        limit: int = 400,
+    ) -> list[dict]:
+        """Plazos (recordatorios) en rango de fechas, con scope de expediente."""
+        from core.auth import Session
+        session = Session.get()
+        conditions = [
+            "(r.is_deleted IS NULL OR r.is_deleted = 0)",
+            "(e.is_deleted IS NULL OR e.is_deleted = 0)",
+            "r.fecha_disparo >= ?",
+            "r.fecha_disparo <= ?",
+            "e.estado NOT IN ('Cerrado','Archivado')",
+        ]
+        params: list = [fecha_desde[:10], fecha_hasta[:10]]
+        if solo_pendientes_disparo:
+            conditions.append("(r.disparado_en IS NULL OR r.disparado_en = '')")
+        sw, sp = cls._scope_expediente_efectivo_sql(session)
+        if sw:
+            conditions.append(f"({sw})")
+            params.extend(sp)
+        sql = (
+            "SELECT r.*, e.id_expediente AS exp_id_expediente, e.etapa_codigo AS exp_etapa_actual, "
+            "e.responsable_username AS exp_responsable_username, "
+            "e.responsable_secundario_username AS exp_responsable_secundario_username, "
+            "c.nombre_completo AS cli_nombre, c.numero_carpeta AS numero_carpeta_cliente "
+            "FROM expediente_recordatorios r "
+            "JOIN expedientes e ON e._id = r.id_expediente "
+            "LEFT JOIN clientes c ON c._id = e.id_cliente "
+            + cls._JOIN_ETAPA_ENCARGADO
+            + " WHERE " + " AND ".join(conditions)
+            + " ORDER BY r.fecha_disparo ASC, r.es_critico DESC"
+        )
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+        conn = db_local.get_connection()
+        rows = conn.execute(sql, tuple(params)).fetchall()
         conn.close()
         return db_local.rows_to_list(rows)
+
+    @classmethod
+    def count_plazos_por_estado_scoped(cls, dias_atras: int = 30, dias_adelante: int = 60) -> dict[str, int]:
+        """KPIs: criticos vencidos (pendientes), proximos 7 dias, hoy."""
+        from core.auth import Session
+        session = Session.get()
+        d0 = date.today()
+        hoy = d0.isoformat()
+        desde = (d0 - timedelta(days=dias_atras)).isoformat()[:10]
+        lim7 = (d0 + timedelta(days=7)).isoformat()[:10]
+
+        sw, sp = cls._scope_expediente_efectivo_sql(session)
+        scope_sql = f" AND ({sw})" if sw else ""
+        pend_sql = (
+            "(r.is_deleted IS NULL OR r.is_deleted = 0) AND (e.is_deleted IS NULL OR e.is_deleted = 0) "
+            "AND (r.disparado_en IS NULL OR r.disparado_en = '') AND e.estado NOT IN ('Cerrado','Archivado')"
+        )
+
+        def _count(extra: str, xp: tuple) -> int:
+            conn = db_local.get_connection()
+            q = (
+                "SELECT COUNT(*) FROM expediente_recordatorios r "
+                "JOIN expedientes e ON e._id = r.id_expediente "
+                + cls._JOIN_ETAPA_ENCARGADO
+                + " WHERE " + pend_sql + extra + scope_sql
+            )
+            row = conn.execute(q, xp + sp).fetchone()
+            conn.close()
+            return int(row[0]) if row else 0
+
+        crit_venc = _count(
+            " AND r.es_critico = 1 AND r.fecha_disparo < ? AND r.fecha_disparo >= ?",
+            (hoy, desde),
+        )
+        prox7 = _count(
+            " AND r.fecha_disparo >= ? AND r.fecha_disparo <= ?",
+            (hoy, lim7),
+        )
+        hoy_n = _count(" AND r.fecha_disparo = ?", (hoy,))
+        return {
+            "criticos_vencidos": crit_venc,
+            "proximos_7": prox7,
+            "hoy": hoy_n,
+        }
 
     @classmethod
     def tiene_tarea_activa(cls, expediente_id: str) -> bool:

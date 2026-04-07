@@ -71,6 +71,13 @@ class TestInitDb:
             conn.close()
             assert "responsable_username" in cols, f"Falta responsable_username en {table}"
 
+    def test_movimientos_has_observaciones_column(self):
+        """Migracion: columna observaciones en movimientos."""
+        conn = db_local.get_connection()
+        cols = [c[1] for c in conn.execute("PRAGMA table_info(movimientos)").fetchall()]
+        conn.close()
+        assert "observaciones" in cols
+
     def test_expedientes_double_responsable(self):
         """Expedientes debe tener ambas columnas de responsable username."""
         conn = db_local.get_connection()

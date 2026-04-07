@@ -1,12 +1,12 @@
 """
 Bloqueo pesimista de registros en MongoDB Atlas.
-Cuando un usuario quiere editar, se solicita un bloqueo que expira en 15 min.
+Cuando un usuario quiere editar, se solicita un bloqueo con vigencia configurable (config.LOCK_EXPIRY_SECONDS).
 """
 import logging
 from datetime import datetime, timezone, timedelta
 from core.db_remote import is_connected, get_db
 from core.auth import Session
-from config import LOCK_EXPIRY_MINUTES
+from config import LOCK_EXPIRY_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class LockManager:
         session = Session.get()
         username = session.username
         now = datetime.now(timezone.utc)
-        expires = now + timedelta(minutes=LOCK_EXPIRY_MINUTES)
+        expires = now + timedelta(seconds=LOCK_EXPIRY_SECONDS)
 
         db = get_db()
         locks = db.record_locks

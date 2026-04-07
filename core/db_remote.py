@@ -19,7 +19,8 @@ SYNC_COLLECTIONS = [
     "usuarios", "consultas", "clientes", "expedientes",
     "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "expediente_estado_historial", "audit_log",
-    "notificaciones", "session_signals", "sync_conflicts",
+    "notificaciones", "expediente_recordatorios", "expediente_etapa_responsables",
+    "session_signals", "sync_conflicts",
 ]
 
 
@@ -68,8 +69,11 @@ def ensure_indexes():
     db.modelos_escrito.create_index("rama")
     db.expediente_estado_historial.create_index("id_expediente")
     db.expediente_estado_historial.create_index("responsable_username")
+    db.expediente_estado_historial.create_index("encargado_username")
     db.notificaciones.create_index("target_username")
     db.notificaciones.create_index([("target_username", pymongo.ASCENDING), ("resuelta", pymongo.ASCENDING)])
+    db.expediente_recordatorios.create_index([("notificar_a_username", pymongo.ASCENDING), ("fecha_disparo", pymongo.ASCENDING)])
+    db.expediente_etapa_responsables.create_index([("id_expediente", pymongo.ASCENDING), ("etapa_codigo", pymongo.ASCENDING)], unique=True)
     db.sync_conflicts.create_index("status")
     db.sync_conflicts.create_index([("table_name", pymongo.ASCENDING), ("record_id", pymongo.ASCENDING)])
     db.record_locks.create_index("expires_at", expireAfterSeconds=0)
@@ -77,7 +81,8 @@ def ensure_indexes():
     for col_name in [
         "usuarios", "consultas", "clientes", "expedientes",
         "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
-        "modelos_escrito", "escritos", "expediente_estado_historial",
+        "modelos_escrito", "escritos", "expediente_estado_historial", "expediente_recordatorios",
+        "expediente_etapa_responsables",
         "audit_log", "notificaciones", "sync_conflicts",
     ]:
         db[col_name].create_index("updated_at")

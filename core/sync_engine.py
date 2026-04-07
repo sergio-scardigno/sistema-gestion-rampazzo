@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 SYNC_TABLES = [
     "usuarios", "consultas", "clientes", "expedientes",
     "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
-    "modelos_escrito", "escritos", "notificaciones",
+    "modelos_escrito", "escritos", "notificaciones", "expediente_recordatorios",
+    "expediente_etapa_responsables",
     "expediente_estado_historial", "audit_log"
 ]
 
@@ -366,3 +367,23 @@ def _pull_remote(db, table: str) -> tuple[int, int]:
         logger.exception("Error al descargar cambios remotos: table=%s", table)
 
     return inserted, conflicts
+
+
+def pull_usuarios_from_remote() -> int:
+    """Descarga cambios de la coleccion usuarios desde MongoDB (incremental).
+
+    Usar antes de armar listas de responsables para que aparezcan altas hechas
+    en otros equipos tras la ultima sync completa.
+
+    Returns:
+        Cantidad de filas aplicadas en SQLite, o 0 si no hay conexion o error.
+    """
+    if not is_connected():
+        return 0
+    try:
+        db = db_remote.get_db()
+        inserted, _ = _pull_remote(db, "usuarios")
+        return inserted
+    except Exception:
+        logger.exception("pull_usuarios_from_remote")
+        return 0

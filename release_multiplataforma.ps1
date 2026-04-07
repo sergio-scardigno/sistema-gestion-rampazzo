@@ -122,7 +122,12 @@ Step "[5/8] Commit + push de version..."
 & git add -- "config.py"
 Ensure-Success "No se pudo hacer git add config.py"
 
-$staged = (& git diff --cached --name-only).Trim()
+$stagedRaw = & git diff --cached --name-only
+if ($null -eq $stagedRaw) {
+    $staged = ""
+} else {
+    $staged = ($stagedRaw | Out-String).Trim()
+}
 if ($staged -match 'config.py') {
     $commitMsg = "v$Version - release multiplataforma"
     & git commit -m $commitMsg -- "config.py"

@@ -104,7 +104,7 @@ def export_report_excel(path: str):
         if movimientos:
             df = pd.DataFrame(movimientos)
             cols = ["id_movimiento", "tipo", "monto", "fecha",
-                    "forma_pago", "estado", "saldo"]
+                    "forma_pago", "estado", "saldo", "observaciones"]
             df = df[[c for c in cols if c in df.columns]]
             df.to_excel(writer, sheet_name="Movimientos", index=False)
 

@@ -1,25 +1,29 @@
 """Formulario de alta/edicion de Turno ANSES."""
 import logging
 import re
+from datetime import date
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QPushButton, QLabel, QComboBox,
-    QMessageBox, QCheckBox, QCompleter, QScrollArea, QFrame, QWidget
+    QMessageBox, QCheckBox, QCompleter, QScrollArea, QFrame, QWidget,
+    QFileDialog,
 )
-from PySide6.QtCore import QDate, QTime, Qt, QStringListModel
-from PySide6.QtGui import QFont
+from PySide6.QtCore import QDate, QTime, Qt, QStringListModel, QUrl
+from PySide6.QtGui import QFont, QDesktopServices
 
 logger = logging.getLogger(__name__)
 
 from controllers.turno_controller import TurnoController
+from controllers.documento_controller import DocumentoController
 from controllers.cliente_controller import ClienteController
 from controllers.expediente_controller import ExpedienteController
 from controllers.notificacion_controller import NotificacionController
 from services import anses_oficinas_service
 from config import ANSES_PROVINCIA_DEFECTO
 from core.auth import Session
-from core.permissions import get_active_users
+from core.permissions import get_active_users_fresh
 from views.widgets.no_wheel_combo import NoWheelComboBox
 from views.widgets.no_wheel_datetime import NoWheelDateEdit, NoWheelTimeEdit
 
@@ -35,6 +39,9 @@ class TurnoFormDialog(QDialog):
         self._selected_cliente_id: str = cliente_id or ""
         self._original_responsable_username = ""
         self._original_responsable_display = ""
+        self._pending_constancia_path = ""
+        self._remove_constancia = False
+        self._loaded_constancia_doc_id = ""
 
         self.setWindowTitle("Editar Turno" if self._is_edit else "Nuevo Turno ANSES")
         self.setMinimumWidth(640)
@@ -187,7 +194,7 @@ class TurnoFormDialog(QDialog):
         self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
         self._cmb_responsable.setPlaceholderText("Quien del estudio gestiona")
-        for u in get_active_users():
+        for u in get_active_users_fresh():
             label = f'{u.get("nombre_completo", "")} ({u.get("username", "")})'
             self._cmb_responsable.addItem(label, u.get("username", ""))
         form.addRow("Responsable *:", self._cmb_responsable)
@@ -217,6 +224,27 @@ class TurnoFormDialog(QDialog):
         self._txt_observaciones.setMaximumHeight(60)
         form.addRow("Observaciones:", self._txt_observaciones)
 
+        constancia_row = QWidget()
+        constancia_lay = QHBoxLayout(constancia_row)
+        constancia_lay.setContentsMargins(0, 0, 0, 0)
+        constancia_lay.setSpacing(8)
+        self._lbl_constancia = QLabel("Sin constancia PDF")
+        self._lbl_constancia.setWordWrap(True)
+        self._lbl_constancia.setStyleSheet("color: #4a5568; font-size: 11px;")
+        constancia_lay.addWidget(self._lbl_constancia, 1)
+        self._btn_const_examinar = QPushButton("Examinar PDF...")
+        self._btn_const_examinar.clicked.connect(self._pick_constancia_pdf)
+        self._btn_const_ver = QPushButton("Ver")
+        self._btn_const_ver.setEnabled(False)
+        self._btn_const_ver.clicked.connect(self._view_constancia_pdf)
+        self._btn_const_quitar = QPushButton("Quitar")
+        self._btn_const_quitar.setEnabled(False)
+        self._btn_const_quitar.clicked.connect(self._remove_constancia_pdf)
+        constancia_lay.addWidget(self._btn_const_examinar)
+        constancia_lay.addWidget(self._btn_const_ver)
+        constancia_lay.addWidget(self._btn_const_quitar)
+        form.addRow("Constancia PDF:", constancia_row)
+
         scroll.setWidget(form_container)
         layout.addWidget(scroll)
 
@@ -234,8 +262,10 @@ class TurnoFormDialog(QDialog):
 
         if self._is_edit:
             self._load_data()
-        elif self._fixed_cliente:
-            self._sugerir_oficina_por_cliente()
+        else:
+            self._refresh_constancia_ui()
+            if self._fixed_cliente:
+                self._sugerir_oficina_por_cliente()
 
     # ── Helpers: formato ─────────────────────────────────────────────────────
 
@@ -373,7 +403,7 @@ class TurnoFormDialog(QDialog):
         cliente_data = ClienteController.get_by_id(cliente_id) if cliente_id else None
         if cliente_id:
             exps = ExpedienteController.get_scoped(
-                where="id_cliente = ? AND estado NOT IN ('Cerrado','Archivado')",
+                where="e.id_cliente = ? AND e.estado NOT IN ('Cerrado','Archivado')",
                 params=(cliente_id,),
                 order_by="id_expediente DESC",
                 limit=200,
@@ -585,6 +615,79 @@ class TurnoFormDialog(QDialog):
         self._chk_nuevo.setChecked(bool(data.get("requiere_nuevo_turno", 0)))
         self._txt_observaciones.setPlainText(data.get("observaciones", ""))
 
+        self._pending_constancia_path = ""
+        self._remove_constancia = False
+        self._loaded_constancia_doc_id = (data.get("id_constancia_doc") or "").strip()
+        self._refresh_constancia_ui()
+
+    def _refresh_constancia_ui(self):
+        if self._pending_constancia_path:
+            p = Path(self._pending_constancia_path)
+            self._lbl_constancia.setText(f"Pendiente: {p.name}")
+            self._btn_const_ver.setEnabled(True)
+            self._btn_const_quitar.setEnabled(True)
+            return
+        if self._remove_constancia:
+            self._lbl_constancia.setText("Se quitará la constancia al guardar.")
+            self._btn_const_ver.setEnabled(False)
+            self._btn_const_quitar.setEnabled(False)
+            return
+        if self._loaded_constancia_doc_id:
+            doc = DocumentoController.get_by_id(self._loaded_constancia_doc_id)
+            if doc:
+                self._lbl_constancia.setText(doc.get("nombre", "Constancia PDF"))
+                self._btn_const_ver.setEnabled(True)
+                self._btn_const_quitar.setEnabled(True)
+                return
+        self._lbl_constancia.setText("Sin constancia PDF")
+        self._btn_const_ver.setEnabled(False)
+        self._btn_const_quitar.setEnabled(False)
+
+    def _pick_constancia_pdf(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Constancia del turno (PDF)",
+            "",
+            "PDF (*.pdf)",
+        )
+        if not path:
+            return
+        p = Path(path)
+        if p.suffix.lower() != ".pdf":
+            QMessageBox.warning(self, "Constancia", "Solo se permiten archivos PDF.")
+            return
+        ok, err = DocumentoController.validate_file(str(p))
+        if not ok:
+            QMessageBox.warning(self, "Constancia", err or "Archivo no valido.")
+            return
+        self._pending_constancia_path = str(p.resolve())
+        self._remove_constancia = False
+        self._refresh_constancia_ui()
+
+    def _view_constancia_pdf(self):
+        if self._pending_constancia_path:
+            p = Path(self._pending_constancia_path)
+            if p.is_file():
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(p.resolve())))
+            return
+        if not self._loaded_constancia_doc_id:
+            return
+        local = DocumentoController.ensure_local_file(self._loaded_constancia_doc_id)
+        if local and local.is_file():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(local.resolve())))
+        else:
+            QMessageBox.warning(self, "Constancia", "No se pudo abrir el archivo.")
+
+    def _remove_constancia_pdf(self):
+        if self._pending_constancia_path:
+            self._pending_constancia_path = ""
+            self._remove_constancia = False
+            self._refresh_constancia_ui()
+            return
+        if self._loaded_constancia_doc_id:
+            self._remove_constancia = True
+            self._refresh_constancia_ui()
+
     # ── Guardar ───────────────────────────────────────────────────────────────
 
     def _save(self):
@@ -747,6 +850,62 @@ class TurnoFormDialog(QDialog):
                 # En casos de duplicados de cliente por mismo DNI, al guardar
                 # alineamos el cliente al de la carpeta para no perder la vinculación.
                 data["id_cliente"] = exp_data.get("id_cliente", "") or data["id_cliente"]
+
+        expediente_id = (data.get("id_expediente") or "").strip()
+
+        doc_id_final = ""
+        if self._is_edit:
+            cur_t = TurnoController.get_by_id(self._id)
+            doc_id_final = (cur_t or {}).get("id_constancia_doc", "") or ""
+
+        if self._remove_constancia and doc_id_final:
+            DocumentoController.delete(doc_id_final)
+            doc_id_final = ""
+
+        if self._pending_constancia_path:
+            if not expediente_id:
+                QMessageBox.warning(
+                    self,
+                    "Constancia",
+                    "Para adjuntar la constancia PDF debe vincular el turno a una carpeta.",
+                )
+                return
+            path = Path(self._pending_constancia_path)
+            if not path.is_file():
+                QMessageBox.warning(self, "Constancia", "El archivo seleccionado ya no existe.")
+                return
+            if path.suffix.lower() != ".pdf":
+                QMessageBox.warning(self, "Constancia", "Solo se permiten archivos PDF.")
+                return
+            ok, err = DocumentoController.validate_file(str(path))
+            if not ok:
+                QMessageBox.warning(self, "Constancia", err or "Archivo no valido.")
+                return
+            if doc_id_final:
+                DocumentoController.delete(doc_id_final)
+                doc_id_final = ""
+            session = Session.get()
+            fecha = self._date_turno.date().toString("yyyy-MM-dd")
+            hora_s = self._time_hora.time().toString("HH:mm")
+            try:
+                doc = DocumentoController.create({
+                    "id_expediente": expediente_id,
+                    "categoria": "Turnos ANSES",
+                    "subcategoria": "Constancia",
+                    "nombre": f"Constancia turno {fecha} {hora_s}",
+                    "descripcion": "Constancia PDF turno ANSES",
+                    "ruta_archivo": str(path.resolve()),
+                    "fecha": date.today().isoformat(),
+                    "mime_type": "application/pdf",
+                    "responsable": session.nombre.upper() if session.logged_in else "",
+                    "responsable_username": session.username if session.logged_in else "",
+                })
+            except ValueError as exc:
+                QMessageBox.warning(self, "Constancia", str(exc))
+                return
+            doc_id_final = doc["_id"]
+
+        data["id_constancia_doc"] = doc_id_final
 
         if self._is_edit:
             TurnoController.update(self._id, data)

@@ -34,6 +34,13 @@ class TestTienePermiso:
         assert not tiene_permiso("abogado", "movimientos.create")
         assert not tiene_permiso("abogado", "reportes.read")
 
+    def test_analisis_equivale_a_abogado(self):
+        assert tiene_permiso("analisis", "expedientes.create")
+        assert tiene_permiso("analisis", "documentos.create")
+        assert not tiene_permiso("analisis", "usuarios.create")
+        assert not tiene_permiso("analisis", "movimientos.create")
+        assert not tiene_permiso("analisis", "reportes.read")
+
     def test_agente_tiene_clientes_no_movimientos(self):
         assert tiene_permiso("agente", "clientes.create")
         assert tiene_permiso("agente", "expedientes.read")
@@ -74,7 +81,7 @@ class TestRestriccionEconomicaYAdmin:
         "configuracion.read", "configuracion.*",
     ]
 
-    @pytest.mark.parametrize("rol", ["secretaria", "agente", "abogado"])
+    @pytest.mark.parametrize("rol", ["secretaria", "agente", "abogado", "analisis"])
     def test_roles_sin_acceso_economico_ni_admin(self, rol):
         for permiso in self.MODULOS_RESTRINGIDOS:
             assert not tiene_permiso(rol, permiso), (
@@ -127,7 +134,7 @@ class TestModulosPermitidos:
         assert "usuarios" in modulos
         assert "configuracion" not in modulos
 
-    @pytest.mark.parametrize("rol", ["secretaria", "agente", "abogado"])
+    @pytest.mark.parametrize("rol", ["secretaria", "agente", "abogado", "analisis"])
     def test_roles_restringidos_no_ven_modulos_economicos(self, rol):
         modulos = modulos_permitidos(rol)
         for mod in ["administracion", "reportes", "auditoria", "usuarios", "configuracion"]:

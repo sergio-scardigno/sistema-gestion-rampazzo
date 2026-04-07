@@ -33,6 +33,7 @@ class FilterableTable(QWidget):
         self._data: list[dict] = []
         self._page = 0
         self._page_size = 50
+        self._open_on_double_click = True
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -75,6 +76,16 @@ class FilterableTable(QWidget):
         pag_layout.addWidget(self._btn_prev)
         pag_layout.addWidget(self._btn_next)
         layout.addLayout(pag_layout)
+
+    def set_open_on_double_click_enabled(self, enabled: bool):
+        """Si False, el doble clic no abre el detalle (modo solo lectura / consulta)."""
+        self._open_on_double_click = bool(enabled)
+
+    def enable_browse_controls(self):
+        """Rehabilita busqueda y paginacion tras un setEnabled global (solo lectura en carpeta)."""
+        self._search.setEnabled(True)
+        self._lbl_info.setEnabled(True)
+        self._refresh()
 
     def set_data(self, data: list[dict]):
         self._data = data
@@ -156,6 +167,8 @@ class FilterableTable(QWidget):
         self._refresh()
 
     def _on_double_click(self, index):
+        if not self._open_on_double_click:
+            return
         item = self._table.item(index.row(), 0)
         if item:
             _id = item.data(Qt.ItemDataRole.UserRole)

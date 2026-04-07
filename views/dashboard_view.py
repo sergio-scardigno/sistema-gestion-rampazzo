@@ -4,10 +4,11 @@ import logging
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea,
     QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView,
-    QLineEdit, QPushButton, QMessageBox, QSplitter, QSizePolicy
+    QLineEdit, QPushButton, QMessageBox, QSplitter, QSizePolicy, QComboBox,
+    QCalendarWidget, QDialog, QAbstractItemView,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, QDate
+from PySide6.QtGui import QFont, QColor, QBrush
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,13 @@ from controllers.cliente_controller import ClienteController
 from controllers.expediente_controller import ExpedienteController
 from controllers.notificacion_controller import NotificacionController
 from core.auth import Session
-from core.permissions import tiene_permiso, es_rol_global, scope_where
-from core.scheduler import get_alertas_pendientes, get_recordatorios_turnos, get_alertas_sin_tarea
+from core.permissions import tiene_permiso
+from core.scheduler import (
+    get_alertas_pendientes,
+    get_recordatorios_turnos,
+    get_alertas_sin_tarea,
+    check_recordatorios_expedientes,
+)
 
 
 class KPICard(QFrame):
@@ -161,6 +167,67 @@ class DashboardView(QWidget):
         self._resultado_frame.setVisible(False)
         self._layout.addWidget(self._resultado_frame)
 
+        # Filtro rápido por etapa y asignaciones para mí
+        stage_frame = QFrame()
+        stage_frame.setStyleSheet("""
+            QFrame {
+                background: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+            }
+        """)
+        stage_layout = QVBoxLayout(stage_frame)
+        stage_layout.setContentsMargins(10, 8, 10, 8)
+        stage_layout.setSpacing(6)
+        stage_header = QHBoxLayout()
+        stage_header.addWidget(QLabel("Asignado a mí por etapa"))
+        stage_header.addStretch()
+        self._cmb_etapa_dashboard = QComboBox()
+        self._cmb_etapa_dashboard.addItem("Todas las etapas", "")
+        for etapa in ExpedienteController.ETAPAS:
+            self._cmb_etapa_dashboard.addItem(etapa["titulo"], etapa["codigo"])
+        self._cmb_etapa_dashboard.currentIndexChanged.connect(self._refresh_asignado_por_etapa)
+        stage_header.addWidget(QLabel("Etapa:"))
+        stage_header.addWidget(self._cmb_etapa_dashboard)
+        stage_layout.addLayout(stage_header)
+        self._table_asignado_etapa = QTableWidget()
+        self._table_asignado_etapa.setColumnCount(4)
+        self._table_asignado_etapa.setHorizontalHeaderLabels(["Carpeta", "Cliente", "Etapa", "Que hacer"])
+        self._table_asignado_etapa.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._table_asignado_etapa.horizontalHeader().setMinimumHeight(32)
+        self._table_asignado_etapa.verticalHeader().setVisible(False)
+        self._table_asignado_etapa.verticalHeader().setDefaultSectionSize(42)
+        self._table_asignado_etapa.setMinimumHeight(200)
+        self._table_asignado_etapa.setMaximumHeight(300)
+        self._table_asignado_etapa.setStyleSheet("""
+            QTableWidget {
+                background-color: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                color: #1a1a1a;
+                gridline-color: #eeeeee;
+            }
+            QTableWidget::item {
+                padding: 8px 6px;
+                border-bottom: 1px solid #f0f0f0;
+                color: #1a1a1a;
+            }
+            QHeaderView::section {
+                background-color: #fafafa;
+                color: #4a4a4a;
+                font-weight: 600;
+                border: none;
+                border-bottom: 2px solid #c9a84c;
+                padding: 8px 6px;
+            }
+        """)
+        self._table_asignado_etapa.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._table_asignado_etapa.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._table_asignado_etapa.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table_asignado_etapa.cellClicked.connect(self._on_asignado_etapa_clicked)
+        stage_layout.addWidget(self._table_asignado_etapa)
+        self._layout.addWidget(stage_frame)
+
         # KPI Grid
         kpi_grid = QGridLayout()
         kpi_grid.setSpacing(10)
@@ -199,15 +266,60 @@ class DashboardView(QWidget):
             self._kpi_cards[key] = card
             kpi_grid.addWidget(card, 2, j)
 
+        plazos_kpis = [
+            ("plazos_crit", "Plazos criticos vencidos", "0", "#c62828"),
+            ("plazos_7", "Plazos prox. 7 dias", "0", "#e65100"),
+            ("plazos_hoy", "Plazos hoy", "0", "#f9a825"),
+        ]
+        for j, (key, title_text, default, color) in enumerate(plazos_kpis):
+            card = KPICard(title_text, default, color)
+            self._kpi_cards[key] = card
+            kpi_grid.addWidget(card, 3, j)
+
         # KPI Auditoria (solo admin/superusuario)
         self._show_audit_kpi = False
         if tiene_permiso(session.rol, "auditoria.*"):
             self._show_audit_kpi = True
             card = KPICard("Acciones Hoy", "0", "#4a4a4a")
             self._kpi_cards["acciones_hoy"] = card
-            kpi_grid.addWidget(card, 3, 0)
+            kpi_grid.addWidget(card, 4, 0)
 
         self._layout.addLayout(kpi_grid)
+
+        # Plazos de expedientes (tabla + calendario)
+        plazos_frame = QFrame()
+        plazos_frame.setStyleSheet("""
+            QFrame { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
+        """)
+        plazos_outer = QVBoxLayout(plazos_frame)
+        plazos_outer.setContentsMargins(10, 8, 10, 8)
+        lbl_pl = QLabel("Plazos de carpetas (pendientes de aviso)")
+        lbl_pl.setFont(QFont("Lato", 13, QFont.Weight.Bold))
+        lbl_pl.setStyleSheet("color: #7e57c2; border: none;")
+        plazos_outer.addWidget(lbl_pl)
+        plazos_split = QSplitter(Qt.Orientation.Horizontal)
+        plazos_split.setChildrenCollapsible(False)
+        self._table_plazos = QTableWidget()
+        self._table_plazos.setColumnCount(7)
+        self._table_plazos.setHorizontalHeaderLabels([
+            "Fecha", "Carpeta", "Cliente", "Etapa", "Titulo", "Crit.", "Vence"
+        ])
+        self._table_plazos.horizontalHeader().setStretchLastSection(True)
+        self._table_plazos.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._table_plazos.verticalHeader().setVisible(False)
+        self._table_plazos.setMinimumHeight(160)
+        self._calendar_plazos = QCalendarWidget()
+        self._calendar_plazos.setMaximumWidth(320)
+        self._calendar_plazos.setGridVisible(True)
+        self._calendar_plazos.setSelectedDate(QDate.currentDate())
+        self._calendar_plazos.clicked.connect(self._on_plazo_calendar_clicked)
+        plazos_split.addWidget(self._table_plazos)
+        plazos_split.addWidget(self._calendar_plazos)
+        plazos_split.setStretchFactor(0, 3)
+        plazos_split.setStretchFactor(1, 1)
+        plazos_outer.addWidget(plazos_split)
+        self._layout.addWidget(plazos_frame)
+        self._plazos_cache: list[dict] = []
 
         # ── Layout de 2 columnas: Turnos (izq) + Alertas/Vencidas (der) ──
         bottom_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -266,7 +378,7 @@ class DashboardView(QWidget):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(4, 0, 0, 0)
-        right_layout.setSpacing(6)
+        right_layout.setSpacing(10)
 
         lbl_alertas = QLabel("Alertas y Recordatorios")
         lbl_alertas.setFont(QFont("Lato", 13, QFont.Weight.Bold))
@@ -276,11 +388,12 @@ class DashboardView(QWidget):
         self._alertas_scroll = QScrollArea()
         self._alertas_scroll.setWidgetResizable(True)
         self._alertas_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._alertas_scroll.setMaximumHeight(180)
+        self._alertas_scroll.setMinimumHeight(200)
+        self._alertas_scroll.setMaximumHeight(300)
         alertas_widget = QWidget()
         self._alertas_container = QVBoxLayout(alertas_widget)
-        self._alertas_container.setContentsMargins(0, 0, 0, 0)
-        self._alertas_container.setSpacing(4)
+        self._alertas_container.setContentsMargins(0, 4, 0, 4)
+        self._alertas_container.setSpacing(8)
         self._alertas_scroll.setWidget(alertas_widget)
 
         self._lbl_no_alertas = QLabel("Sin alertas pendientes")
@@ -301,17 +414,37 @@ class DashboardView(QWidget):
         ])
         self._table_vencidas.horizontalHeader().setStretchLastSection(True)
         self._table_vencidas.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._table_vencidas.horizontalHeader().setMinimumHeight(28)
+        self._table_vencidas.horizontalHeader().setMinimumHeight(32)
         self._table_vencidas.verticalHeader().setVisible(False)
-        self._table_vencidas.verticalHeader().setDefaultSectionSize(32)
+        self._table_vencidas.verticalHeader().setDefaultSectionSize(42)
+        self._table_vencidas.setMinimumHeight(200)
         self._table_vencidas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._table_vencidas.setStyleSheet("""
             QTableWidget {
                 background-color: #ffffff;
                 border: 1px solid #e0e0e0;
                 border-radius: 6px;
+                color: #1a1a1a;
+                gridline-color: #eeeeee;
+            }
+            QTableWidget::item {
+                padding: 8px 6px;
+                border-bottom: 1px solid #f0f0f0;
+                color: #1a1a1a;
+            }
+            QHeaderView::section {
+                background-color: #fafafa;
+                color: #4a4a4a;
+                font-weight: 600;
+                border: none;
+                border-bottom: 2px solid #c9a84c;
+                padding: 8px 6px;
             }
         """)
+        self._table_vencidas.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._table_vencidas.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._table_vencidas.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table_vencidas.cellClicked.connect(self._on_vencidas_clicked)
         right_layout.addWidget(self._table_vencidas)
 
         bottom_splitter.addWidget(right_panel)
@@ -328,15 +461,17 @@ class DashboardView(QWidget):
         outer.addWidget(scroll)
 
     def refresh(self):
+        try:
+            check_recordatorios_expedientes()
+        except Exception:
+            logger.exception("Error al verificar recordatorios de expedientes")
         session = Session.get()
-        is_global = es_rol_global(session.rol)
 
         # KPIs operativos (con scope)
-        from controllers.expediente_controller import ExpedienteController
         exp_activos = len(ExpedienteController.get_scoped(
-            where="estado NOT IN ('Cerrado','Archivado')"))
+            where="e.estado NOT IN ('Cerrado','Archivado')"))
         exp_cerrados = len(ExpedienteController.get_scoped(
-            where="estado IN ('Cerrado','Archivado')"))
+            where="e.estado IN ('Cerrado','Archivado')"))
         tareas_pend = len(TareaController.get_scoped(
             where="estado IN ('Pendiente','En curso','En espera')"))
         from datetime import datetime, timedelta
@@ -387,6 +522,11 @@ class DashboardView(QWidget):
         self._kpi_cards["turnos_sin_doc"].update_value(str(len(turnos_sin_doc)))
         self._kpi_cards["turnos_pend_res"].update_value(str(len(turnos_pend_res)))
 
+        plz = ExpedienteController.count_plazos_por_estado_scoped()
+        self._kpi_cards["plazos_crit"].update_value(str(plz.get("criticos_vencidos", 0)))
+        self._kpi_cards["plazos_7"].update_value(str(plz.get("proximos_7", 0)))
+        self._kpi_cards["plazos_hoy"].update_value(str(plz.get("hoy", 0)))
+
         # Tabla turnos de hoy (con cache de clientes para evitar queries repetidas)
         clientes_cache: dict[str, dict | None] = {}
         self._table_turnos_hoy.setRowCount(len(turnos_hoy))
@@ -411,6 +551,8 @@ class DashboardView(QWidget):
 
         # Alertas del scheduler
         self._refresh_alertas()
+        self._refresh_asignado_por_etapa()
+        self._refresh_plazos_dashboard()
 
         # Tareas vencidas (con scope)
         vencidas = TareaController.get_scoped(
@@ -420,7 +562,9 @@ class DashboardView(QWidget):
         cliente_cache_vencidas: dict[str, dict | None] = {}
         self._table_vencidas.setRowCount(len(vencidas[:20]))
         for i, t in enumerate(vencidas[:20]):
-            self._table_vencidas.setItem(i, 0, QTableWidgetItem(t.get("descripcion", "")))
+            it0 = QTableWidgetItem(t.get("descripcion", ""))
+            it0.setData(Qt.ItemDataRole.UserRole, (t.get("_id") or "").strip())
+            self._table_vencidas.setItem(i, 0, it0)
             expediente_oid = t.get("id_expediente", "") or ""
             nombre_cliente = ""
             if expediente_oid:
@@ -437,6 +581,64 @@ class DashboardView(QWidget):
             self._table_vencidas.setItem(i, 2, QTableWidgetItem(t.get("responsable", "")))
             self._table_vencidas.setItem(i, 3, QTableWidgetItem(t.get("fecha_vencimiento", "")))
             self._table_vencidas.setItem(i, 4, QTableWidgetItem(t.get("estado", "")))
+
+    def _on_plazo_calendar_clicked(self, _qd: QDate):
+        self._fill_plazos_table_filtered()
+
+    def _refresh_plazos_dashboard(self):
+        try:
+            from datetime import datetime, timedelta
+            today = datetime.now().date()
+            desde = (today - timedelta(days=60)).strftime("%Y-%m-%d")
+            hasta = (today + timedelta(days=120)).strftime("%Y-%m-%d")
+            self._plazos_cache = ExpedienteController.list_recordatorios_agenda_scoped(
+                desde, hasta, solo_pendientes_disparo=True, limit=200,
+            )
+            self._fill_plazos_table_filtered()
+        except Exception:
+            logger.exception("Error al cargar plazos en dashboard")
+            self._plazos_cache = []
+            self._table_plazos.setRowCount(0)
+
+    def _fill_plazos_table_filtered(self):
+        from datetime import datetime
+        picked = self._calendar_plazos.selectedDate().toString("yyyy-MM-dd")
+        today_s = datetime.now().strftime("%Y-%m-%d")
+        etapas_map = {x["codigo"]: x["titulo"] for x in ExpedienteController.ETAPAS}
+        rows = [
+            r for r in self._plazos_cache
+            if (r.get("fecha_disparo") or "")[:10] == picked
+        ]
+        self._table_plazos.setRowCount(len(rows))
+        for i, r in enumerate(rows):
+            fd = (r.get("fecha_disparo") or "")[:10]
+            crit = bool(int(r.get("es_critico", 0) or 0))
+            if fd < today_s:
+                vence = "Vencido"
+            elif fd == today_s:
+                vence = "Hoy"
+            else:
+                vence = "Proximo"
+            ec = (r.get("etapa_codigo") or "").strip()
+            etapa = etapas_map.get(ec, ec or "-")
+            vals = [
+                fd,
+                str(r.get("exp_id_expediente", "")),
+                r.get("cli_nombre", "") or "",
+                etapa,
+                r.get("titulo", "") or "",
+                "Si" if crit else "",
+                vence,
+            ]
+            for j, text in enumerate(vals):
+                it = QTableWidgetItem(text)
+                if fd < today_s:
+                    it.setBackground(QBrush(QColor("#ffebee")))
+                elif fd == today_s:
+                    it.setBackground(QBrush(QColor("#fff3e0")))
+                elif crit:
+                    it.setBackground(QBrush(QColor("#f3e5f5")))
+                self._table_plazos.setItem(i, j, it)
 
     def _refresh_alertas(self):
         """Actualiza la seccion de alertas y recordatorios."""
@@ -470,7 +672,7 @@ class DashboardView(QWidget):
 
         if not alertas:
             lbl = QLabel("Sin alertas pendientes")
-            lbl.setStyleSheet("color: #6b6b6b; font-style: italic; padding: 8px;")
+            lbl.setStyleSheet("color: #6b6b6b; font-style: italic; padding: 12px 8px;")
             self._alertas_container.addWidget(lbl)
             return
 
@@ -494,6 +696,12 @@ class DashboardView(QWidget):
             elif tipo == "turno_asignado":
                 icon = "\u23F0"
                 color = "#c9a84c"
+            elif tipo == "expediente_etapa_encargado":
+                icon = "\U0001F4C1"
+                color = "#2d6bcf"
+            elif tipo == "recordatorio_expediente":
+                icon = "\U0001F514"
+                color = "#7e57c2"
             else:
                 icon = "\u2139"
                 color = "#4a4a4a"
@@ -505,11 +713,59 @@ class DashboardView(QWidget):
                 border: 1px solid #e0e0e0;
                 border-left: 3px solid {color};
                 border-radius: 4px;
-                padding: 6px 10px;
+                padding: 10px 12px;
                 font-size: 11px;
             """)
             lbl.setWordWrap(True)
             self._alertas_container.addWidget(lbl)
+
+    def _refresh_asignado_por_etapa(self):
+        session = Session.get()
+        if not session.logged_in:
+            self._table_asignado_etapa.setRowCount(0)
+            return
+        etapa = self._cmb_etapa_dashboard.currentData() if hasattr(self, "_cmb_etapa_dashboard") else ""
+        rows = ExpedienteController.get_pendientes_etapa_para_usuario(
+            username=session.username,
+            etapa_codigo=etapa or "",
+            limit=30,
+        )
+        etapas_map = {x["codigo"]: x for x in ExpedienteController.ETAPAS}
+        self._table_asignado_etapa.setRowCount(len(rows))
+        for i, row in enumerate(rows):
+            etapa_meta = etapas_map.get(row.get("etapa_codigo", ""), {})
+            it0 = QTableWidgetItem(str(row.get("id_expediente", "")))
+            it0.setData(Qt.ItemDataRole.UserRole, (row.get("_id") or "").strip())
+            self._table_asignado_etapa.setItem(i, 0, it0)
+            self._table_asignado_etapa.setItem(i, 1, QTableWidgetItem(row.get("cli_nombre", "")))
+            self._table_asignado_etapa.setItem(i, 2, QTableWidgetItem(etapa_meta.get("titulo", row.get("etapa_codigo", ""))))
+            self._table_asignado_etapa.setItem(i, 3, QTableWidgetItem(etapa_meta.get("instruccion_corta", "")))
+
+    def _on_asignado_etapa_clicked(self, row: int, _col: int):
+        """Abre la carpeta al hacer click en una fila."""
+        it = self._table_asignado_etapa.item(row, 0)
+        if not it:
+            return
+        eid = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not eid:
+            return
+        from views.expedientes.expediente_form import ExpedienteFormDialog
+        dlg = ExpedienteFormDialog(expediente_id=eid, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.refresh()
+
+    def _on_vencidas_clicked(self, row: int, _col: int):
+        """Abre la tarea al hacer click en una fila."""
+        it = self._table_vencidas.item(row, 0)
+        if not it:
+            return
+        tid = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not tid:
+            return
+        from views.tareas.tarea_form import TareaFormDialog
+        dlg = TareaFormDialog(tarea_id=tid, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.refresh()
 
     # ------------------------------------------------------------------
     # Busqueda rapida por N° de carpeta, DNI o nombre

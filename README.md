@@ -4,6 +4,81 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
+**Versión de aplicación:** 1.7.0
+
+---
+
+## Notas de versión — 1.7.0 (abril 2026)
+
+Esta versión amplía el modelo de **carpetas** con un flujo por **etapas procesales**, **responsables por etapa**, **plazos y recordatorios** con notificaciones programadas, un **dashboard** más operativo (KPIs de plazos y tablas por etapa), **sincronización** de las nuevas tablas con MongoDB y mejoras transversales en formularios, permisos y bloqueos de edición.
+
+**Alcance del listado:** corresponde al conjunto de cambios presentes en el árbol de trabajo de Git en la fecha de referencia **7 de abril de 2026** (archivos modificados y nuevos respecto del último commit de la rama actual). No había commits con esa fecha al documentar; el listado describe el estado del repositorio listo para integrar como 1.7.0.
+
+### 1. Flujo por etapas de carpeta y trazabilidad
+
+El `ExpedienteController` define un catálogo ordenado de **etapas** (`ETAPAS`: códigos, títulos, instrucciones breves). Cada carpeta lleva `etapa_codigo` (valor por defecto al crear). Al cambiar de etapa o de responsables se actualiza el **historial de estados** y se pueden generar **notificaciones** al responsable principal y al encargado de la etapa. Se añadieron consultas de negocio: carpetas pendientes por etapa para el usuario, métricas relacionadas, búsqueda ampliada y cierre formal conservando la lógica existente.
+
+### 2. Línea de tiempo visual de etapas
+
+Nuevo widget `ExpedienteEtapasTimeline`: franja horizontal con el orden de etapas, indicación de etapa **anterior** y **actual** y trazos/flechas entre nodos para lectura rápida del avance procesal en la ficha de carpeta.
+
+### 3. Encargados secundarios por etapa
+
+Nueva tabla `expediente_etapa_responsables` y `ExpedienteEtapaResponsableController`: permite asignar un **encargado distinto por etapa** (además del responsable principal de la carpeta). La **visibilidad** de listados (`get_scoped`, variantes con cliente) considera al encargado **efectivo** de la etapa actual. Las notificaciones de tipo `expediente_etapa_encargado` avisan al usuario asignado cuando corresponde.
+
+### 4. Recordatorios de plazos por carpeta
+
+Nueva tabla `expediente_recordatorios` y `ExpedienteRecordatorioController`: fecha de disparo, título, mensaje, usuario a notificar, vínculo opcional a `etapa_codigo` y marca **plazo crítico**. El **scheduler** ejecuta `check_recordatorios_expedientes` **una vez al día (08:00)**, crea notificaciones internas (`recordatorio_expediente`) y marca el registro como disparado para no repetir; los registros sincronizan como el resto del modelo.
+
+### 5. Dashboard operativo
+
+El dashboard incorpora **KPIs de plazos** (críticos vencidos, próximos siete días, vencimientos del día), tablas de detalle y el bloque **Asignado a mí por etapa** (combo de etapa + tabla con carpeta, cliente, etapa e indicación de qué hacer). Se integra el refresco con recordatorios de expedientes donde aplica.
+
+### 6. Notificaciones, campana y alertas al iniciar sesión
+
+`NotificacionController` amplía tipos y flujos: recordatorios de carpeta, encargado de etapa, y convivencia con actualización de mensajes de tareas. Los tipos relevantes aparecen en **popup de alertas** al login y en la **campana** (`notification_bell`, `login_task_alerts_popup`).
+
+### 7. Rol «analisis» en RBAC
+
+En `core/permissions.py` se incorpora el rol **analisis** (misma matriz operativa que **abogado** en documentos/carpetas/tareas/turnos/comunicaciones), con alias y descripción para la UI.
+
+### 8. Auto-archivado de carpetas cerradas
+
+`ExpedienteController.auto_archivar_cerrados` y job en **scheduler** (diario a las **03:00**) para pasar a estado archivado las carpetas que llevan **cerradas** más de un umbral de días, reduciendo ruido en vistas activas.
+
+### 9. Referencias múltiples de expediente y copia rápida de claves
+
+- `ExpedientesReferenciaWidget`: gestión de **referencias** por tipo (ANSES, IPS, SRT, Judicial) persistidas en datos de rama, con lista editable.
+- `ClickCopyLineEdit`: **un clic** copia al portapapeles el contenido de campos sensibles (p. ej. claves), con estilo de lectura clara.
+
+### 10. Base de datos local y migraciones
+
+`core/db_local.py`: creación de tablas e **índices** para recordatorios y encargados por etapa; migraciones incrementales (p. ej. columnas nuevas en `expediente_recordatorios`) para bases ya existentes.
+
+### 11. Sincronización SQLite ↔ MongoDB Atlas
+
+`sync_engine` incluye las colecciones `expediente_recordatorios` y `expediente_etapa_responsables` en el flujo de tablas sincronizadas; `db_remote` ajusta índices y coherencia con el remoto.
+
+### 12. Bloqueos de edición en MongoDB
+
+La configuración de caducidad de **locks** pasa a **segundos** (`lock_expiry_seconds` en `config.ini.example` y `LOCK_EXPIRY_SECONDS` en `config.py`), alineada con `lock_manager` (bloqueo pesimista al editar).
+
+### 13. Formularios y vistas (UI)
+
+Cambios extensos en **carpetas** (`expediente_form`, `expediente_list`), **clientes**, **dashboard**, **tareas**, **turnos**, **documentos**, **movimientos**, **ventana principal** y **tabla filtrable** (`filterable_table`), para integrar etapas, timeline, referencias, recordatorios y flujos ya descritos.
+
+### 14. Otros controladores y utilidades
+
+Ajustes en `documento_controller`, `expediente_estado_controller`, `reporte_controller`, `turno_controller`; corrección menor en `utils/export.py`.
+
+### 15. Script de release multiplataforma
+
+Ajustes en `release_multiplataforma.ps1` (lectura y actualización de `APP_VERSION` en `config.py` para empaquetado).
+
+### 16. Pruebas automatizadas
+
+Nuevos tests de integración para **recordatorios de expediente** y **encargados por etapa**; ampliaciones en expediente, historial de estados, sync, turnos, movimientos, permisos y BD local. La suite total pasa a **489 tests** (ver sección Testing).
+
 ---
 
 ## Stack tecnologico
@@ -109,7 +184,9 @@ sistema-gestion-rampazzo/
 │   ├── auth_controller.py     #   Gestion de usuarios y autenticacion
 │   ├── cliente_controller.py  #   CRUD de clientes
 │   ├── consulta_controller.py #   CRUD de consultas (legado, no visible en UI)
-│   ├── expediente_controller.py # CRUD de carpetas
+│   ├── expediente_controller.py # CRUD de carpetas (etapas, metricas, recordatorios)
+│   ├── expediente_recordatorio_controller.py # Plazos y recordatorios por carpeta
+│   ├── expediente_etapa_responsable_controller.py # Encargado secundario por etapa
 │   ├── tarea_controller.py    #   CRUD de tareas
 │   ├── turno_controller.py    #   CRUD de turnos ANSES
 │   ├── comunicacion_controller.py # CRUD de comunicaciones
@@ -139,6 +216,9 @@ sistema-gestion-rampazzo/
 │   ├── migration/             #   Wizard de migracion desde Excel
 │   └── widgets/               #   Componentes reutilizables
 │       ├── filterable_table.py #    Tabla con busqueda y paginacion
+│       ├── expediente_etapas_timeline.py # Linea de tiempo de etapas de carpeta
+│       ├── expedientes_referencia_widget.py # Referencias ANSES, IPS, SRT, Judicial
+│       ├── click_copy_line_edit.py # Copiar clave al clic
 │       └── sync_indicator.py  #    Indicador de estado de conexion
 │
 ├── utils/
@@ -161,10 +241,10 @@ sistema-gestion-rampazzo/
 │   ├── backups/               #   Backups automaticos
 │   └── documentos/            #   Archivos de documentos adjuntos
 │
-├── tests/                     # Suite de testing (353 tests)
+├── tests/                     # Suite de testing (489 tests)
 │   ├── conftest.py            #   Fixtures globales
-│   ├── unit/                  #   102 tests unitarios
-│   ├── integration/           #   242 tests de integracion
+│   ├── unit/                  #   156 tests unitarios
+│   ├── integration/           #   324 tests de integracion
 │   └── ui/                    #   9 smoke tests de UI
 │
 └── .github/
@@ -180,7 +260,8 @@ sistema-gestion-rampazzo/
 Pantalla principal que muestra al usuario un resumen operativo en tiempo real:
 
 - **Busqueda rapida por N° de carpeta:** Campo de busqueda prominente para localizar un cliente y sus carpetas ingresando el numero de carpeta fisica. Muestra un panel con datos del cliente y accesos directos a cada carpeta.
-- **KPIs:** Carpetas activas/cerradas, tareas pendientes/vencidas, total de clientes, ingresos cobrados, pendientes de cobro.
+- **KPIs:** Carpetas activas/cerradas, tareas pendientes/vencidas, total de clientes, ingresos cobrados, pendientes de cobro; **KPIs de plazos** (criticos vencidos, proximos 7 dias, vencimientos de hoy) y tablas de detalle asociadas.
+- **Asignado a mi por etapa:** Filtro por etapa procesal y tabla de carpetas con indicacion breve de la accion esperada.
 - **Turnos de hoy:** Tabla con los turnos programados para la fecha actual.
 - **Alertas:** Carpetas sin tarea activa, turnos proximos sin documentacion, turnos sin resultado cargado.
 
@@ -198,6 +279,7 @@ Alta, baja y modificacion de clientes del estudio. Es el punto de entrada de tod
 
 Modulo central del sistema. Cada carpeta representa un tramite o caso legal:
 
+- **Flujo por etapas:** Cada carpeta tiene una **etapa procesal** actual (orden de trabajo del estudio), linea de tiempo en la ficha, posible **encargado por etapa**, **recordatorios de plazos** con notificacion y referencias multiples (ANSES, IPS, SRT, Judicial) segun corresponda.
 - **Clasificacion por rama:** Rama + Subtipo (dependiente de la rama) para ordenar el trabajo juridico.
 - **Datos principales:** Tipo de tramite, responsable, estado, prioridad, numero de tramite ANSES.
 - **Campos dinamicos por rama:** el formulario activa campos especificos segun la rama seleccionada.
@@ -211,7 +293,7 @@ Modulo central del sistema. Cada carpeta representa un tramite o caso legal:
   - Movimientos economicos
   - Historial de auditoria de la carpeta
 - **Cierre formal** con resultado y fecha.
-- **Visibilidad por rol:** Roles restringidos solo ven las carpetas asignadas a ellos.
+- **Visibilidad por rol:** Roles restringidos ven las carpetas donde son responsables principales o **encargados de la etapa actual**.
 
 ### Tareas
 
@@ -312,25 +394,32 @@ Se incluyen plantillas CSV en `excel/` para importacion por partes.
 
 ## Roles y permisos
 
-El sistema implementa control de acceso basado en roles (RBAC). Cada rol determina que modulos puede ver y que acciones puede realizar:
+El sistema implementa control de acceso basado en roles (RBAC). Cada rol determina que modulos puede ver y que acciones puede realizar.
 
-| Modulo | Secretaria | Agente | Abogado | Administrador | Superusuario |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Dashboard | Leer | Leer | Leer | Leer | Leer |
-| Clientes | Leer | Completo | Completo | Completo | Completo |
-| Carpetas | Leer | Completo | Completo | Completo | Completo |
-| Tareas | Leer | Completo | Completo | Completo | Completo |
-| Turnos | Leer | Completo | Completo | Completo | Completo |
-| Comunicaciones | Leer | Completo | Completo | Completo | Completo |
-| Documentos | - | Leer | Completo | Completo | Completo |
-| Administracion | - | - | - | Completo | Completo |
-| Reportes | - | - | Leer | Completo | Completo |
-| Auditoria | - | - | - | Completo | Completo |
-| Empleados | - | - | - | Completo | Completo |
-| Configuracion | - | - | - | - | Completo |
-| Migracion | - | - | - | - | Completo |
+Ademas de los perfiles operativos, existen dos perfiles administrativos:
 
-**Visibilidad por asignacion:** Los roles Secretaria, Agente y Abogado solo ven los registros asignados a ellos (filtro por `responsable_username`). Los roles Administrador y Superusuario ven todos los registros.
+- **Administrador:** acceso administrativo completo, incluyendo gestion economica.
+- **Administrador (sin Contable):** perfil administrativo sin acceso a movimientos de dinero ni al modulo/pestana Contable.
+
+| Modulo | Secretaria | Agente | Abogado | Administrador | Administrador (sin Contable) | Superusuario |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Dashboard | Leer | Leer | Leer | Leer | Leer | Leer |
+| Clientes | Leer | Completo | Completo | Completo | Completo | Completo |
+| Carpetas | Leer | Completo | Completo | Completo | Completo | Completo |
+| Tareas | Leer | Completo | Completo | Completo | Completo | Completo |
+| Turnos | Leer | Completo | Completo | Completo | Completo | Completo |
+| Comunicaciones | Leer | Completo | Completo | Completo | Completo | Completo |
+| Documentos | - | Leer | Completo | Completo | Completo | Completo |
+| Administracion (movimientos de dinero) | - | - | - | Completo | - | Completo |
+| Reportes | - | - | Leer | Completo | Completo | Completo |
+| Auditoria | - | - | - | Completo | Completo | Completo |
+| Empleados | - | - | - | Completo | Completo | Completo |
+| Configuracion | - | - | - | - | - | Completo |
+| Migracion | - | - | - | - | - | Completo |
+
+El rol **Analisis** replica la columna **Abogado** de la tabla (mismos permisos por modulo).
+
+**Visibilidad por asignacion:** Los roles Secretaria, Agente, Abogado y Analisis solo ven los registros asignados a ellos (filtro por `responsable_username`, y en carpetas tambien por encargado de etapa cuando corresponda). Los roles Administrador, Administrador (sin Contable) y Superusuario ven todos los registros.
 
 ---
 
@@ -361,7 +450,7 @@ sequenceDiagram
     Note over App,Atlas: Al reconectar, se sincronizan los cambios acumulados.
 ```
 
-**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, comunicaciones, movimientos, documentos, modelos_escrito, escritos, expediente_estado_historial, audit_log.
+**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, comunicaciones, movimientos, documentos, modelos_escrito, escritos, expediente_estado_historial, notificaciones, expediente_recordatorios, expediente_etapa_responsables, audit_log.
 
 **Resolucion de conflictos:** si el remoto tiene una version superior o hay cambios locales pendientes con choque de version, se registra un evento en `sync_conflicts` con snapshot local/remoto.
 
@@ -516,26 +605,30 @@ En la primera ejecucion (cuando no existen usuarios en la BD), se crean automati
 | `super` | `super123` | Superusuario (Direccion) | Acceso total, configuracion y migracion |
 
 > **Importante:** Cambiar las contraseñas por defecto inmediatamente en un entorno de produccion.
+>
+> El perfil **Administrador (sin Contable)** se puede crear desde **Gestion de empleados** cuando se necesite un administrador sin acceso a movimientos de dinero.
+>
+> Ejemplo de alta manual para ese perfil (no se crea automaticamente): usuario `admin_visor` con contraseña sugerida `adminvisor123`.
 
 ---
 
 ## Testing
 
-El proyecto cuenta con una suite de **353 tests automatizados** organizados en 3 niveles con una cobertura de **81%+** sobre los modulos de negocio.
+El proyecto cuenta con una suite de **489 tests automatizados** organizados en 3 niveles con una cobertura de **81%+** sobre los modulos de negocio.
 
 ### Ejecutar tests
 
 ```bash
-# Suite completa (353 tests, ~30 segundos)
+# Suite completa (489 tests)
 python -m pytest tests/
 
-# Solo tests unitarios (102 tests, ~4 segundos)
+# Solo tests unitarios (156 tests)
 python -m pytest tests/unit/
 
-# Solo tests de integracion (242 tests, ~21 segundos)
+# Solo tests de integracion (324 tests)
 python -m pytest tests/integration/
 
-# Solo smoke tests de UI (9 tests, ~3 segundos)
+# Solo smoke tests de UI (9 tests)
 python -m pytest tests/ui/
 
 # Con salida detallada
@@ -559,8 +652,8 @@ start htmlcov\index.html
 
 | Directorio | Tests | Que cubre |
 |---|---|---|
-| `tests/unit/` | 102 | Validadores, modelos, formateadores, permisos, autenticacion (con mocks) |
-| `tests/integration/` | 242 | CRUD completo de todos los controladores, BD SQLite, auditoria, sincronizacion, reportes |
+| `tests/unit/` | 156 | Validadores, modelos, formateadores, permisos, autenticacion (con mocks) |
+| `tests/integration/` | 324 | CRUD completo de todos los controladores, BD SQLite, auditoria, sincronizacion, reportes |
 | `tests/ui/` | 9 | Renderizado de LoginView y MainWindow, flujo de login, permisos en sidebar |
 
 ### CI/CD

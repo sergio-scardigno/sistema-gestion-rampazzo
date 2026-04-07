@@ -22,6 +22,9 @@ def _now() -> str:
 
 def abrir_segmento(id_expediente: str, estado: str,
                    responsable_username: str = "",
+                   encargado_username: str = "",
+                   etapa_anterior: str = "",
+                   observacion_transicion: str = "",
                    usuario: str = "sistema",
                    origen: str = "manual") -> dict:
     """Inserta un nuevo segmento abierto (fin_ts=NULL)."""
@@ -29,7 +32,10 @@ def abrir_segmento(id_expediente: str, estado: str,
     record.update({
         "id_expediente": id_expediente,
         "estado": estado,
+        "etapa_anterior": etapa_anterior or "",
         "responsable_username": responsable_username or "",
+        "encargado_username": encargado_username or "",
+        "observacion_transicion": (observacion_transicion or "").strip(),
         "usuario": usuario,
         "inicio_ts": _now(),
         "fin_ts": None,
@@ -70,6 +76,8 @@ def cerrar_segmento_abierto(id_expediente: str) -> dict | None:
 
 def rotar_segmento(id_expediente: str, nuevo_estado: str,
                    nuevo_responsable: str = "",
+                   nuevo_encargado: str = "",
+                   observacion_transicion: str = "",
                    usuario: str = "sistema",
                    origen: str = "manual") -> dict:
     """Cierra el segmento anterior y abre uno nuevo.
@@ -77,10 +85,14 @@ def rotar_segmento(id_expediente: str, nuevo_estado: str,
     Solo rota si realmente cambio el estado o el responsable.
     Retorna el segmento nuevo creado.
     """
-    cerrar_segmento_abierto(id_expediente)
+    anterior = cerrar_segmento_abierto(id_expediente)
+    etapa_anterior = (anterior or {}).get("estado", "")
     return abrir_segmento(
         id_expediente, nuevo_estado,
         responsable_username=nuevo_responsable,
+        encargado_username=nuevo_encargado,
+        etapa_anterior=etapa_anterior,
+        observacion_transicion=observacion_transicion,
         usuario=usuario,
         origen=origen,
     )
@@ -134,6 +146,8 @@ def seed_expedientes_sin_segmento():
             id_expediente=r[0],
             estado=r[1] or "Activo",
             responsable_username=r[2] or "",
+            encargado_username="",
+            etapa_anterior="",
             usuario="sistema",
             origen="seed",
         )

@@ -42,6 +42,9 @@ class NotificationItem(QFrame):
         elif tipo == "turno_asignado":
             icon_text = "\u23F0"
             color = "#c9a84c"
+        elif tipo == "expediente_etapa_encargado":
+            icon_text = "\u2699"
+            color = "#0d9488"
         else:
             icon_text = "\u2139"
             color = "#4a4a4a"

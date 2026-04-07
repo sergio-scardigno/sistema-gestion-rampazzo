@@ -14,6 +14,14 @@ class TestMovimientoCRUD:
         updated = MovimientoController.update(r["_id"], {"estado": "Cancelado"})
         assert updated["estado"] == "Cancelado"
 
+    def test_observaciones_persisten(self, session_superusuario, sample_movimiento):
+        data = {**sample_movimiento, "observaciones": "Nota interna de prueba"}
+        r = MovimientoController.create(data)
+        loaded = MovimientoController.get_by_id(r["_id"])
+        assert loaded["observaciones"] == "Nota interna de prueba"
+        upd = MovimientoController.update(r["_id"], {"observaciones": "Actualizado"})
+        assert upd["observaciones"] == "Actualizado"
+
     def test_delete(self, session_superusuario, sample_movimiento):
         r = MovimientoController.create(sample_movimiento)
         assert MovimientoController.delete(r["_id"]) is True

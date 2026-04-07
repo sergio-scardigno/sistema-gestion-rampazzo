@@ -17,6 +17,7 @@ COLUMNS = [
     ("modalidad", "Modalidad"),
     ("subtipo", "Subtipo"),
     ("tipo_tramite", "Tipo Tramite"),
+    ("etapa_label", "Etapa"),
     ("estado", "Estado"),
     ("responsable", "Responsable"),
     ("prioridad", "Prioridad"),
@@ -96,6 +97,13 @@ class ExpedienteListView(QWidget):
         self._cmb_estado.currentIndexChanged.connect(self.refresh)
         header.addWidget(self._cmb_estado)
 
+        self._cmb_etapa = QComboBox()
+        self._cmb_etapa.addItem("Todas las etapas", "")
+        for etapa in ExpedienteController.ETAPAS:
+            self._cmb_etapa.addItem(etapa["titulo"], etapa["codigo"])
+        self._cmb_etapa.currentIndexChanged.connect(self.refresh)
+        header.addWidget(self._cmb_etapa)
+
         # Filtro modalidad
         self._cmb_modalidad = QComboBox()
         self._cmb_modalidad.addItem("Todas las modalidades", "")
@@ -162,10 +170,17 @@ class ExpedienteListView(QWidget):
         if modalidad:
             conditions.append("e.modalidad = ?")
             params += (modalidad,)
+        etapa = self._cmb_etapa.currentData()
+        if etapa:
+            conditions.append("e.etapa_codigo = ?")
+            params += (etapa,)
         where = " AND ".join(conditions)
         data = ExpedienteController.get_scoped_with_cliente(
             where=where, params=params, order_by="e.fecha_apertura DESC"
         )
+        etapas_map = {x["codigo"]: x["titulo"] for x in ExpedienteController.ETAPAS}
+        for row in data:
+            row["etapa_label"] = etapas_map.get(row.get("etapa_codigo", ""), row.get("etapa_codigo", ""))
         self._calcular_dias(data)
         expediente_ids = [row.get("_id", "") for row in data if row.get("_id")]
         metricas_rel = ExpedienteController.get_metricas_relacionadas(expediente_ids)

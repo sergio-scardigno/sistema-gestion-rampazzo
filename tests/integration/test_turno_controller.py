@@ -2,6 +2,8 @@
 import pytest
 from datetime import datetime, timedelta
 from controllers.turno_controller import TurnoController
+from controllers.expediente_controller import ExpedienteController
+from controllers.documento_controller import DocumentoController
 
 
 class TestTurnoCRUD:
@@ -99,12 +101,46 @@ class TestReprogramar:
         assert nuevo is not None
         assert nuevo["fecha_turno"] == "2025-05-20"
         assert nuevo["hora_turno"] == "10:00"
+        assert (nuevo.get("id_constancia_doc") or "") == ""
         # Original debe estar reprogramado
         original = TurnoController.get_by_id(r["_id"])
         assert original["estado"] == "Reprogramado"
 
     def test_reprogramar_nonexistent(self, session_superusuario):
         assert TurnoController.reprogramar("no-existe", "2025-01-01", "09:00") is None
+
+
+class TestTurnoConstanciaDoc:
+    def test_turno_puede_enlazar_id_constancia_doc(
+        self, session_superusuario, sample_expediente, tmp_path,
+    ):
+        exp = ExpedienteController.create(sample_expediente)
+        pdf = tmp_path / "constancia.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n%test")
+        doc = DocumentoController.create({
+            "id_expediente": exp["_id"],
+            "categoria": "Turnos ANSES",
+            "subcategoria": "Constancia",
+            "nombre": "Constancia test",
+            "ruta_archivo": str(pdf),
+            "fecha": "2025-01-01",
+            "mime_type": "application/pdf",
+        })
+        t = TurnoController.create({
+            "id_cliente": exp["id_cliente"],
+            "id_expediente": exp["_id"],
+            "fecha_turno": "2025-04-10",
+            "hora_turno": "09:30",
+            "oficina_anses": "UDAI Resistencia",
+            "tipo_tramite": "Jubilacion",
+            "estado": "Pendiente",
+            "responsable": "Test",
+            "responsable_username": "testsuper",
+        })
+        u = TurnoController.update(t["_id"], {"id_constancia_doc": doc["_id"]})
+        assert u.get("id_constancia_doc") == doc["_id"]
+        loaded = TurnoController.get_by_id(t["_id"])
+        assert loaded.get("id_constancia_doc") == doc["_id"]
 
 
 class TestConstants:

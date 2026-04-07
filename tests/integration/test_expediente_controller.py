@@ -12,11 +12,12 @@ class TestExpedienteCRUD:
         assert r["tipo_tramite"] == "Jubilacion"
         assert r["id_expediente"] == 1
         assert r["estado"] == "Activo"
+        assert r["etapa_codigo"] == "para_citar_o_videollamada"
 
     def test_update(self, session_superusuario, sample_expediente):
         r = ExpedienteController.create(sample_expediente)
-        updated = ExpedienteController.update(r["_id"], {"estado": "En tramite"})
-        assert updated["estado"] == "En tramite"
+        updated = ExpedienteController.update(r["_id"], {"etapa_codigo": "para_analizar"})
+        assert updated["etapa_codigo"] == "para_analizar"
 
     def test_delete(self, session_superusuario, sample_expediente):
         r = ExpedienteController.create(sample_expediente)
@@ -173,10 +174,13 @@ class TestExpedienteNotifications:
         data = {**sample_expediente, "responsable_username": "abogado_dest"}
         exp = ExpedienteController.create(data)
         active = NotificacionController.get_active_for_user("abogado_dest", limit=10)
-        assert any(
-            n.get("tipo") == "expediente_asignado" and n.get("id_referencia") == exp["_id"]
+        match = [
+            n
             for n in active
-        )
+            if n.get("tipo") == "expediente_asignado" and n.get("id_referencia") == exp["_id"]
+        ]
+        assert match
+        assert "responsable principal" in (match[0].get("mensaje") or "").lower()
 
     def test_update_notifies_new_responsable(self, session_superusuario, sample_expediente):
         _seed_user("abogado_old", "abogado")
@@ -186,7 +190,13 @@ class TestExpedienteNotifications:
         ExpedienteController.update(exp["_id"], {"responsable_username": "admin_new"})
         active_new = NotificacionController.get_active_for_user("admin_new", limit=10)
         active_old = NotificacionController.get_active_for_user("abogado_old", limit=10)
-        assert any(n.get("tipo") == "expediente_asignado" for n in active_new)
+        enc_new = [
+            n
+            for n in active_new
+            if n.get("tipo") == "expediente_etapa_encargado" and n.get("id_referencia") == exp["_id"]
+        ]
+        assert enc_new
+        assert "responsable principal" in (enc_new[0].get("mensaje") or "").lower()
         assert len(active_old) == len(before_old)
 
     def test_create_does_not_notify_secretaria(self, session_superusuario, sample_expediente):
@@ -194,3 +204,46 @@ class TestExpedienteNotifications:
         ExpedienteController.create({**sample_expediente, "responsable_username": "sec_dest"})
         active = NotificacionController.get_active_for_user("sec_dest", limit=10)
         assert all(n.get("tipo") != "expediente_asignado" for n in active)
+
+    def test_update_etapa_notifies_secondary(self, session_superusuario, sample_expediente):
+        _seed_user("analista_1", "analisis")
+        exp = ExpedienteController.create({**sample_expediente, "responsable_secundario_username": "analista_1"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "req_analizar"})
+        active = NotificacionController.get_active_for_user("analista_1", limit=30)
+        etapa_notifs = [n for n in active if n.get("tipo") == "expediente_etapa_encargado"]
+        assert etapa_notifs
+        assert any("responsable secundario" in (n.get("mensaje") or "").lower() for n in etapa_notifs)
+
+    def test_update_only_secondary_explicit_message(self, session_superusuario, sample_expediente):
+        _seed_user("abo_pri", "abogado")
+        _seed_user("abo_sec", "abogado")
+        exp = ExpedienteController.create({**sample_expediente, "responsable_username": "abo_pri"})
+        ExpedienteController.update(
+            exp["_id"], {"responsable_secundario_username": "abo_sec"}
+        )
+        active = NotificacionController.get_active_for_user("abo_sec", limit=20)
+        sec_msgs = [
+            n.get("mensaje", "")
+            for n in active
+            if n.get("tipo") == "expediente_etapa_encargado" and n.get("id_referencia") == exp["_id"]
+        ]
+        assert sec_msgs
+        assert any("te designaron responsable secundario" in m.lower() for m in sec_msgs)
+
+    def test_create_notifies_secretaria_as_secondary(self, session_superusuario, sample_expediente):
+        _seed_user("sec_sec", "secretaria")
+        exp = ExpedienteController.create({
+            **sample_expediente,
+            "responsable_secundario_username": "sec_sec",
+        })
+        active = NotificacionController.get_active_for_user("sec_sec", limit=20)
+        assert any(
+            n.get("tipo") == "expediente_asignado"
+            and n.get("id_referencia") == exp["_id"]
+            and "responsable secundario" in (n.get("mensaje") or "").lower()
+            for n in active
+        )
+        assert any(
+            n.get("tipo") == "expediente_etapa_encargado" and n.get("id_referencia") == exp["_id"]
+            for n in active
+        )

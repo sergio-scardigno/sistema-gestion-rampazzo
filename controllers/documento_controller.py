@@ -26,7 +26,9 @@ class DocumentoController(BaseController):
         "Identidad", "Laboral", "Medicos", "Judiciales",
         "Administrativos", "Resoluciones", "Escritos",
         "Calculo Derecho",
-        "Notificaciones", "Comunicaciones", "Otro"
+        "Notificaciones", "Comunicaciones",
+        "Turnos ANSES",
+        "Otro",
     ]
 
     # Subcategorias por categoria (carpetas logicas del pliego)
@@ -41,6 +43,7 @@ class DocumentoController(BaseController):
         "Calculo Derecho": ["Liquidacion", "Pericia", "Otro"],
         "Notificaciones": ["Cedula", "Carta documento", "Telegrama", "Otro"],
         "Comunicaciones": ["Email", "Nota", "Informe", "Otro"],
+        "Turnos ANSES": ["Constancia"],
         "Otro": ["General"],
     }
 

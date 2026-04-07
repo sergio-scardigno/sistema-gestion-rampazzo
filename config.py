@@ -104,7 +104,9 @@ DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Sync ---
 SYNC_INTERVAL_SECONDS = int(_get("sync", "interval_seconds", "300"))  # 5 min
-LOCK_EXPIRY_MINUTES = int(_get("sync", "lock_expiry_minutes", "15"))
+# Bloqueo pesimista de registros en Mongo (expedientes/clientes al editar), en segundos.
+# Solo lock_expiry_seconds (default 30). lock_expiry_minutes en ini antiguos se ignora.
+LOCK_EXPIRY_SECONDS = max(1, int(_get("sync", "lock_expiry_seconds", "30")))
 
 # --- Machine ---
 MACHINE_ID = _get("machine", "id", os.environ.get("COMPUTERNAME", socket.gethostname()) or "unknown")
@@ -116,7 +118,7 @@ BACKUP_RETENTION_DAYS = int(_get("backup", "retention_days", "30"))
 
 # --- App ---
 APP_NAME = "Sistema Rampazzo"
-APP_VERSION = "1.6.2"
+APP_VERSION = "1.7.0"
 APP_VERSION_TUPLE = tuple(int(x) for x in APP_VERSION.split("."))
 MIN_COMPATIBLE_VERSION = "1.0.0"
 MIN_COMPATIBLE_VERSION_TUPLE = tuple(int(x) for x in MIN_COMPATIBLE_VERSION.split("."))

@@ -319,7 +319,7 @@ class ReporteController:
         from datetime import timezone
         conn = db_local.get_connection()
         rows = conn.execute("""
-            SELECT estado, inicio_ts, fin_ts
+            SELECT estado, etapa_anterior, inicio_ts, fin_ts
             FROM expediente_estado_historial
             WHERE id_expediente = ?
             ORDER BY inicio_ts ASC
@@ -333,9 +333,9 @@ class ReporteController:
         for r in rows:
             estado = r[0]
             try:
-                inicio = datetime.fromisoformat(r[1])
-                if r[2]:
-                    fin = datetime.fromisoformat(r[2])
+                inicio = datetime.fromisoformat(r[2])
+                if r[3]:
+                    fin = datetime.fromisoformat(r[3])
                 else:
                     fin = now
                 # Asegurar que ambos sean aware para poder restar
@@ -349,8 +349,13 @@ class ReporteController:
             por_estado[estado] = por_estado.get(estado, 0) + dias
             total += dias
 
+        from controllers.expediente_controller import ExpedienteController
         estados_list = [
-            {"estado": e, "dias": round(d, 1)}
+            {
+                "estado": e,
+                "estado_label": ExpedienteController.etapa_por_codigo(e).get("titulo", e),
+                "dias": round(d, 1),
+            }
             for e, d in sorted(por_estado.items(), key=lambda x: x[1], reverse=True)
         ]
         return {"estados": estados_list, "total_dias": round(total, 1)}

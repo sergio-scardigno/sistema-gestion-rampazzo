@@ -1,6 +1,7 @@
 """
 Ventana principal con sidebar dinamico segun rol + area de contenido + barra superior.
 """
+import logging
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -18,6 +19,7 @@ from views.widgets.sync_indicator import SyncIndicator
 from views.widgets.notification_bell import NotificationBell
 from config import APP_NAME, APP_VERSION
 
+logger = logging.getLogger(__name__)
 
 # Mapeo de modulos a iconos (unicode simples)
 MODULO_CONFIG = {
@@ -61,6 +63,15 @@ class MainWindow(QMainWindow):
 
         # Popup de alertas de tareas al iniciar sesion.
         QTimer.singleShot(450, self._show_login_task_popup)
+
+        def _check_rec_exp():
+            try:
+                from core.scheduler import check_recordatorios_expedientes
+                check_recordatorios_expedientes()
+            except Exception:
+                logger.exception("check_recordatorios_expedientes al iniciar sesion")
+
+        QTimer.singleShot(700, _check_rec_exp)
         self._assignment_popup_timer = QTimer(self)
         self._assignment_popup_timer.timeout.connect(self._poll_new_assignment_notifications)
         self._assignment_popup_timer.start(15_000)
@@ -342,7 +353,7 @@ class MainWindow(QMainWindow):
             view = self._views.get("turnos")
             if view and hasattr(view, "refresh"):
                 view.refresh()
-        elif tipo == "expediente_asignado":
+        elif tipo in {"expediente_asignado", "expediente_etapa_encargado", "recordatorio_expediente"}:
             from controllers.expediente_controller import ExpedienteController
             exp = ExpedienteController.get_by_id(id_referencia)
             if not exp:
@@ -411,7 +422,7 @@ class MainWindow(QMainWindow):
             active = NotificacionController.get_active_for_user(session.username, limit=30)
             pending = [
                 n for n in active
-                if n.get("tipo") == "expediente_asignado"
+                if n.get("tipo") in {"expediente_asignado", "expediente_etapa_encargado", "recordatorio_expediente"}
                 and int(n.get("leida", 0) or 0) == 0
                 and n.get("_id", "") not in self._shown_assignment_popup_ids
             ]

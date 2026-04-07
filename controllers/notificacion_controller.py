@@ -8,7 +8,13 @@ from config import MACHINE_ID
 OPEN_STATES = ("Pendiente", "En curso", "En espera")
 CLOSED_STATES = ("Cumplida", "Completada", "Cancelada")
 TASK_ALERT_TYPES = ("tarea_asignada", "tarea_proxima_vencer")
-POPUP_ALERT_TYPES = ("tarea_asignada", "tarea_proxima_vencer", "expediente_asignado")
+POPUP_ALERT_TYPES = (
+    "tarea_asignada",
+    "tarea_proxima_vencer",
+    "expediente_asignado",
+    "expediente_etapa_encargado",
+    "recordatorio_expediente",
+)
 
 
 class NotificacionController:
@@ -138,6 +144,30 @@ class NotificacionController:
         return cls._upsert_task_notification(
             target_username=target_username,
             tipo="expediente_asignado",
+            mensaje=mensaje,
+            id_referencia=id_referencia,
+        )
+
+    @classmethod
+    def create_for_expediente_etapa_encargado(
+        cls, target_username: str, mensaje: str, id_referencia: str
+    ) -> dict:
+        """Crear o refrescar notificacion al encargado por cambio de etapa."""
+        return cls._upsert_task_notification(
+            target_username=target_username,
+            tipo="expediente_etapa_encargado",
+            mensaje=mensaje,
+            id_referencia=id_referencia,
+        )
+
+    @classmethod
+    def create_for_recordatorio_expediente(
+        cls, target_username: str, mensaje: str, id_referencia: str
+    ) -> dict:
+        """Crear o refrescar recordatorio programado de expediente."""
+        return cls._upsert_task_notification(
+            target_username=target_username,
+            tipo="recordatorio_expediente",
             mensaje=mensaje,
             id_referencia=id_referencia,
         )
@@ -273,7 +303,23 @@ class NotificacionController:
 
     @classmethod
     def get_login_popup_notifications(cls, username: str, due_days: int = 3, limit: int = 20) -> list[dict]:
-        """Devuelve alertas activas para mostrar en popup de inicio de sesion."""
+        """Devuelve alertas activas para mostrar en popup de inicio de sesion.
+
+        Se usa un pool amplio en BD: si solo se pidieran las ultimas 20 notificaciones,
+        las de tarea (muy frecuentes tras sync) dejaban fuera designaciones de carpeta.
+        """
         cls.sync_task_alerts_for_user(username, due_days=due_days)
-        active = cls.get_active_for_user(username, limit=limit)
-        return [n for n in active if n.get("tipo") in POPUP_ALERT_TYPES]
+        pool_limit = max(limit * 25, 200)
+        active = cls.get_active_for_user(username, limit=pool_limit)
+        popup = [n for n in active if n.get("tipo") in POPUP_ALERT_TYPES]
+        carpeta_tipos = {
+            "expediente_asignado",
+            "expediente_etapa_encargado",
+            "recordatorio_expediente",
+        }
+        carpeta = [n for n in popup if n.get("tipo") in carpeta_tipos]
+        tareas = [n for n in popup if n.get("tipo") not in carpeta_tipos]
+        carpeta.sort(key=lambda n: n.get("created_at", "") or "", reverse=True)
+        tareas.sort(key=lambda n: n.get("created_at", "") or "", reverse=True)
+        merged = carpeta + tareas
+        return merged[:limit]

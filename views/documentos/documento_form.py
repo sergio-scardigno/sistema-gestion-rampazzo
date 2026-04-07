@@ -16,7 +16,7 @@ from controllers.expediente_controller import ExpedienteController
 from controllers.cliente_controller import ClienteController
 from core.auth import Session
 from core import file_service
-from core.permissions import get_active_users
+from core.permissions import get_active_users_fresh
 from config import FILE_SERVER_URL
 from views.widgets.no_wheel_datetime import NoWheelDateEdit
 
@@ -180,7 +180,7 @@ class DocumentoFormDialog(QDialog):
         # Responsable
         self._cmb_responsable = QComboBox()
         self._cmb_responsable.setEditable(True)
-        users = get_active_users()
+        users = get_active_users_fresh()
         for u in users:
             label = f'{u.get("nombre_completo", "")} ({u.get("username", "")})'
             self._cmb_responsable.addItem(label, u.get("username", ""))

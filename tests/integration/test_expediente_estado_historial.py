@@ -35,16 +35,16 @@ class TestSegmentoAlCrear:
         hist = eec.get_historial(exp["_id"])
         assert len(hist) == 1
         seg = hist[0]
-        assert seg["estado"] == "Activo"
+        assert seg["estado"] == "para_citar_o_videollamada"
         assert seg["responsable_username"] == "testsuper"
         assert seg["inicio_ts"] is not None
         assert seg["fin_ts"] is None
         assert seg["origen"] == "manual"
 
-    def test_create_with_custom_estado(self, session_superusuario):
-        exp = _create_expediente(session_superusuario, estado="En tramite")
+    def test_create_with_custom_etapa(self, session_superusuario):
+        exp = _create_expediente(session_superusuario, etapa_codigo="para_analizar")
         hist = eec.get_historial(exp["_id"])
-        assert hist[0]["estado"] == "En tramite"
+        assert hist[0]["estado"] == "para_analizar"
 
 
 # ══════════════════════════════════════════════════════════
@@ -52,17 +52,25 @@ class TestSegmentoAlCrear:
 # ══════════════════════════════════════════════════════════
 
 class TestRotacionSegmentos:
-    def test_change_estado_rotates_segment(self, session_superusuario):
+    def test_change_etapa_rotates_segment(self, session_superusuario):
         exp = _create_expediente(session_superusuario)
-        ExpedienteController.update(exp["_id"], {"estado": "En tramite"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_analizar"})
         hist = eec.get_historial(exp["_id"])
         assert len(hist) == 2
-        # Primer segmento cerrado
-        assert hist[0]["estado"] == "Activo"
+        assert hist[0]["estado"] == "para_citar_o_videollamada"
         assert hist[0]["fin_ts"] is not None
-        # Segundo segmento abierto
-        assert hist[1]["estado"] == "En tramite"
+        assert hist[1]["estado"] == "para_analizar"
         assert hist[1]["fin_ts"] is None
+
+    def test_observacion_transicion_guardada_en_segmento(self, session_superusuario):
+        exp = _create_expediente(session_superusuario)
+        ExpedienteController.update(exp["_id"], {
+            "etapa_codigo": "para_analizar",
+            "observacion_transicion": "Llamar al cliente el martes.",
+        })
+        hist = eec.get_historial(exp["_id"])
+        assert len(hist) == 2
+        assert (hist[1].get("observacion_transicion") or "") == "Llamar al cliente el martes."
 
     def test_change_responsable_rotates_segment(self, session_superusuario):
         exp = _create_expediente(session_superusuario)
@@ -80,18 +88,25 @@ class TestRotacionSegmentos:
         hist = eec.get_historial(exp["_id"])
         assert len(hist) == 1
 
-    def test_multiple_state_changes(self, session_superusuario):
+    def test_multiple_etapa_changes(self, session_superusuario):
         exp = _create_expediente(session_superusuario)
-        ExpedienteController.update(exp["_id"], {"estado": "En tramite"})
-        ExpedienteController.update(exp["_id"], {"estado": "En espera"})
-        ExpedienteController.update(exp["_id"], {"estado": "Cerrado",
-                                                  "resultado": "Favorable",
-                                                  "fecha_cierre": "2025-06-01"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_analizar"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_citar"})
+        ExpedienteController.update(exp["_id"], {
+            "etapa_codigo": "enviar_notificarse",
+            "estado": "Cerrado",
+            "resultado": "Favorable",
+            "fecha_cierre": "2025-06-01",
+        })
         hist = eec.get_historial(exp["_id"])
         assert len(hist) == 4
         estados = [h["estado"] for h in hist]
-        assert estados == ["Activo", "En tramite", "En espera", "Cerrado"]
-        # Solo el ultimo esta abierto
+        assert estados == [
+            "para_citar_o_videollamada",
+            "para_analizar",
+            "para_citar",
+            "enviar_notificarse",
+        ]
         for h in hist[:-1]:
             assert h["fin_ts"] is not None
         assert hist[-1]["fin_ts"] is None
@@ -126,17 +141,17 @@ class TestAutoArchivado:
         updated = ExpedienteController.get_by_id(exp["_id"])
         assert updated["estado"] == "Cerrado"
 
-    def test_auto_archivar_creates_historial_segment(self, session_superusuario):
-        """El auto-archivado crea un segmento nuevo en el historial."""
+    def test_auto_archivar_updates_expediente_sin_rotar_por_solo_estado(self, session_superusuario):
+        """Auto-archivado cambia estado del expediente; el historial sigue por etapa (sin rotar)."""
         exp = _create_expediente(session_superusuario,
                                  estado="Cerrado",
                                  resultado="Favorable",
                                  fecha_cierre="2024-01-01")
         ExpedienteController.auto_archivar_cerrados(dias=30)
+        updated = ExpedienteController.get_by_id(exp["_id"])
+        assert updated["estado"] == "Archivado"
         hist = eec.get_historial(exp["_id"])
-        estados = [h["estado"] for h in hist]
-        # Deberia tener: Cerrado (del create, cerrado por la rotacion) + Archivado (abierto)
-        assert "Archivado" in estados
+        assert len(hist) == 1
 
     def test_auto_archivar_ignores_activos(self, session_superusuario):
         """Expedientes activos no se tocan."""
@@ -195,15 +210,15 @@ class TestReporteTiempos:
         assert "estados" in result
         assert "total_dias" in result
         assert len(result["estados"]) >= 1
-        assert result["estados"][0]["estado"] == "Activo"
+        assert result["estados"][0]["estado"] == "para_citar_o_videollamada"
 
     def test_tiempos_por_estado_expediente_multiple(self, session_superusuario):
         exp = _create_expediente(session_superusuario)
-        ExpedienteController.update(exp["_id"], {"estado": "En tramite"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_analizar"})
         result = ReporteController.tiempos_por_estado_expediente(exp["_id"])
         estados = [e["estado"] for e in result["estados"]]
-        assert "Activo" in estados
-        assert "En tramite" in estados
+        assert "para_citar_o_videollamada" in estados
+        assert "para_analizar" in estados
 
     def test_tiempos_por_estado_responsable_empty(self, session_superusuario):
         result = ReporteController.tiempos_por_estado_responsable()
@@ -211,8 +226,9 @@ class TestReporteTiempos:
 
     def test_tiempos_por_estado_responsable_with_data(self, session_superusuario):
         exp = _create_expediente(session_superusuario)
-        # Rotar para tener segmentos cerrados
-        ExpedienteController.update(exp["_id"], {"estado": "En tramite"})
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_analizar"})
+        time.sleep(0.02)
+        ExpedienteController.update(exp["_id"], {"etapa_codigo": "para_citar"})
         result = ReporteController.tiempos_por_estado_responsable()
         assert len(result) >= 1
         assert "responsable" in result[0]

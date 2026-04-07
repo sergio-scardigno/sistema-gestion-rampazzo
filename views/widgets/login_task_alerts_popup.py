@@ -28,7 +28,7 @@ class LoginTaskAlertsPopup(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        title = QLabel("Alertas de tareas y carpetas asignadas")
+        title = QLabel("Alertas de tareas y designaciones de carpeta")
         title.setFont(QFont("Lato", 14, QFont.Weight.Bold))
         layout.addWidget(title)
 
@@ -56,13 +56,25 @@ class LoginTaskAlertsPopup(QDialog):
                 badge_title = "VENCE"
                 badge_value = self._get_due_date_text(notif)
             elif tipo == "expediente_asignado":
-                prefix = "ASIGNADA"
+                prefix = "CARPETA"
+                badge_title = "ASIGNADA"
+                badge_value = self._get_expediente_label(notif)
+            elif tipo == "expediente_etapa_encargado":
+                prefix = "SECUNDARIO"
+                badge_title = "ETAPA"
+                badge_value = self._get_expediente_label(notif)
+            elif tipo == "recordatorio_expediente":
+                prefix = "RECORD."
                 badge_title = "CARPETA"
                 badge_value = self._get_expediente_label(notif)
-            else:
-                prefix = "ASIGNADA"
+            elif tipo == "tarea_asignada":
+                prefix = "TAREA"
                 badge_title = "VENCE"
                 badge_value = self._get_due_date_text(notif)
+            else:
+                prefix = "ALERTA"
+                badge_title = "REF."
+                badge_value = "-"
             text = notif.get("mensaje", "")
 
             widget = self._build_item_widget(prefix, text, badge_title, badge_value)

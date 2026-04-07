@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox, QDoubleSpinBox,
-    QScrollArea, QFrame, QWidget
+    QScrollArea, QFrame, QWidget, QPlainTextEdit,
 )
 from PySide6.QtCore import QDate
 from PySide6.QtGui import QFont
@@ -120,6 +120,10 @@ class MovimientoFormDialog(QDialog):
         self._spn_saldo.setPrefix("$ ")
         form.addRow("Saldo pendiente:", self._spn_saldo)
 
+        self._txt_observaciones = QPlainTextEdit()
+        self._txt_observaciones.setMinimumHeight(88)
+        form.addRow("Observaciones:", self._txt_observaciones)
+
         scroll.setWidget(form_container)
         layout.addWidget(scroll)
 
@@ -151,6 +155,7 @@ class MovimientoFormDialog(QDialog):
             self._cmb_estado,
             self._txt_comprobante,
             self._spn_saldo,
+            self._txt_observaciones,
         ]
         for w in widgets:
             w.setEnabled(False)
@@ -190,6 +195,7 @@ class MovimientoFormDialog(QDialog):
         self._cmb_estado.setCurrentText(data.get("estado", "Pendiente"))
         self._txt_comprobante.setText(data.get("comprobante", ""))
         self._spn_saldo.setValue(float(data.get("saldo", 0) or 0))
+        self._txt_observaciones.setPlainText(data.get("observaciones") or "")
 
     def _save(self):
         if self._read_only:
@@ -211,6 +217,7 @@ class MovimientoFormDialog(QDialog):
             "estado": self._cmb_estado.currentText(),
             "comprobante": self._txt_comprobante.text().strip(),
             "saldo": self._spn_saldo.value(),
+            "observaciones": self._txt_observaciones.toPlainText().strip(),
             "responsable_username": session.username if session.logged_in else "",
         }
         if self._is_edit:

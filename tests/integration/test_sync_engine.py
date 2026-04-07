@@ -61,6 +61,7 @@ class TestSyncConstants:
         expected = {"usuarios", "consultas", "clientes", "expedientes",
                     "tareas", "turnos", "comunicaciones", "movimientos",
                     "documentos", "modelos_escrito", "escritos", "notificaciones",
+                    "expediente_recordatorios", "expediente_etapa_responsables",
                     "expediente_estado_historial", "audit_log"}
         assert expected == set(SYNC_TABLES)
 

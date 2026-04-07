@@ -16,6 +16,7 @@ SYNCED_ENTITY_TABLES = [
     "usuarios", "consultas", "clientes", "expedientes",
     "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "expediente_estado_historial", "notificaciones",
+    "expediente_recordatorios", "expediente_etapa_responsables",
 ]
 
 _TABLES_SQL = """
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS expedientes (
     responsable_username TEXT DEFAULT '',
     responsable_secundario_username TEXT DEFAULT '',
     estado TEXT DEFAULT 'Activo',
+    etapa_codigo TEXT DEFAULT 'para_citar_o_videollamada',
     prioridad TEXT DEFAULT 'Normal',
     modalidad TEXT,
     ubicacion_fisica TEXT,
@@ -184,6 +186,7 @@ CREATE TABLE IF NOT EXISTS movimientos (
     estado TEXT DEFAULT 'Pendiente',
     comprobante TEXT,
     saldo REAL,
+    observaciones TEXT DEFAULT '',
     responsable_username TEXT DEFAULT '',
     is_deleted INTEGER DEFAULT 0,
     deleted_at TEXT,
@@ -277,7 +280,8 @@ CREATE TABLE IF NOT EXISTS turnos (
     updated_at TEXT,
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
-    created_by_machine TEXT
+    created_by_machine TEXT,
+    id_constancia_doc TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -325,7 +329,10 @@ CREATE TABLE IF NOT EXISTS expediente_estado_historial (
     _id TEXT PRIMARY KEY,
     id_expediente TEXT NOT NULL,
     estado TEXT NOT NULL,
+    etapa_anterior TEXT DEFAULT '',
     responsable_username TEXT DEFAULT '',
+    encargado_username TEXT DEFAULT '',
+    observacion_transicion TEXT DEFAULT '',
     usuario TEXT DEFAULT 'sistema',
     inicio_ts TEXT NOT NULL,
     fin_ts TEXT,
@@ -337,6 +344,42 @@ CREATE TABLE IF NOT EXISTS expediente_estado_historial (
     version INTEGER DEFAULT 1,
     sync_status TEXT DEFAULT 'synced',
     created_by_machine TEXT
+);
+
+CREATE TABLE IF NOT EXISTS expediente_recordatorios (
+    _id TEXT PRIMARY KEY,
+    id_expediente TEXT NOT NULL,
+    fecha_disparo TEXT NOT NULL,
+    titulo TEXT DEFAULT '',
+    mensaje TEXT DEFAULT '',
+    notificar_a_username TEXT DEFAULT '',
+    disparado_en TEXT DEFAULT '',
+    creado_por_username TEXT DEFAULT '',
+    etapa_codigo TEXT DEFAULT '',
+    es_critico INTEGER DEFAULT 0,
+    created_at TEXT,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS expediente_etapa_responsables (
+    _id TEXT PRIMARY KEY,
+    id_expediente TEXT NOT NULL,
+    etapa_codigo TEXT NOT NULL,
+    responsable_secundario_username TEXT DEFAULT '',
+    created_at TEXT,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS sync_meta (
@@ -467,6 +510,28 @@ def init_db():
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE expedientes ADD COLUMN modalidad TEXT")
         conn.commit()
+    # Migracion: agregar etapa_codigo a expedientes
+    try:
+        conn.execute("SELECT etapa_codigo FROM expedientes LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute(
+            "ALTER TABLE expedientes ADD COLUMN etapa_codigo TEXT DEFAULT 'para_citar_o_videollamada'"
+        )
+        conn.commit()
+    # Backfill etapa_codigo para registros legacy
+    conn.execute("""
+        UPDATE expedientes
+        SET etapa_codigo = CASE
+            WHEN LOWER(COALESCE(estado, '')) = 'favorable' THEN 'favorable'
+            WHEN LOWER(COALESCE(estado, '')) = 'desfavorable' THEN 'desfavorable'
+            WHEN LOWER(COALESCE(estado, '')) IN ('cerrado', 'archivado') THEN 'enviar_notificarse'
+            WHEN LOWER(COALESCE(estado, '')) = 'en tramite' THEN 'para_analizar'
+            WHEN LOWER(COALESCE(estado, '')) = 'en espera' THEN 'pendiente_turno'
+            ELSE 'para_citar_o_videollamada'
+        END
+        WHERE COALESCE(TRIM(etapa_codigo), '') = ''
+    """)
+    conn.commit()
     # Migracion: agregar nota de calculo derecho a expedientes
     try:
         conn.execute("SELECT calculo_derecho_nota FROM expedientes LIMIT 1")
@@ -479,6 +544,12 @@ def init_db():
         "ON clientes(numero_carpeta) WHERE numero_carpeta IS NOT NULL AND numero_carpeta != ''"
     )
     conn.commit()
+    # Migracion: id documento de constancia PDF del turno ANSES
+    try:
+        conn.execute("SELECT id_constancia_doc FROM turnos LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE turnos ADD COLUMN id_constancia_doc TEXT DEFAULT ''")
+        conn.commit()
     # Migracion: agregar columnas de creador en tareas si no existen
     for col in ["creado_por_username", "creado_por_nombre"]:
         try:
@@ -486,10 +557,18 @@ def init_db():
         except sqlite3.OperationalError:
             conn.execute(f"ALTER TABLE tareas ADD COLUMN {col} TEXT DEFAULT ''")
             conn.commit()
+    # Migracion: observaciones en movimientos economicos
+    try:
+        conn.execute("SELECT observaciones FROM movimientos LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE movimientos ADD COLUMN observaciones TEXT DEFAULT ''")
+        conn.commit()
     # Migracion: agregar columnas responsable_username en tablas operativas
     _migrate_responsable_username(conn)
     _migrate_soft_delete_columns(conn)
     _migrate_notificaciones_resolution(conn)
+    _migrate_expediente_historial_etapas(conn)
+    _migrate_expediente_etapa_y_recordatorio_plazos(conn)
 
     # ── Reparar caracteres corruptos (U+FFFD) de importaciones previas ──
     _fix_replacement_characters(conn)
@@ -519,6 +598,13 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_inicio ON expediente_estado_historial(id_expediente, inicio_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_expediente_fin ON expediente_estado_historial(id_expediente, fin_ts)",
         "CREATE INDEX IF NOT EXISTS idx_eeh_responsable_inicio ON expediente_estado_historial(responsable_username, inicio_ts)",
+        "CREATE INDEX IF NOT EXISTS idx_eeh_encargado_inicio ON expediente_estado_historial(encargado_username, inicio_ts)",
+        "CREATE INDEX IF NOT EXISTS idx_expedientes_etapa_codigo ON expedientes(etapa_codigo)",
+        "CREATE INDEX IF NOT EXISTS idx_recordatorios_fecha_disparo ON expediente_recordatorios(fecha_disparo)",
+        "CREATE INDEX IF NOT EXISTS idx_recordatorios_usuario_fecha ON expediente_recordatorios(notificar_a_username, fecha_disparo)",
+        "CREATE INDEX IF NOT EXISTS idx_recordatorios_etapa_fecha ON expediente_recordatorios(etapa_codigo, fecha_disparo)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_ee_resp_exp_etapa ON expediente_etapa_responsables(id_expediente, etapa_codigo) WHERE (is_deleted IS NULL OR is_deleted = 0)",
+        "CREATE INDEX IF NOT EXISTS idx_ee_resp_expediente ON expediente_etapa_responsables(id_expediente)",
         "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_status_detected ON sync_conflicts(status, detected_at)",
         "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_table_record ON sync_conflicts(table_name, record_id)",
         "CREATE INDEX IF NOT EXISTS idx_notificaciones_target_created ON notificaciones(target_username, created_at)",
@@ -711,6 +797,33 @@ def _migrate_notificaciones_resolution(conn):
             conn.execute(f"SELECT {col} FROM notificaciones LIMIT 1")
         except sqlite3.OperationalError:
             conn.execute(f"ALTER TABLE notificaciones ADD COLUMN {col} {col_def}")
+            conn.commit()
+
+
+def _migrate_expediente_historial_etapas(conn):
+    """Agrega columnas para trazabilidad de etapas en historial."""
+    for col, col_def in [
+        ("etapa_anterior", "TEXT DEFAULT ''"),
+        ("encargado_username", "TEXT DEFAULT ''"),
+        ("observacion_transicion", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            conn.execute(f"SELECT {col} FROM expediente_estado_historial LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute(f"ALTER TABLE expediente_estado_historial ADD COLUMN {col} {col_def}")
+            conn.commit()
+
+
+def _migrate_expediente_etapa_y_recordatorio_plazos(conn):
+    """Encargado secundario por etapa; recordatorios con etapa y critico."""
+    for col, col_def in [
+        ("etapa_codigo", "TEXT DEFAULT ''"),
+        ("es_critico", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            conn.execute(f"SELECT {col} FROM expediente_recordatorios LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute(f"ALTER TABLE expediente_recordatorios ADD COLUMN {col} {col_def}")
             conn.commit()
 
 
