@@ -4,15 +4,15 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
-**Versión de aplicación:** 1.7.0
+**Versión de aplicación:** 1.7.1
 
 ---
 
-## Notas de versión — 1.7.0 (abril 2026)
+## Notas de versión — 1.7.1 (abril 2026)
 
 Esta versión amplía el modelo de **carpetas** con un flujo por **etapas procesales**, **responsables por etapa**, **plazos y recordatorios** con notificaciones programadas, un **dashboard** más operativo (KPIs de plazos y tablas por etapa), **sincronización** de las nuevas tablas con MongoDB y mejoras transversales en formularios, permisos y bloqueos de edición.
 
-**Alcance del listado:** corresponde al conjunto de cambios presentes en el árbol de trabajo de Git en la fecha de referencia **7 de abril de 2026** (archivos modificados y nuevos respecto del último commit de la rama actual). No había commits con esa fecha al documentar; el listado describe el estado del repositorio listo para integrar como 1.7.0.
+**Alcance del listado:** corresponde al conjunto de cambios presentes en el árbol de trabajo de Git en la fecha de referencia **7 de abril de 2026** (archivos modificados y nuevos respecto del último commit de la rama actual). No había commits con esa fecha al documentar; el listado describe el estado del repositorio listo para integrar como 1.7.1.
 
 ### 1. Flujo por etapas de carpeta y trazabilidad
 

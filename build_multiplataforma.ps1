@@ -291,6 +291,10 @@ Write-Host "      Workflow completado correctamente."
 Write-Host ""
 
 Step "[7/8] Descargando artifacts..."
+if (Test-Path $tmpDir) {
+    Remove-Item -Recurse -Force $tmpDir
+}
+New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 & $gh run download $runId -R $Repo -D $tmpDir
 Ensure-Success "No se pudieron descargar artifacts."
 Write-Host "      Artifacts descargados en $tmpDir"
