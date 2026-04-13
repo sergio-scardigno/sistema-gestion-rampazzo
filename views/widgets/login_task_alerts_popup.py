@@ -1,5 +1,6 @@
 """Popup de inicio con alertas y asignaciones del usuario."""
 from datetime import datetime
+
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -10,17 +11,35 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QFrame,
+    QMessageBox,
 )
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
+
+from controllers.notificacion_controller import (
+    DISMISSIBLE_TYPES,
+    NOTIF_STYLES,
+    NotificacionController,
+    _DEFAULT_NOTIF_STYLE,
+)
+from core.auth import Session
 
 
 class LoginTaskAlertsPopup(QDialog):
     """Muestra alertas activas (tareas y carpetas asignadas) al iniciar sesion."""
 
+    _BADGE_OVERRIDES: dict[str, tuple[str, str]] = {
+        "tarea_proxima_vencer": ("VENCE", "due_date"),
+        "tarea_asignada": ("VENCE", "due_date"),
+        "expediente_asignado": ("ASIGNADA", "expediente"),
+        "expediente_etapa_encargado": ("ETAPA", "expediente"),
+        "recordatorio_expediente": ("CARPETA", "expediente"),
+    }
+
     def __init__(self, notifications: list[dict], parent=None):
         super().__init__(parent)
         self.selected_notification: dict | None = None
+        self.setObjectName("LoginTaskAlertsPopup")
         self.setWindowTitle("Alertas y asignaciones")
         self.setMinimumWidth(560)
         self.setMinimumHeight(360)
@@ -30,71 +49,115 @@ class LoginTaskAlertsPopup(QDialog):
 
         title = QLabel("Alertas de tareas y designaciones de carpeta")
         title.setFont(QFont("Lato", 14, QFont.Weight.Bold))
+        title.setStyleSheet("color: #111827; border: none; background: transparent;")
         layout.addWidget(title)
 
         subtitle = QLabel(
-            "Estas alertas quedan visibles en la campana hasta que se resuelvan."
+            "Estas alertas siguen en la campana hasta descartarlas o hasta que "
+            "el sistema las resuelva (por ejemplo, tarea cumplida)."
         )
-        subtitle.setStyleSheet("color: #6b6b6b; font-size: 11px;")
+        subtitle.setObjectName("login_alerts_subtitle")
+        subtitle.setWordWrap(True)
         layout.addWidget(subtitle)
 
         self._list_widget = QListWidget()
+        self._list_widget.setObjectName("login_alerts_list")
         self._list_widget.setAlternatingRowColors(True)
-        self._list_widget.setStyleSheet(
-            """
-            QListWidget { background-color: #ffffff; border: 1px solid #e0e0e0; }
-            QListWidget::item { margin: 4px 6px; }
-            QListWidget::item:selected { background-color: #e9f2ff; }
-            """
-        )
         self._list_widget.itemClicked.connect(self._open_from_item)
 
         for notif in notifications:
-            tipo = notif.get("tipo", "")
-            if tipo == "tarea_proxima_vencer":
-                prefix = "PROXIMA"
-                badge_title = "VENCE"
-                badge_value = self._get_due_date_text(notif)
-            elif tipo == "expediente_asignado":
-                prefix = "CARPETA"
-                badge_title = "ASIGNADA"
-                badge_value = self._get_expediente_label(notif)
-            elif tipo == "expediente_etapa_encargado":
-                prefix = "SECUNDARIO"
-                badge_title = "ETAPA"
-                badge_value = self._get_expediente_label(notif)
-            elif tipo == "recordatorio_expediente":
-                prefix = "RECORD."
-                badge_title = "CARPETA"
-                badge_value = self._get_expediente_label(notif)
-            elif tipo == "tarea_asignada":
-                prefix = "TAREA"
-                badge_title = "VENCE"
-                badge_value = self._get_due_date_text(notif)
-            else:
-                prefix = "ALERTA"
-                badge_title = "REF."
-                badge_value = "-"
-            text = notif.get("mensaje", "")
-
-            widget = self._build_item_widget(prefix, text, badge_title, badge_value)
             item = QListWidgetItem()
+            widget = self._build_item_widget(notif, item)
             item.setSizeHint(widget.sizeHint())
             item.setData(Qt.ItemDataRole.UserRole, notif)
             self._list_widget.addItem(item)
             self._list_widget.setItemWidget(item, widget)
 
-        click_hint = QLabel("Tip: hace clic en una alerta para abrir el detalle")
-        click_hint.setStyleSheet("color: #4a4a4a; font-size: 11px; font-style: italic;")
+        click_hint = QLabel("Tip: hacé clic en una alerta para abrir el detalle")
+        click_hint.setObjectName("login_alerts_hint")
         layout.addWidget(click_hint)
         layout.addWidget(self._list_widget, 1)
 
         btn_row = QHBoxLayout()
         btn_row.addStretch()
+        btn_dismiss_all = QPushButton("Descartar todas")
+        btn_dismiss_all.setToolTip(
+            "Descartar todas las alertas listadas (pide confirmación)"
+        )
+        btn_dismiss_all.clicked.connect(self._confirm_dismiss_all)
+        btn_row.addWidget(btn_dismiss_all)
         btn_close = QPushButton("Cerrar")
         btn_close.clicked.connect(self.accept)
         btn_row.addWidget(btn_close)
         layout.addLayout(btn_row)
+
+    def _confirm_dismiss_item(self, notif: dict, list_item: QListWidgetItem):
+        reply = QMessageBox.question(
+            self,
+            "Descartar alerta",
+            "¿Confirmás descartar esta alerta? No volverá a mostrarse "
+            "(incluido el aviso al iniciar sesión), salvo que el sistema "
+            "genere un aviso nuevo con otra referencia.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        session = Session.get()
+        if not session.logged_in:
+            return
+        ok = NotificacionController.dismiss_notification(
+            notif.get("_id", ""),
+            session.username,
+        )
+        if not ok:
+            QMessageBox.warning(
+                self,
+                "Descartar",
+                "No se pudo descartar esta notificación.",
+            )
+            return
+        row = self._list_widget.row(list_item)
+        if row >= 0:
+            self._list_widget.takeItem(row)
+
+    def _confirm_dismiss_all(self):
+        if self._list_widget.count() == 0:
+            return
+        reply = QMessageBox.question(
+            self,
+            "Descartar todas las alertas",
+            f"¿Confirmás descartar las {self._list_widget.count()} alertas listadas? "
+            "No volverán a mostrarse de esta forma.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        session = Session.get()
+        if not session.logged_in:
+            return
+        errors = 0
+        for i in range(self._list_widget.count() - 1, -1, -1):
+            item = self._list_widget.item(i)
+            notif = item.data(Qt.ItemDataRole.UserRole) or {}
+            if isinstance(notif, dict) and notif.get("_id"):
+                if NotificacionController.dismiss_notification(
+                    notif["_id"],
+                    session.username,
+                ):
+                    self._list_widget.takeItem(i)
+                else:
+                    errors += 1
+            else:
+                self._list_widget.takeItem(i)
+        if errors:
+            QMessageBox.warning(
+                self,
+                "Descartar",
+                f"No se pudieron descartar {errors} notificación(es).",
+            )
+        self.accept()
 
     def _format_date(self, iso_date: str) -> str:
         if not iso_date:
@@ -135,17 +198,40 @@ class LoginTaskAlertsPopup(QDialog):
             return "-"
 
     def _build_item_widget(
-        self, prefix: str, message: str, badge_title: str, badge_value: str
+        self,
+        notif: dict,
+        list_item: QListWidgetItem,
     ) -> QWidget:
+        tipo = notif.get("tipo", "")
+        style = NOTIF_STYLES.get(tipo, _DEFAULT_NOTIF_STYLE)
+        prefix = style["label"]
+
+        override = self._BADGE_OVERRIDES.get(tipo)
+        if override:
+            badge_title = override[0]
+            badge_value = (
+                self._get_due_date_text(notif)
+                if override[1] == "due_date"
+                else self._get_expediente_label(notif)
+            )
+        else:
+            badge_title = "REF."
+            badge_value = "-"
+
+        text = notif.get("mensaje", "")
+        message = text
+        bg = style["bg"]
+        border_color = style["border"]
+        icon_color = style["icon_color"]
+
         card = QFrame()
         card.setStyleSheet(
-            """
-            QFrame {
-                background-color: #f9fafb;
-                border: 1px solid #dfe5ec;
-                border-radius: 8px;
-            }
-            """
+            f"QFrame {{ background-color: {bg}; "
+            f"border-top: 1px solid #cbd5e1; "
+            f"border-right: 1px solid #cbd5e1; "
+            f"border-bottom: 1px solid #cbd5e1; "
+            f"border-left: 4px solid {border_color}; "
+            f"border-radius: 8px; }}"
         )
         row = QHBoxLayout(card)
         row.setContentsMargins(10, 8, 10, 8)
@@ -154,30 +240,39 @@ class LoginTaskAlertsPopup(QDialog):
         left = QVBoxLayout()
         left.setSpacing(4)
         lbl_type = QLabel(prefix)
-        lbl_type.setStyleSheet("color: #2d4c7a; font-weight: 700; font-size: 10px;")
+        lbl_type.setStyleSheet(
+            f"color: {icon_color}; font-weight: 700; font-size: 10px; "
+            f"border: none; background: transparent; letter-spacing: 1px;"
+        )
         left.addWidget(lbl_type)
         lbl_msg = QLabel(message)
         lbl_msg.setWordWrap(True)
-        lbl_msg.setStyleSheet("color: #1f2937; font-size: 12px;")
+        lbl_msg.setStyleSheet(
+            "color: #111827; font-size: 12px; border: none; background: transparent;"
+        )
         left.addWidget(lbl_msg)
         row.addLayout(left, 1)
 
-        # Fecha de vencimiento destacada y muy visible
         due = QLabel(f"{badge_title}\n{badge_value}")
         due.setAlignment(Qt.AlignmentFlag.AlignCenter)
         due.setMinimumWidth(120)
         due.setStyleSheet(
-            """
-            background-color: #fff4d6;
-            color: #7a2f2f;
-            border: 2px solid #d8a84c;
-            border-radius: 8px;
-            font-weight: 800;
-            font-size: 17px;
-            padding: 6px 10px;
-            """
+            f"background-color: {border_color}22; "
+            f"color: {border_color}; "
+            f"border: 2px solid {border_color}; "
+            f"border-radius: 8px; "
+            f"font-weight: 800; font-size: 17px; padding: 6px 10px;"
         )
         row.addWidget(due)
+
+        if tipo in DISMISSIBLE_TYPES:
+            btn = QPushButton("Descartar")
+            btn.setToolTip("No volver a mostrar esta alerta")
+            btn.clicked.connect(
+                lambda: self._confirm_dismiss_item(notif, list_item)
+            )
+            row.addWidget(btn, 0, Qt.AlignmentFlag.AlignTop)
+
         return card
 
     def _open_from_item(self, item: QListWidgetItem):

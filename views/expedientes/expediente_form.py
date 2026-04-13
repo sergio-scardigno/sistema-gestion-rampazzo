@@ -67,6 +67,7 @@ class RecordatorioEditDialog(QDialog):
         self._cmb_etapa_rec.addItem("(sin etapa vinculada)", "")
         for et in ExpedienteController.ETAPAS:
             self._cmb_etapa_rec.addItem(et["titulo"], et["codigo"])
+        ExpedienteController.aplicar_colores_items_combo_etapas(self._cmb_etapa_rec)
         ec = (initial or {}).get("etapa_codigo", "") or ""
         if not ec and (default_etapa_codigo or "").strip():
             ec = default_etapa_codigo.strip()
@@ -637,9 +638,11 @@ class ExpedienteFormDialog(QDialog):
 
         self._cmb_responsable = NoWheelComboBox()
         self._cmb_responsable.setEditable(True)
+        self._cmb_responsable.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self._cmb_responsable.setPlaceholderText("Seleccionar responsable...")
         self._cmb_responsable2 = NoWheelComboBox()
         self._cmb_responsable2.setEditable(True)
+        self._cmb_responsable2.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self._cmb_responsable2.setPlaceholderText("Seleccionar resp. secundario...")
         self._cmb_responsable2.addItem("-- Sin resp. secundario --", "")
         users = get_active_users_fresh()
@@ -648,6 +651,23 @@ class ExpedienteFormDialog(QDialog):
             uname = u.get("username", "")
             self._cmb_responsable.addItem(label, uname)
             self._cmb_responsable2.addItem(label, uname)
+        resp_primary_completer = QCompleter(self)
+        resp_primary_completer.setModel(self._cmb_responsable.model())
+        resp_primary_completer.setCompletionColumn(0)
+        resp_primary_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        resp_primary_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        resp_primary_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        resp_primary_completer.activated[str].connect(self._on_responsable_completer_activated)
+        self._cmb_responsable.setCompleter(resp_primary_completer)
+
+        resp_secondary_completer = QCompleter(self)
+        resp_secondary_completer.setModel(self._cmb_responsable2.model())
+        resp_secondary_completer.setCompletionColumn(0)
+        resp_secondary_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        resp_secondary_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        resp_secondary_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        resp_secondary_completer.activated[str].connect(self._on_responsable_secundario_completer_activated)
+        self._cmb_responsable2.setCompleter(resp_secondary_completer)
         form.addRow("Responsable *:", self._cmb_responsable)
         form.addRow("Resp. secundario:", self._cmb_responsable2)
 
@@ -657,20 +677,29 @@ class ExpedienteFormDialog(QDialog):
         self._timeline_container = QScrollArea()
         self._timeline_container.setWidgetResizable(True)
         self._timeline_container.setFrameShape(QFrame.Shape.NoFrame)
+        self._timeline_container.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._timeline_container.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._timeline_widget = ExpedienteEtapasTimeline()
         self._timeline_container.setWidget(self._timeline_widget)
-        self._timeline_container.setMinimumHeight(170)
+        self._timeline_container.setFixedHeight(255)
         form.addRow(self._timeline_container)
 
         self._cmb_etapa = QComboBox()
         for etapa in ExpedienteController.ETAPAS:
             self._cmb_etapa.addItem(etapa["titulo"], etapa["codigo"])
+        ExpedienteController.aplicar_colores_items_combo_etapas(self._cmb_etapa)
         self._cmb_etapa.currentIndexChanged.connect(self._refresh_etapa_timeline)
         form.addRow("Etapa de flujo:", self._cmb_etapa)
 
         self._lbl_etapa_instruccion = QLabel("")
         self._lbl_etapa_instruccion.setStyleSheet("color: #5a6475; font-style: italic;")
         form.addRow("Accion sugerida:", self._lbl_etapa_instruccion)
+
+        self._lbl_clasificacion_etapa = QLabel("")
+        self._lbl_clasificacion_etapa.setWordWrap(True)
+        self._lbl_clasificacion_etapa.setMinimumHeight(0)
+        self._lbl_clasificacion_etapa.hide()
+        form.addRow("Clasificacion:", self._lbl_clasificacion_etapa)
 
         lbl_pe = QLabel(
             "Agregue solo las etapas que necesite. El responsable principal es el de RESPONSABLES; "
@@ -682,16 +711,16 @@ class ExpedienteFormDialog(QDialog):
         self._scroll_estado_etapas = QScrollArea()
         self._scroll_estado_etapas.setWidgetResizable(True)
         self._scroll_estado_etapas.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll_estado_etapas.setMaximumHeight(200)
+        self._scroll_estado_etapas.setFixedHeight(300)
         self._estado_etapas_content = QWidget()
         self._estado_etapas_rows_layout = QVBoxLayout()
-        self._estado_etapas_rows_layout.setContentsMargins(0, 0, 0, 0)
-        self._estado_etapas_rows_layout.setSpacing(4)
+        self._estado_etapas_rows_layout.setContentsMargins(6, 6, 6, 0)
+        self._estado_etapas_rows_layout.setSpacing(8)
         self._btn_add_estado_etapa = QPushButton("+ Agregar etapa")
         self._btn_add_estado_etapa.setProperty("variant", "secondary")
         self._btn_add_estado_etapa.clicked.connect(self._on_add_estado_etapa_row)
         _etapas_outer = QVBoxLayout(self._estado_etapas_content)
-        _etapas_outer.setContentsMargins(4, 2, 4, 4)
+        _etapas_outer.setContentsMargins(10, 8, 10, 10)
         _etapas_outer.addLayout(self._estado_etapas_rows_layout)
         _etapas_outer.addStretch(1)
         _etapas_outer.addWidget(self._btn_add_estado_etapa)
@@ -1091,13 +1120,15 @@ class ExpedienteFormDialog(QDialog):
     def _add_estado_etapa_row(self, etapa_codigo: str, encargado_username: str):
         """Una fila: etapa, encargado secundario, texto de plazo, botones."""
         row = QWidget()
+        row.setMinimumHeight(40)
         h = QHBoxLayout(row)
-        h.setContentsMargins(0, 1, 0, 1)
-        h.setSpacing(6)
+        h.setContentsMargins(0, 4, 0, 4)
+        h.setSpacing(8)
         cmb_etapa = NoWheelComboBox()
         cmb_etapa.addItem("-- Elija etapa --", "")
         for et in ExpedienteController.ETAPAS:
             cmb_etapa.addItem(et["titulo"], et["codigo"])
+        ExpedienteController.aplicar_colores_items_combo_etapas(cmb_etapa)
         cmb_enc = NoWheelComboBox()
         cmb_enc.addItem("(Heredar de la carpeta)", "")
         users = get_active_users_fresh()
@@ -1213,6 +1244,7 @@ class ExpedienteFormDialog(QDialog):
         ec_new = (data.get("etapa_codigo") or "").strip()
         if ec_new and ec_new != etapa_codigo:
             self._refresh_estado_etapas_panel()
+        self._refresh_etapa_timeline()
         if hasattr(self, "_recordatorios_table"):
             self._load_tab_recordatorios()
 
@@ -1463,6 +1495,18 @@ class ExpedienteFormDialog(QDialog):
         idx = self._cmb_cliente.findText(text)
         if idx >= 0:
             self._cmb_cliente.setCurrentIndex(idx)
+
+    def _on_responsable_completer_activated(self, text: str):
+        """Seleccionar responsable principal al elegir una opcion del autocompletado."""
+        idx = self._cmb_responsable.findText(text)
+        if idx >= 0:
+            self._cmb_responsable.setCurrentIndex(idx)
+
+    def _on_responsable_secundario_completer_activated(self, text: str):
+        """Seleccionar responsable secundario al elegir una opcion del autocompletado."""
+        idx = self._cmb_responsable2.findText(text)
+        if idx >= 0:
+            self._cmb_responsable2.setCurrentIndex(idx)
 
     def _on_cliente_changed(self, index: int):
         """Actualizar N° de carpeta y claves al cambiar el cliente seleccionado."""
@@ -1717,6 +1761,8 @@ class ExpedienteFormDialog(QDialog):
         self._update_modalidad_visibility(rama)
         if not self._suspend_rama_rebuild:
             self._rebuild_rama_datos_widget(preserve_data=False)
+        if hasattr(self, "_refresh_etapa_timeline"):
+            self._refresh_etapa_timeline()
 
     def _on_modalidad_changed(self, _modalidad: str):
         """Regenera campos de rama para aplicar campos exclusivos virtuales."""
@@ -1787,13 +1833,62 @@ class ExpedienteFormDialog(QDialog):
         etapa_codigo = self._cmb_etapa.currentData() or "para_citar_o_videollamada"
         etapa_meta = ExpedienteController.etapa_por_codigo(etapa_codigo)
         self._lbl_etapa_instruccion.setText(etapa_meta.get("instruccion_corta", ""))
+        self._sync_modalidad_con_etapa_iniciada(etapa_codigo)
+        self._refresh_clasificacion_etapa_label(etapa_codigo)
         anterior, actual_hist = self._ultima_transicion_etapa() if self._is_edit else ("", etapa_codigo)
         actual = etapa_codigo or actual_hist
+        plazos_por_etapa = self._proximos_plazos_por_etapa() if self._id else {}
         self._timeline_widget.set_data(
             ExpedienteController.ETAPAS,
             actual=actual,
             anterior=anterior,
+            plazos_por_etapa=plazos_por_etapa,
         )
+
+    def _sync_modalidad_con_etapa_iniciada(self, etapa_codigo: str):
+        """Si la rama usa modalidad y la etapa es INICIADA, alinear combo con la etapa."""
+        rama = self._cmb_rama.currentText().strip()
+        if rama not in ExpedienteController.RAMAS_CON_MODALIDAD:
+            return
+        if etapa_codigo == "iniciada_virtual":
+            if self._cmb_modalidad.currentText() != "Virtual":
+                self._cmb_modalidad.setCurrentText("Virtual")
+        elif etapa_codigo == "iniciada_presencial":
+            if self._cmb_modalidad.currentText() != "Presencial":
+                self._cmb_modalidad.setCurrentText("Presencial")
+
+    def _refresh_clasificacion_etapa_label(self, etapa_codigo: str):
+        info = ExpedienteController.clasificacion_etapa(etapa_codigo)
+        if not info.get("mostrar"):
+            self._lbl_clasificacion_etapa.hide()
+            self._lbl_clasificacion_etapa.clear()
+            return
+        cat = info.get("categoria") or ""
+        estilos = {
+            "no_iniciada": (
+                "background-color: #fff7ed; color: #9a3412; border: 1px solid #fdba74; "
+                "border-radius: 6px; padding: 8px;"
+            ),
+            "iniciada": (
+                "background-color: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; "
+                "border-radius: 6px; padding: 8px;"
+            ),
+            "citado_anses": (
+                "background-color: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; "
+                "border-radius: 6px; padding: 8px;"
+            ),
+            "resultado_favorable": (
+                "background-color: #ecfdf5; color: #166534; border: 1px solid #86efac; "
+                "border-radius: 6px; padding: 8px;"
+            ),
+            "resultado_desfavorable": (
+                "background-color: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; "
+                "border-radius: 6px; padding: 8px;"
+            ),
+        }
+        self._lbl_clasificacion_etapa.setStyleSheet(estilos.get(cat, "padding: 8px;"))
+        self._lbl_clasificacion_etapa.setText(info.get("texto", ""))
+        self._lbl_clasificacion_etapa.show()
 
     def _save(self):
         if self._is_read_only:
@@ -1898,6 +1993,27 @@ class ExpedienteFormDialog(QDialog):
         subtipo = self._cmb_subtipo.currentText()
         if subtipo == "-- Seleccionar subtipo --":
             subtipo = ""
+
+        # Coherencia etapa INICIADA vs modalidad (rama Previsional)
+        if rama in ExpedienteController.RAMAS_CON_MODALIDAD:
+            modalidad_ui = self._cmb_modalidad.currentText().strip() or ExpedienteController.MODALIDADES[0]
+            if etapa_codigo == "iniciada_virtual" and modalidad_ui != "Virtual":
+                QMessageBox.warning(
+                    self,
+                    "Etapa y modalidad",
+                    "La etapa 'INICIADA - Virtual' requiere modalidad Virtual.\n"
+                    "Seleccione Virtual en modalidad o cambie la etapa de flujo.",
+                )
+                return
+            if etapa_codigo == "iniciada_presencial" and modalidad_ui != "Presencial":
+                QMessageBox.warning(
+                    self,
+                    "Etapa y modalidad",
+                    "La etapa 'INICIADA - Presencial' requiere modalidad Presencial.\n"
+                    "Seleccione Presencial en modalidad o cambie la etapa de flujo.",
+                )
+                return
+
         datos_rama = {}
         if self._rama_datos_widget:
             datos_rama = self._rama_datos_widget.get_data()

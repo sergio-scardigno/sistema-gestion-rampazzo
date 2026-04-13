@@ -37,6 +37,7 @@ Esta guia esta dividida en dos partes:
     - [Reprogramacion de turno](#112-reprogramacion-de-turno)
     - [Versionado de documentos](#113-versionado-de-documentos)
     - [Pausar o dar de baja un empleado](#114-pausar-o-dar-de-baja-un-empleado)
+    - [Notificaciones y alertas (campana, historial, login)](#115-notificaciones-y-alertas-campana-historial-login)
 12. [Migracion desde Excel / CSV](#12-migracion-desde-excel--csv)
 13. [Exportar / Importar sistema completo](#13-exportar--importar-sistema-completo)
 14. [Backups de documentos en VPS](#14-backups-de-documentos-en-vps)
@@ -59,6 +60,16 @@ Todo lo que necesitas para trabajar dia a dia con el sistema.
 2. Escribir tu **Usuario** y **Contraseña**.
 3. Presionar **Iniciar Sesion** (o la tecla Enter).
 4. Si los datos son correctos, se abre la ventana principal.
+
+### Popup de alertas al iniciar sesion
+
+Si tenes **notificaciones activas** (tareas, asignaciones de carpeta, encargado de etapa, recordatorios de plazo, turnos, etc.), puede abrirse un **cuadro de dialogo** justo despues del login con la lista de alertas.
+
+**Como funciona:**
+
+- Las alertas mas relacionadas con **carpeta** (asignacion, encargado de etapa, recordatorio de expediente) suelen aparecer **primero**; despues el resto (por ejemplo muchas alertas de tarea), para que no se pierdan los avisos de carpeta.
+- En cada fila podes usar **Descartar** para ocultar esa alerta como activa (con confirmacion). **Descartar todas** hace lo mismo para todas las filas y cierra el dialogo.
+- **Descartar** no borra el historial del caso: solo marca la notificacion para que no vuelva a molestar como pendiente; si la descartaste vos a mano, el sistema **no la recrea** sola por el mismo motivo.
 
 > **Tip:** Si te equivocas en la contraseña, se limpia el campo automaticamente para que vuelvas a intentar.
 
@@ -90,14 +101,16 @@ Cada usuario tiene un rol que define que puede ver y hacer. Esta es la version r
 - **Agente:** Gestiona todo el ciclo operativo: evalua consultas, crea clientes y carpetas, programa turnos, gestiona tareas.
 - **Abogado:** Igual que el agente, pero ademas maneja documentos completos y puede consultar reportes.
 - **Administrador:** Ve todo el estudio (todas las carpetas, no solo los suyos), gestiona la economia, auditoria y empleados.
+- **Administrador (sin Contable):** Igual que Administrador en operacion y personal, pero **sin** acceso al modulo de movimientos de dinero / pestaña contable.
+- **Analisis:** Mismas capacidades operativas que **Abogado** en clientes, carpetas, tareas, turnos, comunicaciones y documentos (lectura/escritura segun modulo); no gestiona economia ni auditoria de sistema salvo lo que el rol permita igual que Abogado.
 - **Superusuario:** Acceso total sin restricciones, incluyendo configuracion y migracion de datos.
 
 > **Tip:** Si no ves algun modulo en el sidebar, es porque tu rol no tiene acceso. Consulta con tu Administrador si necesitas permisos adicionales.
 
 **Visibilidad de registros:**
 
-- Secretaria, Agente y Abogado solo ven las carpetas, tareas, turnos y comunicaciones **asignados a ellos**.
-- Administrador y Superusuario ven **todos los registros** del estudio.
+- Secretaria, Agente, Abogado y **Analisis** solo ven las carpetas, tareas, turnos y comunicaciones **asignados a ellos** (en carpetas tambien cuenta el **encargado de la etapa actual** cuando aplica).
+- Administrador, Administrador (sin Contable) y Superusuario ven **todos los registros** del estudio.
 
 ---
 
@@ -139,6 +152,16 @@ En la parte superior del Dashboard hay un campo de busqueda. Es la herramienta m
 - Naranja: Carpetas activas sin ninguna tarea asignada
 
 > **Tip:** Los indicadores economicos (ingresos cobrados y pendientes) solo los ven el Administrador y el Superusuario.
+
+### Campana de notificaciones e historial (barra superior)
+
+En la parte superior de la ventana principal (junto al area de usuario) tenes:
+
+- **Campana:** Abre un panel con las notificaciones **activas**. El numero rojo (badge) depende del **tipo** de aviso: en algunos casos, al **abrir** el panel dejan de sumar al contador aunque no esten marcadas como leidas en base; en otros (por ejemplo alertas de tarea) el contador puede **seguir** para que no pase desapercibido el trabajo pendiente. Las filas que ya no cuentan para el badge pueden verse **mas tenues**.
+- **Boton de historial (reloj):** Abre un listado de notificaciones **recientes** (activas y ya resueltas o descartadas), util para repasar lo que paso en los ultimos dias.
+- En cada notificacion del panel de la campana podes usar la **X** para **descartar** (con confirmacion). Descartar es independiente de marcar la tarea cumplida: solo oculta el aviso como pendiente.
+
+> **Tip:** Si cerro sesion y vuelvo a entrar, el sistema reinicia el estado "visto" en pantalla de la campana; las notificaciones reales siguen en la base segun corresponda.
 
 ---
 
@@ -228,11 +251,16 @@ En el listado se muestran las columnas: N° Carpeta, **Rama**, **Subtipo**, Tipo
 - **Tipo de tramite**: Jubilacion, Retiro por salud, Laboral, Amparo, Pension, PUAM, RTI, Reajuste, Otro.
 - **Rama**: Laboral, ART, Previsional, Amparos, Migraciones, Familia o Daños.
 - **Subtipo**: se carga automaticamente segun la rama elegida.
+- **Etapas del tramite (flujo operativo):**
+  - **Clasificacion:** El sistema muestra una etiqueta que resume en que "tipo" de etapa estas (por ejemplo: no iniciada, iniciada, citado ANSES, resultado), con colores distintos para leer rapido el estado del caso.
+  - **Combos de etapa:** Al elegir la etapa del flujo, el desplegable puede tener **fondo coloreado** (por ejemplo rojizo en etapas de requerimiento / no iniciada, verde en iniciada virtual o presencial). Lo mismo aplica en el listado de carpetas y en filtros del dashboard donde se elige etapa.
+  - **Linea de tiempo:** Debajo aparece un **timeline por fases** (pre-tramite, turno, envio, iniciada, cierre), con una fila para etapas **no iniciadas** cuando corresponde. Si la etapa actual es de **requerimiento**, puede verse un aviso y un **parpadeo** para no perder de vista el pendiente. Tambien se muestran **plazos proximos** relacionados con la carpeta cuando hay recordatorios.
+  - **Modalidad (rama Previsional):** Si pasas la etapa a **iniciada virtual** o **iniciada presencial**, el sistema **ajusta** el campo de modalidad para que coincida. Al **Guardar**, si la modalidad no es coherente con la etapa, aparece un mensaje de error y **no** se guarda hasta corregirlo.
+- **Responsable** (obligatorio): quien esta a cargo. El combo permite **escribir para buscar** con autocompletado: al tipear se filtran los nombres sin tener que desplazar todo el listado. Si tu rol usa **encargados por etapa**, aparecen en el mismo panel de etapas.
 - **Datos especificos**: bloque dinamico que cambia segun la rama/subtipo (ej.: campos laborales, ART, previsionales, etc.).
 - **Modulo Judicial**:
   - Activar el checkbox **Caso judicializado** para mostrar los campos judiciales comunes.
   - Campos judiciales: Fuero, Juzgado, Secretaria, N° expediente, Provincia, Instancia, Monto reclamado, Etapa procesal.
-- **Responsable** (obligatorio): quien esta a cargo.
 - **Estado**: Activo, En tramite, En espera, Guardada, Favorable, Desfavorable, Cerrado, Archivado.
 - **Prioridad**: Alta, Normal, Baja.
 - Otros campos: Ubicacion fisica, Link Drive, Nro. Tramite ANSES, Resultado, Fecha de cierre, Observaciones.
@@ -364,7 +392,7 @@ Tu funcion principal es ser el primer punto de contacto y buscar informacion de 
 
 **Checklist diario:**
 
-1. Abrir el **Dashboard** y revisar los turnos de hoy y las alertas.
+1. Abrir el **Dashboard** y revisar los turnos de hoy y las alertas; mirar la **campana** si hay numero en rojo.
 2. Si un cliente llama o se presenta, usar la **busqueda por N° de carpeta, DNI o nombre** para encontrar su informacion rapidamente.
 3. Si necesitas informacion de una carpeta o tarea, podes verlos en modo lectura.
 
@@ -378,7 +406,7 @@ Tu funcion principal es gestionar todo el ciclo operativo de un caso.
 
 **Checklist diario:**
 
-1. Revisar el **Dashboard**: tareas vencidas, turnos de hoy, alertas.
+1. Revisar el **Dashboard**: tareas vencidas, turnos de hoy, alertas; **campana** e historial de notificaciones si aplica.
 2. **Crear clientes nuevos** con su N° de carpeta y procedencia del contacto.
 3. **Completar datos** de los clientes (CUIL, direccion, etc.).
 4. **Crear carpetas** y **tareas** para las proximas acciones.
@@ -388,7 +416,7 @@ Tu funcion principal es gestionar todo el ciclo operativo de un caso.
 
 **Que NO podes hacer:** Crear ni editar documentos (solo verlos). No tenes acceso a Administracion economica, Reportes, Auditoria ni Empleados.
 
-> **Importante:** Solo ves las carpetas, tareas y turnos asignados a vos.
+> **Importante:** Solo ves las carpetas, tareas y turnos asignados a vos (y carpetas donde seas **encargado de la etapa actual**).
 
 ---
 
@@ -398,8 +426,8 @@ Tu funcion principal es el aspecto legal: gestion de carpetas, documentacion y c
 
 **Checklist diario:**
 
-1. Revisar el **Dashboard**: carpetas activas, tareas pendientes, alertas.
-2. Trabajar en las **carpetas** asignadas: actualizar estados, crear tareas legales.
+1. Revisar el **Dashboard**: carpetas activas, tareas pendientes, alertas; **campana** y popup de alertas tras login.
+2. Trabajar en las **carpetas** asignadas: actualizar estados, etapas y linea de tiempo, crear tareas legales.
 3. **Gestionar documentos**: subir documentos por categoria, usar "Nueva Version" para actualizaciones.
 4. **Registrar comunicaciones** legales (mails, cartas documento, cedulas).
 5. **Cerrar carpetas** resueltas: cambiar estado y cargar resultado.
@@ -407,7 +435,15 @@ Tu funcion principal es el aspecto legal: gestion de carpetas, documentacion y c
 
 **Que NO podes hacer:** No tenes acceso a Administracion economica, Auditoria ni Empleados.
 
-> **Importante:** Solo ves las carpetas, tareas y turnos asignados a vos.
+> **Importante:** Solo ves las carpetas, tareas y turnos asignados a vos (y carpetas donde seas **encargado de la etapa actual**).
+
+---
+
+### Analisis
+
+Misma rutina operativa que **Abogado** para la gestion de carpetas, tareas, turnos, comunicaciones y documentos. Revisa el **Dashboard**, la **campana** y las alertas al iniciar sesion igual que el resto del equipo juridico.
+
+**Que NO podes hacer:** No tenes acceso a Administracion economica, Auditoria ni Empleados (salvo lo que tu Administrador defina; en la practica equivale a Abogado en modulos visibles).
 
 ---
 
@@ -423,7 +459,7 @@ R: Desde el **Dashboard**, escribi el N° de carpeta, el DNI o el nombre en el c
 R: Pedile a un Administrador o Superusuario que use la funcion **Resetear Clave** en el modulo de Empleados.
 
 **P: No puedo ver una carpeta que deberia ver.**
-R: Solo ves las carpetas asignadas a vos como responsable. Si necesitas acceso a todos, consulta con tu Administrador.
+R: Solo ves las carpetas donde sos **responsable principal** o, si aplica, **encargado de la etapa actual**. Si necesitas acceso a todos los casos, consulta con tu Administrador.
 
 **P: Puedo trabajar sin internet?**
 R: Si. La aplicacion funciona completamente offline. Los cambios se sincronizan automaticamente cuando vuelve la conexion.
@@ -587,7 +623,7 @@ Tabla con: Usuario, Nombre Completo, Email, Rol, Estado, Ultimo Acceso.
    - **Contraseña** (obligatoria): se almacena encriptada.
    - **Nombre completo** (obligatorio).
    - **Email** (opcional).
-   - **Rol** (obligatorio): Secretaria, Agente, Abogado, Administrador. (Solo los Superusuarios pueden asignar el rol Superusuario).
+   - **Rol** (obligatorio): Secretaria, Agente, Abogado, Analisis, Administrador, Administrador (sin Contable). (Solo los Superusuarios pueden asignar el rol Superusuario).
 3. Clic en **Guardar**.
 
 ### Resetear contraseña
@@ -710,6 +746,26 @@ Cada version queda registrada con quien la subio, cuando y por que cambio.
 ### 11.4 Pausar o dar de baja un empleado
 
 Ver seccion [10. Gestion de empleados](#10-gestion-de-empleados) para los pasos detallados de pausa, reactivacion y baja de empleados.
+
+---
+
+### 11.5 Notificaciones y alertas (campana, historial, login)
+
+**Donde aparecen**
+
+- **Barra superior:** icono de **campana** (notificaciones activas) y boton de **historial** (reloj).
+- **Al iniciar sesion:** si hay avisos pendientes, puede abrirse un **popup** con la lista (prioriza alertas de **carpeta**: asignacion, encargado de etapa, recordatorio de expediente; despues el resto, por ejemplo tareas).
+
+**Que podes hacer**
+
+- **Abrir la campana:** Ver todas las notificaciones activas. El **numero rojo** no siempre es "cantidad de filas": segun el tipo, abrir el panel puede hacer que algunas dejen de contar sin tocar la base; otras (como alertas de tarea) pueden seguir mostrando numero para no olvidar el trabajo.
+- **Historial:** Ver las ultimas notificaciones incluyendo las ya resueltas o descartadas (consulta rapida de lo ocurrido).
+- **Descartar una fila:** Quita el aviso como pendiente (con confirmacion). No reemplaza a **cumplir la tarea** ni a gestionar la carpeta: solo oculta la notificacion. Si la descartaste vos, el sistema **no la vuelve a crear** sola por el mismo motivo.
+- **Descartar todas:** En el popup de login o en el panel, descarta de una vez todas las filas mostradas (con confirmacion).
+
+**Cierre de sesion**
+
+- Al cerrar sesion, el estado "visto" en pantalla de la campana se reinicia; al entrar de nuevo veras los contadores segun las notificaciones reales vigentes.
 
 ---
 
@@ -897,23 +953,27 @@ Si un registro fue modificado localmente y tambien en MongoDB:
 
 ### Tabla completa de permisos por rol
 
-| Modulo | Secretaria | Agente | Abogado | Administrador | Superusuario |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Dashboard | Ver | Ver | Ver | Ver | Ver |
-| Clientes | Solo ver | Completo | Completo | Completo | Completo |
-| Carpetas | Solo ver | Completo | Completo | Completo | Completo |
-| Tareas | Solo ver | Completo | Completo | Completo | Completo |
-| Turnos ANSES | Solo ver | Completo | Completo | Completo | Completo |
-| Comunicaciones | Solo ver | Completo | Completo | Completo | Completo |
-| Documentos | Solo ver | Solo ver | Completo | Completo | Completo |
-| Administracion | - | - | - | Completo | Completo |
-| Reportes | - | - | Solo ver | Completo | Completo |
-| Auditoria | - | - | - | Completo | Completo |
-| Empleados | - | - | - | Completo | Completo |
-| Configuracion | - | - | - | - | Completo |
-| Migracion Excel/CSV | - | - | - | - | Completo |
+| Modulo | Secretaria | Agente | Abogado | Analisis | Administrador | Administrador (sin Contable) | Superusuario |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Dashboard | Ver | Ver | Ver | Ver | Ver | Ver | Ver |
+| Clientes | Solo ver | Completo | Completo | Completo | Completo | Completo | Completo |
+| Carpetas | Solo ver | Completo | Completo | Completo | Completo | Completo | Completo |
+| Tareas | Solo ver | Completo | Completo | Completo | Completo | Completo | Completo |
+| Turnos ANSES | Solo ver | Completo | Completo | Completo | Completo | Completo | Completo |
+| Comunicaciones | Solo ver | Completo | Completo | Completo | Completo | Completo | Completo |
+| Documentos | Solo ver | Solo ver | Completo | Completo | Completo | Completo | Completo |
+| Administracion | - | - | - | - | Completo | - | Completo |
+| Reportes | - | - | Solo ver | Solo ver | Completo | Completo | Completo |
+| Auditoria | - | - | - | - | Completo | Completo | Completo |
+| Empleados | - | - | - | - | Completo | Completo | Completo |
+| Configuracion | - | - | - | - | - | - | Completo |
+| Migracion Excel/CSV | - | - | - | - | - | - | Completo |
 
 **"Completo"** = puede crear, ver, editar y eliminar registros en ese modulo.
+
+**Analisis:** Misma matriz que **Abogado** en la tabla (documentos completos donde Abogado tiene completo; sin acceso a modulos no listados para Abogado).
+
+**Administrador (sin Contable):** Igual que **Administrador** salvo la columna **Administracion** (movimientos de dinero / contable).
 
 ### Estados de carpetas
 
@@ -1035,7 +1095,7 @@ R: Los datos se guardan en la base de datos local cada vez que haces clic en Gua
 
 **Modulos disponibles:** Todos excepto Configuracion y Migracion Excel/CSV.
 
-1. **Supervisar el Dashboard:** Revisar todos los KPIs (incluyendo economicos), atender alertas de todo el equipo.
+1. **Supervisar el Dashboard:** Revisar todos los KPIs (incluyendo economicos), atender alertas de todo el equipo, revisar la **campana** si hay notificaciones propias.
 2. **Supervision operativa:** Revisar carpetas de todos los responsables, verificar que no haya carpetas sin tarea activa, controlar tareas vencidas.
 3. **Gestion economica:** Registrar honorarios y gastos, controlar saldos pendientes.
 4. **Reportes:** Generar y exportar reportes en PDF y Excel, analizar indicadores humanos.
@@ -1052,7 +1112,7 @@ R: Los datos se guardan en la base de datos local cada vez que haces clic en Gua
 
 Ademas de todo lo que puede hacer un Administrador:
 
-1. **Configuracion del sistema:** Gestionar la configuracion general, crear usuarios de cualquier rol (incluyendo otros superusuarios).
+1. **Configuracion del sistema:** Gestionar la configuracion general, crear usuarios de cualquier rol (incluyendo otros superusuarios). Revisar **campana** e historial como cualquier usuario cuando haya alertas personales.
 2. **Migracion desde Excel / CSV:** Importar datos historicos usando el asistente de 6 pasos.
 3. **Exportar / Importar sistema completo:** Generar un ZIP hibrido (SQLite + documentos + Mongo) o restaurar desde uno existente (ver seccion 13).
 4. **Supervision total:** Vision global de toda la operacion del estudio.

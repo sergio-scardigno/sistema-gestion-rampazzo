@@ -112,3 +112,46 @@ class TestExpedienteNotification:
         active = NotificacionController.get_active_for_user("abogado1", limit=10)
         assert len([n for n in active if n.get("tipo") == "expediente_asignado"]) == 1
         assert any("Cambio de responsable" in n.get("mensaje", "") for n in active)
+
+
+class TestDismissNotification:
+    def test_dismiss_hides_from_active(self):
+        created = NotificacionController.create_for_expediente_etapa_encargado(
+            "abogado1",
+            "Cambio de etapa en carpeta",
+            id_referencia="exp-dismiss-1",
+        )
+        assert NotificacionController.dismiss_notification(created["_id"], "abogado1")
+        active = NotificacionController.get_active_for_user("abogado1", limit=20)
+        assert all(n["_id"] != created["_id"] for n in active)
+
+    def test_dismiss_wrong_user_returns_false(self):
+        created = NotificacionController.create_for_tarea_asignada(
+            "abogado1", "Tarea", id_referencia="t-other"
+        )
+        assert not NotificacionController.dismiss_notification(created["_id"], "otro")
+
+    def test_upsert_does_not_recreate_user_dismissed_row(self):
+        created = NotificacionController.create_for_tarea_asignada(
+            "abogado1", "Asignacion", id_referencia="t-dismiss-upsert"
+        )
+        assert NotificacionController.dismiss_notification(created["_id"], "abogado1")
+        again = NotificacionController.create_for_tarea_asignada(
+            "abogado1", "Asignacion nueva", id_referencia="t-dismiss-upsert"
+        )
+        assert again["_id"] == created["_id"]
+        active = NotificacionController.get_active_for_user("abogado1", limit=20)
+        assert all(n.get("id_referencia") != "t-dismiss-upsert" for n in active)
+
+    def test_dismiss_by_type_and_ref(self):
+        NotificacionController.create_for_recordatorio_expediente(
+            "abogado1",
+            "Recordatorio",
+            id_referencia="exp-rec-1",
+        )
+        dismissed = NotificacionController.dismiss_by_type_and_ref(
+            "abogado1", "recordatorio_expediente", "exp-rec-1"
+        )
+        assert dismissed >= 1
+        active = NotificacionController.get_active_for_user("abogado1", limit=20)
+        assert all(row.get("id_referencia") != "exp-rec-1" for row in active)

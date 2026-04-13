@@ -186,6 +186,7 @@ class DashboardView(QWidget):
         self._cmb_etapa_dashboard.addItem("Todas las etapas", "")
         for etapa in ExpedienteController.ETAPAS:
             self._cmb_etapa_dashboard.addItem(etapa["titulo"], etapa["codigo"])
+        ExpedienteController.aplicar_colores_items_combo_etapas(self._cmb_etapa_dashboard)
         self._cmb_etapa_dashboard.currentIndexChanged.connect(self._refresh_asignado_por_etapa)
         stage_header.addWidget(QLabel("Etapa:"))
         stage_header.addWidget(self._cmb_etapa_dashboard)

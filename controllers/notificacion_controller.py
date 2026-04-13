@@ -16,6 +16,72 @@ POPUP_ALERT_TYPES = (
     "recordatorio_expediente",
 )
 
+DISMISSIBLE_TYPES = (
+    "expediente_asignado",
+    "turno_asignado",
+    "expediente_etapa_encargado",
+    "recordatorio_expediente",
+    "tarea_asignada",
+    "tarea_proxima_vencer",
+)
+
+# Solo estos dejan de contar en el badge al abrir el popup (sin tocar la BD).
+BADGE_HIDE_ON_VIEW_TYPES = ("expediente_asignado", "turno_asignado")
+
+BADGE_PERSIST_WHEN_READ_TYPES = TASK_ALERT_TYPES
+
+NOTIF_STYLES = {
+    "tarea_asignada": {
+        "bg": "#e8f0fe",
+        "border": "#2d6bcf",
+        "icon": "\u2611",
+        "icon_color": "#2d6bcf",
+        "label": "TAREA",
+    },
+    "tarea_proxima_vencer": {
+        "bg": "#fdecea",
+        "border": "#d32f2f",
+        "icon": "\u23F1",
+        "icon_color": "#d32f2f",
+        "label": "VENCE",
+    },
+    "expediente_etapa_encargado": {
+        "bg": "#e6f5f3",
+        "border": "#0d9488",
+        "icon": "\u2699",
+        "icon_color": "#0d9488",
+        "label": "ETAPA",
+    },
+    "recordatorio_expediente": {
+        "bg": "#fee2e2",
+        "border": "#991b1b",
+        "icon": "\u26A0",
+        "icon_color": "#991b1b",
+        "label": "RECORD.",
+    },
+    "expediente_asignado": {
+        "bg": "#f0ebfa",
+        "border": "#7b5cd6",
+        "icon": "\u2630",
+        "icon_color": "#7b5cd6",
+        "label": "CARPETA",
+    },
+    "turno_asignado": {
+        "bg": "#fef7e0",
+        "border": "#c9a84c",
+        "icon": "\u23F0",
+        "icon_color": "#c9a84c",
+        "label": "TURNO",
+    },
+}
+_DEFAULT_NOTIF_STYLE = {
+    "bg": "#eef2f7",
+    "border": "#374151",
+    "icon": "\u2139",
+    "icon_color": "#374151",
+    "label": "ALERTA",
+}
+
 
 class NotificacionController:
     """Gestiona notificaciones persistentes dirigidas a usuarios."""
@@ -95,6 +161,20 @@ class NotificacionController:
                 payload["updated_at"] = now
             db_local.update("notificaciones", current["_id"], payload)
             return db_local.find_by_id("notificaciones", current["_id"]) or current
+        # No reactivar filas descartadas manualmente (resuelta=1, resuelta_por_estado=0).
+        if cls._supports_resolution_fields() and id_referencia:
+            dismissed = db_local.find_all(
+                "notificaciones",
+                where=(
+                    "target_username = ? AND tipo = ? AND id_referencia = ? "
+                    "AND resuelta = 1 AND (resuelta_por_estado = 0 OR resuelta_por_estado IS NULL)"
+                ),
+                params=(target_username, tipo, id_referencia),
+                order_by="created_at DESC",
+                limit=1,
+            )
+            if dismissed:
+                return dismissed[0]
         record = cls._base_record(target_username, tipo, mensaje, id_referencia=id_referencia)
         db_local.insert("notificaciones", record)
         return record
@@ -201,6 +281,19 @@ class NotificacionController:
         )
 
     @classmethod
+    def get_recent_for_user(cls, username: str, limit: int = 100) -> list[dict]:
+        """Obtener historial reciente (activas + resueltas) para un usuario."""
+        if not username:
+            return []
+        return db_local.find_all(
+            "notificaciones",
+            where="target_username = ?",
+            params=(username,),
+            order_by="created_at DESC",
+            limit=limit,
+        )
+
+    @classmethod
     def mark_read(cls, _id: str):
         """Marcar una notificacion como leida."""
         payload = {"leida": 1, "sync_status": "pending"}
@@ -214,6 +307,60 @@ class NotificacionController:
         active = cls.get_active_for_user(username, limit=200)
         for n in active:
             cls.mark_read(n["_id"])
+
+    @classmethod
+    def dismiss_notification(cls, _id: str, username: str) -> bool:
+        """Marca una notificacion como resuelta por el usuario (no vuelve a mostrarse).
+
+        Usa resuelta=1 y resuelta_por_estado=0 para distinguir del cierre automatico
+        por estado de tarea (resuelta_por_estado=1).
+        """
+        if not _id or not username:
+            return False
+        row = db_local.find_by_id("notificaciones", _id)
+        if not row or (row.get("target_username") or "") != username:
+            return False
+        tipo = row.get("tipo", "")
+        if tipo not in DISMISSIBLE_TYPES:
+            return False
+        now = cls._now_iso()
+        if cls._supports_resolution_fields():
+            payload = {
+                "resuelta": 1,
+                "fecha_resolucion": now,
+                "resuelta_por_estado": 0,
+                "leida": 1,
+                "sync_status": "pending",
+            }
+            if cls._supports_updated_at():
+                payload["updated_at"] = now
+            db_local.update("notificaciones", _id, payload)
+        else:
+            cls.mark_read(_id)
+        return True
+
+    @classmethod
+    def dismiss_by_type_and_ref(
+        cls, username: str, tipo: str, id_referencia: str
+    ) -> int:
+        """Descarta todas las notificaciones activas que coincidan con tipo y referencia."""
+        if not username or tipo not in DISMISSIBLE_TYPES:
+            return 0
+        where = "target_username = ? AND tipo = ? AND id_referencia = ?"
+        params: list = [username, tipo, id_referencia or ""]
+        if cls._supports_resolution_fields():
+            where += " AND (resuelta = 0 OR resuelta IS NULL)"
+        rows = db_local.find_all(
+            "notificaciones",
+            where=where,
+            params=tuple(params),
+            limit=50,
+        )
+        count = 0
+        for n in rows:
+            if cls.dismiss_notification(n.get("_id", ""), username):
+                count += 1
+        return count
 
     @classmethod
     def resolve_for_tarea(cls, tarea_id: str, resolved_by_status: bool = True):

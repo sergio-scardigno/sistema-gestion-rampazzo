@@ -20,6 +20,7 @@ Guia tecnica para desarrolladores que necesiten configurar el entorno, ejecutar 
 11. [Estructura del proyecto](#11-estructura-del-proyecto)
 12. [Troubleshooting](#12-troubleshooting)
 13. [Seguridad por IP/WiFi (diseno futuro)](#13-seguridad-por-ipwifi-diseno-futuro)
+14. [Notificaciones en UI (estilos y archivos clave)](#14-notificaciones-en-ui-estilos-y-archivos-clave)
 
 ---
 
@@ -113,16 +114,16 @@ La primera ejecucion crea automaticamente:
 ### Ejecutar tests
 
 ```bash
-# Suite completa (~353 tests)
+# Suite completa (489 tests; cobertura tipica ~81%+ sobre modulos de negocio)
 python -m pytest tests/
 
-# Solo unitarios (~102 tests, ~4s)
+# Solo unitarios (156 tests)
 python -m pytest tests/unit/
 
-# Solo integracion (~242 tests, ~21s)
+# Solo integracion (324 tests)
 python -m pytest tests/integration/
 
-# Solo smoke tests de UI (~9 tests, ~3s)
+# Solo smoke tests de UI (9 tests)
 python -m pytest tests/ui/
 
 # Con salida detallada
@@ -426,8 +427,11 @@ sistema-gestion-rampazzo/
 │
 ├── core/                        # Nucleo: auth, sync, DB, permisos, scheduler
 ├── controllers/                 # Logica de negocio y CRUD
+│   # ... incluye notificacion_controller.py (tipos, NOTIF_STYLES, popup login, badge),
+│   # expediente_recordatorio_controller.py, expediente_etapa_responsable_controller.py
 ├── models/                      # Helpers de modelo (IDs, timestamps)
 ├── views/                       # Interfaz grafica PySide6
+│   # widgets/: notification_bell.py (campana, historial), login_task_alerts_popup.py
 ├── utils/                       # Validadores, formatters, exportacion, migracion
 ├── resources/styles/            # Hoja de estilos Qt (tema oscuro/dorado)
 ├── anses_oficinas/              # Datos de oficinas ANSES (incluidos en el build)
@@ -445,8 +449,20 @@ sistema-gestion-rampazzo/
 | `SistemaRampazzo.spec` | Configuracion completa de PyInstaller (entry point, datos incluidos, opciones) |
 | `config.py` | Detecta si se ejecuta como `.exe` (frozen) o como script, y ajusta rutas |
 | `config.ini.example` | Se copia al ZIP para que el usuario final lo renombre a `config.ini` |
-| `resources/` | Estilos Qt, incluidos en el build via `datas` del spec |
+| `resources/` | Estilos Qt (`resources/styles/theme.qss`), incluidos en el build via `datas` del spec |
 | `anses_oficinas/` | Datos de oficinas, incluidos en el build via `datas` del spec |
+
+### Modulo de notificaciones y expediente (referencia rapida)
+
+| Ruta | Descripcion |
+|---|---|
+| `controllers/notificacion_controller.py` | Tipos de notificacion, `NOTIF_STYLES`, sincronizacion con tareas, `get_login_popup_notifications`, `get_recent_for_user`, descarte (`dismiss`), reglas de badge |
+| `controllers/expediente_recordatorio_controller.py` | Recordatorios / plazos por carpeta; disparo programado vinculado al scheduler |
+| `controllers/expediente_etapa_responsable_controller.py` | Encargado por etapa; visibilidad y notificaciones `expediente_etapa_encargado` |
+| `views/widgets/notification_bell.py` | Campana, popup de lista activa, historial, badge, reset de sesion |
+| `views/widgets/login_task_alerts_popup.py` | Dialogo post-login de alertas, descarte por fila y masivo |
+| `tests/unit/test_notificacion_controller.py` | Tests unitarios del controlador de notificaciones |
+| `resources/styles/theme.qss` | Estilos de contenedores (`#LoginTaskAlertsPopup`, historial, botones de descarte); los items `#notif_item` se estilizan en gran parte desde Python segun `NOTIF_STYLES` |
 
 ---
 
@@ -657,3 +673,21 @@ single_session_per_machine = true
 - Restringir IPs permitidas en MongoDB Atlas (`Network Access`).
 - Reglas de Firewall del SO por perfil de red.
 - Uso obligatorio de VPN corporativa y whitelist del rango VPN.
+
+---
+
+## 14. Notificaciones en UI (estilos y archivos clave)
+
+### Patron de estilos
+
+- **`NOTIF_STYLES`** (en `notificacion_controller.py`): diccionario por tipo con color de fondo, borde, icono y etiqueta. Los widgets de lista (`notification_bell`, `login_task_alerts_popup`) aplican estilos **inline** en cada fila a partir de estos datos.
+- **`theme.qss`**: define marcos generales (popup de login, lista, boton de historial, botones de descarte, badge en barra superior). El selector generico `#notif_item` **no** debe pisar los colores por tipo; por eso el detalle visual del contenido del item sale de Python.
+
+### Flujo resumido
+
+1. Tras login exitoso, `MainWindow` puede invocar `get_login_popup_notifications` y mostrar `LoginTaskAlertsPopup`.
+2. La campana consulta activas + cuenta badge segun tipo (`BADGE_HIDE_ON_VIEW_TYPES`, `BADGE_PERSIST_WHEN_READ_TYPES`, etc.).
+3. El historial usa `get_recent_for_user` (incluye resueltas / descartadas segun logica del controlador).
+4. `dismiss_notification` / `dismiss_by_type_and_ref` marcan notificaciones como descartadas sin confundir con `resuelta_por_estado` de tareas.
+
+Para detalle de API y tests, ver `tests/unit/test_notificacion_controller.py`.

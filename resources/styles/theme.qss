@@ -349,6 +349,47 @@ QDialog {
     background-color: #f5f5f5;
 }
 
+/* Popup de alertas al login: mas contraste (fondo blanco) */
+#LoginTaskAlertsPopup {
+    background-color: #ffffff;
+}
+
+#LoginTaskAlertsPopup QLabel#login_alerts_subtitle {
+    color: #374151;
+    font-size: 11px;
+}
+
+#LoginTaskAlertsPopup QLabel#login_alerts_hint {
+    color: #1f2937;
+    font-size: 11px;
+    font-style: italic;
+}
+
+#login_alerts_list {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    outline: none;
+}
+
+#login_alerts_list::item {
+    margin: 4px 6px;
+    border: none;
+}
+
+#login_alerts_list::item:alternate {
+    background: #f9fafb;
+}
+
+#login_alerts_list::item:selected {
+    background-color: #dbeafe;
+    color: #1f2937;
+}
+
+#login_alerts_list::item:hover {
+    background-color: #eff6ff;
+}
+
 /* --- ToolTip --- */
 QToolTip {
     background-color: #222222;
@@ -433,7 +474,20 @@ QMenu::separator {
     background-color: #f0f0f0;
 }
 
-#notif_badge {
+#notif_history_btn {
+    background-color: transparent;
+    border: none;
+    border-radius: 18px;
+    font-size: 18px;
+    padding: 0px;
+    color: #6b6b6b;
+}
+
+#notif_history_btn:hover {
+    background-color: #f0f0f0;
+}
+
+#topbar #notif_badge {
     background-color: #cc3333;
     color: #ffffff;
     border-radius: 9px;
@@ -449,11 +503,42 @@ QMenu::separator {
     border-radius: 10px;
 }
 
+#notif_history_popup {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+}
+
 #notif_popup_header {
-    background-color: #fafafa;
+    background-color: #f3f4f6;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     border: none;
+}
+
+#notif_history_header {
+    background-color: #f3f4f6;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border: none;
+}
+
+#notif_dismiss_btn {
+    background-color: transparent;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 0px;
+    min-width: 26px;
+    min-height: 26px;
+}
+
+#notif_dismiss_btn:hover {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
 }
 
 #notif_mark_all_btn {
@@ -470,15 +555,8 @@ QMenu::separator {
     text-decoration: underline;
 }
 
-#notif_item {
-    background-color: #ffffff;
-    border: none;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-#notif_item:hover {
-    background-color: #fdf8ec;
-}
+/* notif_item: los fondos, bordes laterales y hover se aplican inline
+   desde Python segun el tipo de notificacion (ver NOTIF_STYLES). */
 
 /* --- CheckBox / RadioButton --- */
 QCheckBox, QRadioButton {

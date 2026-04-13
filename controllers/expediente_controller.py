@@ -29,12 +29,12 @@ class ExpedienteController(BaseController):
         {"codigo": "pendiente_turno", "titulo": "Pendiente de Turno", "color": "#8bc34a", "instruccion_corta": "Gestionar solicitud y fecha de turno."},
         {"codigo": "turno", "titulo": "Turno", "color": "#4caf50", "instruccion_corta": "Preparar y asistir al turno asignado."},
         {"codigo": "enviada_iniciar", "titulo": "Enviada para Iniciar", "color": "#26c6da", "instruccion_corta": "Enviar para comienzo formal del trámite."},
-        {"codigo": "iniciada_virtual", "titulo": "INICIADA - Virtual", "color": "#00acc1", "instruccion_corta": "Gestionar acciones de iniciada virtual."},
-        {"codigo": "iniciada_presencial", "titulo": "INICIADA - Presencial", "color": "#29b6f6", "instruccion_corta": "Gestionar acciones de iniciada presencial."},
-        {"codigo": "req_analizar", "titulo": "Requerimientos - Analizar", "color": "#ab47bc", "instruccion_corta": "Resolver requerimiento de análisis."},
-        {"codigo": "req_migraciones", "titulo": "Requerimientos - Migraciones", "color": "#7e57c2", "instruccion_corta": "Resolver requerimiento de migraciones."},
-        {"codigo": "req_citar", "titulo": "Requerimientos - Citar", "color": "#5c6bc0", "instruccion_corta": "Resolver requerimiento de citación."},
-        {"codigo": "citado_anses", "titulo": "Citado por ANSES", "color": "#42a5f5", "instruccion_corta": "Preparar gestión por citación ANSES."},
+        {"codigo": "iniciada_virtual", "titulo": "INICIADA - Virtual", "color": "#00acc1", "instruccion_corta": "Carpeta INICIADA - Modalidad Virtual. Gestionar acciones de trámite iniciado."},
+        {"codigo": "iniciada_presencial", "titulo": "INICIADA - Presencial", "color": "#29b6f6", "instruccion_corta": "Carpeta INICIADA - Modalidad Presencial. Gestionar acciones de trámite iniciado."},
+        {"codigo": "req_analizar", "titulo": "Requerimientos - Analizar", "color": "#ab47bc", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de análisis antes de reiniciar."},
+        {"codigo": "req_migraciones", "titulo": "Requerimientos - Migraciones", "color": "#7e57c2", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de migraciones antes de reiniciar."},
+        {"codigo": "req_citar", "titulo": "Requerimientos - Citar", "color": "#5c6bc0", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de citación antes de reiniciar."},
+        {"codigo": "citado_anses", "titulo": "Citado por ANSES", "color": "#42a5f5", "instruccion_corta": "ANSES citó personalmente. Preparar gestión; resultado pendiente (Favorable/Desfavorable)."},
         {"codigo": "favorable", "titulo": "Favorable", "color": "#2e7d32", "instruccion_corta": "Registrar resolución favorable."},
         {"codigo": "desfavorable", "titulo": "Desfavorable", "color": "#c62828", "instruccion_corta": "Registrar resolución desfavorable."},
         {"codigo": "enviar_notificarse", "titulo": "Enviar a notificarse", "color": "#78909c", "instruccion_corta": "Enviar para notificación final."},
@@ -43,12 +43,93 @@ class ExpedienteController(BaseController):
     MODALIDADES = ["Presencial", "Virtual"]
     RAMAS_CON_MODALIDAD = ["Previsional"]
 
+    ETAPAS_NO_INICIADA = frozenset({"req_analizar", "req_migraciones", "req_citar"})
+    ETAPAS_INICIADA = frozenset({"iniciada_virtual", "iniciada_presencial"})
+    ETAPAS_RESULTADO = frozenset({"favorable", "desfavorable"})
+
     @classmethod
     def etapa_por_codigo(cls, codigo: str) -> dict:
         for etapa in cls.ETAPAS:
             if etapa["codigo"] == codigo:
                 return etapa
         return cls.ETAPAS[0]
+
+    @classmethod
+    def clasificacion_etapa(cls, codigo: str) -> dict:
+        """Clasificación de etapa para UI (No iniciada / Iniciada / ANSES / Resultado).
+
+        Retorna dict con:
+        - mostrar: si conviene mostrar el bloque de clasificación
+        - categoria: clave para estilo (no_iniciada, iniciada, citado_anses, resultado_favorable, resultado_desfavorable)
+        - texto: mensaje para el usuario
+        """
+        c = (codigo or "").strip()
+        if c in cls.ETAPAS_NO_INICIADA:
+            motivos = {
+                "req_analizar": "Requerimiento de análisis",
+                "req_migraciones": "Requerimiento de migraciones",
+                "req_citar": "Requerimiento de citación",
+            }
+            return {
+                "mostrar": True,
+                "categoria": "no_iniciada",
+                "texto": f"Carpeta NO INICIADA — Motivo: {motivos.get(c, c)}.",
+            }
+        if c == "iniciada_virtual":
+            return {
+                "mostrar": True,
+                "categoria": "iniciada",
+                "texto": "Carpeta INICIADA — Modalidad: Virtual.",
+            }
+        if c == "iniciada_presencial":
+            return {
+                "mostrar": True,
+                "categoria": "iniciada",
+                "texto": "Carpeta INICIADA — Modalidad: Presencial.",
+            }
+        if c == "citado_anses":
+            return {
+                "mostrar": True,
+                "categoria": "citado_anses",
+                "texto": "Citado por ANSES — Pendiente de resultado (Favorable / Desfavorable).",
+            }
+        if c == "favorable":
+            return {
+                "mostrar": True,
+                "categoria": "resultado_favorable",
+                "texto": "Resultado: Favorable.",
+            }
+        if c == "desfavorable":
+            return {
+                "mostrar": True,
+                "categoria": "resultado_desfavorable",
+                "texto": "Resultado: Desfavorable.",
+            }
+        return {"mostrar": False, "categoria": "", "texto": ""}
+
+    @classmethod
+    def aplicar_colores_items_combo_etapas(cls, combo) -> None:
+        """Fondo en el desplegable: rojizo (No iniciada / req), verde (Iniciada virtual/presencial)."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QBrush, QColor
+
+        rojizo = QColor("#f0dede")
+        verde = QColor("#e0f0e0")
+        role = Qt.ItemDataRole.BackgroundRole
+        for i in range(combo.count()):
+            codigo = combo.itemData(i)
+            if codigo is None:
+                continue
+            sc = str(codigo).strip() if codigo != "" else ""
+            if not sc:
+                combo.setItemData(i, None, role)
+                continue
+            if sc in cls.ETAPAS_NO_INICIADA:
+                combo.setItemData(i, QBrush(rojizo), role)
+            elif sc in cls.ETAPAS_INICIADA:
+                combo.setItemData(i, QBrush(verde), role)
+            else:
+                combo.setItemData(i, None, role)
 
     # ── Ramas jurídicas ──
 

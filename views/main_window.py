@@ -298,12 +298,14 @@ class MainWindow(QMainWindow):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._session_guard.stop()
+            self._notification_bell.reset_session()
             AuthController.logout()
             self.close()
 
     def _on_session_invalidated(self, message: str):
         """Forzar cierre de sesion por decision de un administrador."""
         self._session_guard.stop()
+        self._notification_bell.reset_session()
         QMessageBox.critical(
             self, "Sesion Cerrada",
             f"{message}\n\nDebe iniciar sesion nuevamente."

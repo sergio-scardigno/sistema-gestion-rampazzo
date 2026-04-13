@@ -101,6 +101,7 @@ class ExpedienteListView(QWidget):
         self._cmb_etapa.addItem("Todas las etapas", "")
         for etapa in ExpedienteController.ETAPAS:
             self._cmb_etapa.addItem(etapa["titulo"], etapa["codigo"])
+        ExpedienteController.aplicar_colores_items_combo_etapas(self._cmb_etapa)
         self._cmb_etapa.currentIndexChanged.connect(self.refresh)
         header.addWidget(self._cmb_etapa)
 

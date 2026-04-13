@@ -20,7 +20,7 @@ El `ExpedienteController` define un catálogo ordenado de **etapas** (`ETAPAS`: 
 
 ### 2. Línea de tiempo visual de etapas
 
-Nuevo widget `ExpedienteEtapasTimeline`: franja horizontal con el orden de etapas, indicación de etapa **anterior** y **actual** y trazos/flechas entre nodos para lectura rápida del avance procesal en la ficha de carpeta.
+Widget `ExpedienteEtapasTimeline` en la ficha de carpeta: lectura rápida del avance procesal (etapa anterior/actual, conexiones entre nodos). En esta versión el timeline se **amplió a fases, requerimientos y plazos** (ver también punto **19**).
 
 ### 3. Encargados secundarios por etapa
 
@@ -77,7 +77,29 @@ Ajustes en `release_multiplataforma.ps1` (lectura y actualización de `APP_VERSI
 
 ### 16. Pruebas automatizadas
 
-Nuevos tests de integración para **recordatorios de expediente** y **encargados por etapa**; ampliaciones en expediente, historial de estados, sync, turnos, movimientos, permisos y BD local. La suite total pasa a **489 tests** (ver sección Testing).
+Nuevos tests de integración para **recordatorios de expediente** y **encargados por etapa**; ampliaciones en expediente, historial de estados, sync, turnos, movimientos, permisos y BD local. Se agregaron tests unitarios del **controlador de notificaciones** (`tests/unit/test_notificacion_controller.py`: descarte, upsert, badge, sincronización con tareas). La suite total pasa a **489 tests** (ver sección Testing).
+
+### 17. Sistema de notificaciones mejorado (campana, historial, descarte)
+
+- **Campana** (`notification_bell`): contador (badge) según tipo de notificación: algunos tipos dejan de sumar al abrir el popup sin marcar como leídos en base; otros (p. ej. alertas de tarea) pueden seguir contando aunque estén leídas.
+- **Historial**: botón de reloj junto a la campana abre un listado de notificaciones recientes (activas y resueltas, hasta ~120 filas).
+- **Descarte**: en el desplegable de la campana y en el **popup de alertas al login**, se puede descartar ítem por ítem o **descartar todas** (con confirmación). Un descarte manual no se “revive” automáticamente si el sistema vuelve a generar el mismo tipo de alerta.
+- **Estilos por tipo** (`NOTIF_STYLES` en `NotificacionController`): color, borde, icono y etiqueta corta por tipo (tarea, vencimiento, carpeta, turno, etapa, recordatorio). Los ítems fuera del contador del badge se muestran atenuados.
+- Al **cerrar sesión**, la campana reinicia el estado “visto” en memoria para la próxima sesión.
+
+### 18. Clasificación visual de etapas y coherencia con modalidad (Previsional)
+
+- En la ficha de carpeta, etiqueta **Clasificación** que agrupa la etapa en categorías (p. ej. no iniciada, iniciada, citado ANSES, resultado), con estilo por categoría.
+- Los **combos de etapa** en formulario, listado y dashboard usan **fondo coloreado** (p. ej. tono rojizo para requerimiento / no iniciada, verde para iniciada virtual o presencial).
+- Para rama **Previsional**, al elegir etapa **iniciada virtual** o **iniciada presencial** el combo de **modalidad** se alinea; al **guardar**, se valida que etapa y modalidad coincidan (si no, se muestra error y no se guarda).
+
+### 19. Línea de tiempo de etapas rediseñada por fases
+
+El widget `ExpedienteEtapasTimeline` evoluciona a un **timeline por fases** (Pre-trámite, Turno, Envío, Iniciada, Cierre), con fila **No iniciada** para etapas de requerimiento, **banner y parpadeo** cuando la etapa actual es de requerimiento, curvas y flecha con gradiente, y una **línea de plazos próximos** integrada (según recordatorios / plazos por etapa que recibe el formulario).
+
+### 20. Autocompletado en responsables
+
+En el formulario de carpeta, los combos de **responsable** (y asignaciones similares) usan **QCompleter** con búsqueda por contenido (`MatchContains`) y sin insertar texto libre en el combo, para acelerar la asignación.
 
 ---
 
@@ -193,6 +215,7 @@ sistema-gestion-rampazzo/
 │   ├── documento_controller.py #  Gestion documental con versionado
 │   ├── movimiento_controller.py # Movimientos economicos
 │   ├── reporte_controller.py  #   KPIs y consultas agregadas
+│   ├── notificacion_controller.py # Notificaciones, estilos, popup login, badge
 │   └── audit_controller.py    #   Consultas al log de auditoria
 │
 ├── models/
@@ -216,9 +239,11 @@ sistema-gestion-rampazzo/
 │   ├── migration/             #   Wizard de migracion desde Excel
 │   └── widgets/               #   Componentes reutilizables
 │       ├── filterable_table.py #    Tabla con busqueda y paginacion
-│       ├── expediente_etapas_timeline.py # Linea de tiempo de etapas de carpeta
+│       ├── expediente_etapas_timeline.py # Linea de tiempo de etapas de carpeta (por fases)
 │       ├── expedientes_referencia_widget.py # Referencias ANSES, IPS, SRT, Judicial
 │       ├── click_copy_line_edit.py # Copiar clave al clic
+│       ├── notification_bell.py # Campana, popup de notificaciones e historial
+│       ├── login_task_alerts_popup.py # Popup de alertas tras iniciar sesion
 │       └── sync_indicator.py  #    Indicador de estado de conexion
 │
 ├── utils/
@@ -261,9 +286,10 @@ Pantalla principal que muestra al usuario un resumen operativo en tiempo real:
 
 - **Busqueda rapida por N° de carpeta:** Campo de busqueda prominente para localizar un cliente y sus carpetas ingresando el numero de carpeta fisica. Muestra un panel con datos del cliente y accesos directos a cada carpeta.
 - **KPIs:** Carpetas activas/cerradas, tareas pendientes/vencidas, total de clientes, ingresos cobrados, pendientes de cobro; **KPIs de plazos** (criticos vencidos, proximos 7 dias, vencimientos de hoy) y tablas de detalle asociadas.
-- **Asignado a mi por etapa:** Filtro por etapa procesal y tabla de carpetas con indicacion breve de la accion esperada.
+- **Asignado a mi por etapa:** Filtro por etapa procesal y tabla de carpetas con indicacion breve de la accion esperada (el combo de etapa puede mostrar **colores** alineados con el formulario de carpetas).
 - **Turnos de hoy:** Tabla con los turnos programados para la fecha actual.
 - **Alertas:** Carpetas sin tarea activa, turnos proximos sin documentacion, turnos sin resultado cargado.
+- **Barra superior:** **Campana de notificaciones** (badge, listado de pendientes, descarte por ítem o masivo) y botón de **historial** de notificaciones recientes. Tras **iniciar sesión**, si hay alertas activas puede abrirse un **popup** con la misma lógica de prioridad (carpeta / etapa / recordatorios antes que el resto).
 
 ### Clientes
 
@@ -279,7 +305,10 @@ Alta, baja y modificacion de clientes del estudio. Es el punto de entrada de tod
 
 Modulo central del sistema. Cada carpeta representa un tramite o caso legal:
 
-- **Flujo por etapas:** Cada carpeta tiene una **etapa procesal** actual (orden de trabajo del estudio), linea de tiempo en la ficha, posible **encargado por etapa**, **recordatorios de plazos** con notificacion y referencias multiples (ANSES, IPS, SRT, Judicial) segun corresponda.
+- **Flujo por etapas:** Cada carpeta tiene una **etapa procesal** actual (orden de trabajo del estudio), **línea de tiempo por fases** en la ficha (con plazos próximos y resaltado de requerimientos), posible **encargado por etapa**, **recordatorios de plazos** con notificacion y referencias multiples (ANSES, IPS, SRT, Judicial) segun corresponda.
+- **Clasificación de etapa en pantalla:** Etiqueta que resume la etapa en categorías (no iniciada, iniciada, citado ANSES, resultado) con estilos visuales; combos de etapa con **fondo coloreado** en formulario y listado.
+- **Modalidad coherente (Previsional):** al guardar, la etapa de flujo y la **modalidad** (virtual/presencial) deben ser consistentes; el formulario alinea modalidad al cambiar a etapas iniciadas.
+- **Responsables:** autocompletado en combos de responsable para asignar más rápido.
 - **Clasificacion por rama:** Rama + Subtipo (dependiente de la rama) para ordenar el trabajo juridico.
 - **Datos principales:** Tipo de tramite, responsable, estado, prioridad, numero de tramite ANSES.
 - **Campos dinamicos por rama:** el formulario activa campos especificos segun la rama seleccionada.
