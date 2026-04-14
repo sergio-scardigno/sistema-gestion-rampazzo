@@ -245,7 +245,8 @@ class ExpedienteEtapasTimeline(QWidget):
         phase_inner_h = phase_title_h + phase_title_to_pills + pill_h + bottom_pad_phase
         phase_h = phase_inner_h + 10.0
         main_cy = phase_rect_y + phase_title_h + phase_title_to_pills + pill_h / 2.0
-        req_cy = phase_top + phase_h + (14.0 if compact_mode else 18.0)
+        # Separa visualmente la fila "No Iniciada" del bloque "Iniciada".
+        req_cy = phase_top + phase_h + (30.0 if compact_mode else 34.0)
 
         if current_requires_edit:
             brect = QRectF(10.0, top_pad, w - 20.0, banner_h)
@@ -345,9 +346,9 @@ class ExpedienteEtapasTimeline(QWidget):
             req_xs = [p.x() for c, p in centers if c in req_codes]
             req_rect = QRectF(
                 min(req_xs) - pill_w / 2 - 10.0,
-                req_cy - 20.0,
+                req_cy - 38.0,
                 (max(req_xs) - min(req_xs)) + pill_w + 20.0,
-                36.0,
+                60.0,
             )
             painter.setPen(QPen(QColor("#ddd6fe"), 1))
             painter.setBrush(QBrush(QColor("#f5f3ff")))
@@ -356,7 +357,7 @@ class ExpedienteEtapasTimeline(QWidget):
                 painter.setPen(QColor("#6d28d9"))
                 painter.setFont(QFont("Lato", 8, QFont.Weight.DemiBold))
                 painter.drawText(
-                    req_rect.adjusted(6, -11, -6, 0),
+                    req_rect.adjusted(6, 3, -6, -36),
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
                     "No Iniciada",
                 )

@@ -21,6 +21,7 @@ server/.env
 # Data local
 data/local.db
 data/*.db
+data/documentos_imported_*/
 
 # Config con credenciales
 config.ini
