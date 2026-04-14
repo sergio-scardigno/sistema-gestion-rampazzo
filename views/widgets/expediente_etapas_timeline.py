@@ -165,16 +165,23 @@ class ExpedienteEtapasTimeline(QWidget):
         self._blink_timer = QTimer(self)
         self._blink_timer.setInterval(600)
         self._blink_timer.timeout.connect(self._toggle_blink)
-        self.setMinimumHeight(200)
-        self.setMinimumWidth(420)
+        self.setMinimumHeight(228)
+        self.setMinimumWidth(380)
 
     def sizeHint(self) -> QSize:
         n = max(len(self._etapas), 1)
-        return QSize(max(560, n * 52), 210)
+        # Ancho orientativo: pills compactas + separacion fija (no estirar al ancho completo).
+        gap = 6
+        pill = 66
+        row_w = max(1, n) * pill + max(0, n - 1) * gap
+        return QSize(min(920, max(380, row_w + 32)), 236)
 
     def minimumSizeHint(self) -> QSize:
         n = max(len(self._etapas), 1)
-        return QSize(max(460, n * 48), 200)
+        gap = 6
+        pill = 64
+        row_w = max(1, n) * pill + max(0, n - 1) * gap
+        return QSize(min(880, max(360, row_w + 28)), 228)
 
     def _toggle_blink(self):
         self._blink_on = not self._blink_on
@@ -224,15 +231,21 @@ class ExpedienteEtapasTimeline(QWidget):
         current_requires_edit = self._actual in _NEEDS_EDIT_CODES
         compact_mode = w < 900.0
         ultra_compact_mode = w < 760.0
-        top_pad = 6.0
-        banner_h = (20.0 if compact_mode else 24.0) if current_requires_edit else 0.0
-        phase_top = top_pad + (banner_h + 4.0 if current_requires_edit else 0.0)
-        phase_h = 52.0 if compact_mode else 60.0
-        main_cy = phase_top + (24.0 if compact_mode else 28.0)
-        req_cy = phase_top + phase_h + (18.0 if compact_mode else 22.0)
-        pill_w = 56.0 if ultra_compact_mode else (60.0 if compact_mode else 66.0)
-        pill_h = 19.0 if ultra_compact_mode else (20.0 if compact_mode else 21.0)
+        top_pad = 4.0
+        banner_h = (22.0 if compact_mode else 26.0) if current_requires_edit else 0.0
+        phase_top = top_pad + (banner_h + 3.0 if current_requires_edit else 0.0)
+        pill_w = 58.0 if ultra_compact_mode else (62.0 if compact_mode else 68.0)
+        pill_h = 22.0 if ultra_compact_mode else (23.0 if compact_mode else 24.0)
         radius = 5.0 if compact_mode else 6.0
+        # Banda reservada al titulo de fase + hueco hasta las pills (evita superposicion con el texto).
+        phase_rect_y = phase_top + 5.0
+        phase_title_h = 16.0 if ultra_compact_mode else (18.0 if compact_mode else 20.0)
+        phase_title_to_pills = 10.0 if compact_mode else 11.0
+        bottom_pad_phase = 8.0
+        phase_inner_h = phase_title_h + phase_title_to_pills + pill_h + bottom_pad_phase
+        phase_h = phase_inner_h + 10.0
+        main_cy = phase_rect_y + phase_title_h + phase_title_to_pills + pill_h / 2.0
+        req_cy = phase_top + phase_h + (14.0 if compact_mode else 18.0)
 
         if current_requires_edit:
             brect = QRectF(10.0, top_pad, w - 20.0, banner_h)
@@ -241,7 +254,7 @@ class ExpedienteEtapasTimeline(QWidget):
             painter.drawRoundedRect(brect, 9.0, 9.0)
             actual_label = _SHORT_LABELS.get(self._actual) or self._actual.replace("_", " ")
             painter.setPen(QColor("#92400e"))
-            painter.setFont(QFont("Lato", 7 if compact_mode else 8, QFont.Weight.Bold))
+            painter.setFont(QFont("Lato", 9 if compact_mode else 10, QFont.Weight.Bold))
             banner_txt = (
                 f"ATENCION: Carpeta NO INICIADA - requiere edicion ({actual_label})."
                 if not compact_mode
@@ -253,19 +266,30 @@ class ExpedienteEtapasTimeline(QWidget):
                 banner_txt,
             )
 
-        margin_x = 10.0 if compact_mode else 14.0
-        usable_w = max(40.0, w - 2 * margin_x)
         main_codes = [c for c in codes if c not in _REQ_CODES]
         req_codes = [c for c in codes if c in _REQ_CODES]
         main_n = len(main_codes)
-        step = usable_w / max(1, main_n - 1) if main_n > 1 else 0.0
+        # Separacion fija entre pills (compacto); la fila se centra. Evita huecos enormes y
+        # mantiene margenes >= mitad de pill para no recortar en los bordes.
+        gap_main = 5.0 if ultra_compact_mode else (6.0 if compact_mode else 7.0)
         centers: list[tuple[str, QPointF]] = []
-        for i, code in enumerate(main_codes):
-            if main_n == 1:
-                cx = w / 2
-            else:
-                cx = margin_x + step * i
-            centers.append((code, QPointF(cx, main_cy)))
+        if main_n == 1:
+            centers.append((main_codes[0], QPointF(w / 2.0, main_cy)))
+        elif main_n > 1:
+            avail_row = max(40.0, w - 4.0)
+            row_w = main_n * pill_w + (main_n - 1) * gap_main
+            if row_w > avail_row:
+                gap_main = max(1.5, (avail_row - main_n * pill_w) / max(1, main_n - 1))
+                row_w = main_n * pill_w + (main_n - 1) * gap_main
+            if row_w > avail_row:
+                pill_w = max(42.0, (avail_row - (main_n - 1) * 1.5) / main_n)
+                gap_main = 1.5
+                row_w = main_n * pill_w + (main_n - 1) * gap_main
+            left_edge = (w - row_w) / 2.0
+            left_edge = max(0.0, min(left_edge, w - row_w))
+            for i, code in enumerate(main_codes):
+                cx = left_edge + pill_w / 2.0 + i * (pill_w + gap_main)
+                centers.append((code, QPointF(cx, main_cy)))
 
         phase_code_to_x = {c: p.x() for c, p in centers}
         for phase in _PHASES:
@@ -280,13 +304,19 @@ class ExpedienteEtapasTimeline(QWidget):
             painter.drawRoundedRect(phase_rect, 9.0, 9.0)
             if not ultra_compact_mode:
                 painter.setPen(QColor("#64748b"))
-                painter.setFont(QFont("Lato", 6 if compact_mode else 7, QFont.Weight.DemiBold))
+                painter.setFont(QFont("Lato", 8 if compact_mode else 9, QFont.Weight.DemiBold))
                 sub = phase.get("sub_label") or ""
                 label_txt = phase["label"]
                 if sub:
                     label_txt = f"{label_txt} ({sub})"
+                title_rect = QRectF(
+                    phase_rect.left() + 6.0,
+                    phase_rect.top() + 4.0,
+                    phase_rect.width() - 12.0,
+                    phase_title_h,
+                )
                 painter.drawText(
-                    phase_rect.adjusted(6, 2, -6, -2),
+                    title_rect,
                     Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft,
                     label_txt,
                 )
@@ -298,26 +328,35 @@ class ExpedienteEtapasTimeline(QWidget):
                 if c in phase_code_to_x
             ]
             anchor_x = sum(candidate_x) / len(candidate_x) if candidate_x else (w * 0.64)
-            req_spacing = 58.0 if ultra_compact_mode else (64.0 if compact_mode else 70.0)
-            start_x = anchor_x - (req_spacing * (len(req_codes) - 1) / 2.0)
+            req_gap = 5.0 if ultra_compact_mode else (6.0 if compact_mode else 7.0)
+            req_spacing = pill_w + req_gap
+            req_n = len(req_codes)
+            req_start_cx = anchor_x - (req_spacing * (req_n - 1) / 2.0)
+            for _ in range(2):
+                left_p = req_start_cx - pill_w / 2.0
+                right_p = req_start_cx + (req_n - 1) * req_spacing + pill_w / 2.0
+                if left_p < 2.0:
+                    req_start_cx += 2.0 - left_p
+                elif right_p > w - 2.0:
+                    req_start_cx -= right_p - (w - 2.0)
             for i, code in enumerate(req_codes):
-                centers.append((code, QPointF(start_x + i * req_spacing, req_cy)))
+                centers.append((code, QPointF(req_start_cx + i * req_spacing, req_cy)))
 
             req_xs = [p.x() for c, p in centers if c in req_codes]
             req_rect = QRectF(
                 min(req_xs) - pill_w / 2 - 10.0,
-                req_cy - 18.0,
+                req_cy - 20.0,
                 (max(req_xs) - min(req_xs)) + pill_w + 20.0,
-                34.0,
+                36.0,
             )
             painter.setPen(QPen(QColor("#ddd6fe"), 1))
             painter.setBrush(QBrush(QColor("#f5f3ff")))
             painter.drawRoundedRect(req_rect, 8.0, 8.0)
             if not ultra_compact_mode:
                 painter.setPen(QColor("#6d28d9"))
-                painter.setFont(QFont("Lato", 6, QFont.Weight.DemiBold))
+                painter.setFont(QFont("Lato", 8, QFont.Weight.DemiBold))
                 painter.drawText(
-                    req_rect.adjusted(6, -10, -6, 0),
+                    req_rect.adjusted(6, -11, -6, 0),
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
                     "No Iniciada",
                 )
@@ -367,8 +406,8 @@ class ExpedienteEtapasTimeline(QWidget):
         def _draw_pill_node(code: str, p: QPointF):
             etapa = em.get(code, {})
             label = _SHORT_LABELS.get(code) or (etapa.get("titulo") or code)[:24]
-            if ultra_compact_mode and len(label) > 10:
-                label = label[:9] + "."
+            if ultra_compact_mode and len(label) > 12:
+                label = label[:11] + "."
             color = QColor(etapa.get("color", "#4a90d9"))
             is_current = code == self._actual
             is_previous = code == self._anterior
@@ -388,15 +427,15 @@ class ExpedienteEtapasTimeline(QWidget):
                 painter.setPen(QPen(QColor("#f59e0b"), 1.7))
                 painter.drawRoundedRect(pulse, radius + 2.0, radius + 2.0)
             painter.setPen(QColor("#0f172a"))
-            painter.setFont(QFont("Lato", 5 if ultra_compact_mode else 6, QFont.Weight.Bold))
+            painter.setFont(QFont("Lato", 7 if ultra_compact_mode else 8, QFont.Weight.Bold))
             painter.drawText(r, Qt.AlignmentFlag.AlignCenter, label)
             if is_current and code in _NEEDS_EDIT_CODES:
-                tag = QRectF(r.right() - 12.0, r.top() - 6.0, 12.0, 10.0)
+                tag = QRectF(r.right() - 14.0, r.top() - 7.0, 14.0, 12.0)
                 painter.setPen(QPen(QColor("#f59e0b"), 0.9))
                 painter.setBrush(QBrush(QColor("#fff7ed")))
                 painter.drawRoundedRect(tag, 4.0, 4.0)
                 painter.setPen(QColor("#9a3412"))
-                painter.setFont(QFont("Lato", 5, QFont.Weight.Bold))
+                painter.setFont(QFont("Lato", 6, QFont.Weight.Bold))
                 painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, "ed")
 
         for code in main_codes:
@@ -429,47 +468,47 @@ class ExpedienteEtapasTimeline(QWidget):
             _draw_arrow_along_path(painter, path, target_c, 2.2, gradient=grad)
             tip = path.pointAtPercent(0.53)
             if not ultra_compact_mode:
-                tip_rect = QRectF(tip.x() - 34.0, tip.y() - 11.0, 68.0, 11.0)
+                tip_rect = QRectF(tip.x() - 36.0, tip.y() - 12.0, 72.0, 13.0)
                 painter.setPen(QPen(QColor("#bfdbfe"), 1))
                 painter.setBrush(QBrush(QColor("#eff6ff")))
                 painter.drawRoundedRect(tip_rect, 5.0, 5.0)
                 painter.setPen(QColor("#1d4ed8"))
-                painter.setFont(QFont("Lato", 5, QFont.Weight.DemiBold))
+                painter.setFont(QFont("Lato", 7, QFont.Weight.DemiBold))
                 painter.drawText(tip_rect, Qt.AlignmentFlag.AlignCenter, "mov.")
 
         estado_line, historial_line = _build_resumen(codes, self._actual, self._anterior, em)
         plazos_line = _build_plazos_resumen(self._plazos_por_etapa, em)
-        resumen_rect = QRectF(8, h - 60, w - 16, 48)
+        resumen_rect = QRectF(8, h - 68, w - 16, 58)
         painter.setPen(QPen(QColor("#dbe4ef"), 1))
         painter.setBrush(QBrush(QColor("#f8fafc")))
         painter.drawRoundedRect(resumen_rect, 6.0, 6.0)
         painter.setPen(QColor("#334155"))
-        painter.setFont(QFont("Lato", 5 if compact_mode else 6, QFont.Weight.Bold))
+        painter.setFont(QFont("Lato", 7 if compact_mode else 8, QFont.Weight.Bold))
         painter.drawText(
-            resumen_rect.adjusted(8, 3, -8, -30),
+            resumen_rect.adjusted(8, 4, -8, -38),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             estado_line,
         )
         painter.setPen(QColor("#475569"))
-        painter.setFont(QFont("Lato", 5 if compact_mode else 6, QFont.Weight.DemiBold))
+        painter.setFont(QFont("Lato", 7 if compact_mode else 8, QFont.Weight.DemiBold))
         painter.drawText(
-            resumen_rect.adjusted(8, 18, -8, -16),
+            resumen_rect.adjusted(8, 22, -8, -20),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             historial_line,
         )
         painter.setPen(QColor("#64748b"))
-        painter.setFont(QFont("Lato", 5 if compact_mode else 6, QFont.Weight.DemiBold))
+        painter.setFont(QFont("Lato", 7 if compact_mode else 8, QFont.Weight.DemiBold))
         painter.drawText(
-            resumen_rect.adjusted(8, 33, -8, -2),
+            resumen_rect.adjusted(8, 40, -8, -4),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             plazos_line,
         )
 
         if not ultra_compact_mode:
             painter.setPen(QColor("#94a3b8"))
-            painter.setFont(QFont("Lato", 5))
+            painter.setFont(QFont("Lato", 6))
             painter.drawText(
-                QRectF(6, h - 12, w - 12, 10),
+                QRectF(6, h - 14, w - 12, 12),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 "Linea curva: ultimo cambio de etapa en el historial.",
             )

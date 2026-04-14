@@ -4,7 +4,13 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
-**Versión de aplicación:** 1.7.1
+**Versión de aplicación:** 1.7.2
+
+---
+
+## Notas de versión — 1.7.2 (abril 2026)
+
+Ajustes en el timeline de **ESTADO** (`ExpedienteEtapasTimeline`): pills más compactas y centradas sin recorte en los extremos, texto más grande y legible, banda de título de fase separada de la fila de pills (sin superposición), y altura del bloque en el formulario de carpeta acorde al layout.
 
 ---
 

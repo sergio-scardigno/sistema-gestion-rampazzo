@@ -681,7 +681,7 @@ class ExpedienteFormDialog(QDialog):
         self._timeline_container.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._timeline_widget = ExpedienteEtapasTimeline()
         self._timeline_container.setWidget(self._timeline_widget)
-        self._timeline_container.setFixedHeight(255)
+        self._timeline_container.setFixedHeight(282)
         form.addRow(self._timeline_container)
 
         self._cmb_etapa = QComboBox()

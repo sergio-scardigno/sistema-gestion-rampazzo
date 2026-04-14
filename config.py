@@ -118,7 +118,7 @@ BACKUP_RETENTION_DAYS = int(_get("backup", "retention_days", "30"))
 
 # --- App ---
 APP_NAME = "Sistema Rampazzo"
-APP_VERSION = "1.7.1"
+APP_VERSION = "1.7.2"
 APP_VERSION_TUPLE = tuple(int(x) for x in APP_VERSION.split("."))
 MIN_COMPATIBLE_VERSION = "1.0.0"
 MIN_COMPATIBLE_VERSION_TUPLE = tuple(int(x) for x in MIN_COMPATIBLE_VERSION.split("."))
