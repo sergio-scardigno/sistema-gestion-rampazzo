@@ -39,6 +39,8 @@ a = Analysis(
     excludes=[
         'PyQt5', 'PyQt6', 'PyQt5.sip',
         'tkinter', '_tkinter',
+        # Evita hook de PyInstaller para torch (no usado en la app).
+        'torch', 'torchvision', 'torchaudio',
         'IPython', 'jupyter', 'notebook', 'nbformat', 'nbconvert',
         'sphinx', 'docutils', 'babel',
         'black', 'yapf', 'pylint', 'astroid', 'isort',

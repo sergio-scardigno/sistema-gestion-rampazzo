@@ -32,25 +32,32 @@ from core.scheduler import (
 class KPICard(QFrame):
     def __init__(self, title: str, value: str, color: str = "#c9a84c", parent=None):
         super().__init__(parent)
+        self.setFixedHeight(44)
+        self.setMinimumWidth(120)
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: #ffffff;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                border-left: 4px solid {color};
-                padding: 10px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff, stop:1 #f8f8f8);
+                border: 1px solid #e2e2e2;
+                border-radius: 6px;
+                border-left: 3px solid {color};
             }}
         """)
-        layout = QVBoxLayout(self)
-        layout.setSpacing(2)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout = QHBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(8, 2, 8, 2)
 
+        left = QVBoxLayout()
+        left.setSpacing(0)
+        left.setContentsMargins(0, 0, 0, 0)
         self._lbl_title = QLabel(title)
-        self._lbl_title.setStyleSheet("color: #6b6b6b; font-size: 11px; font-weight: 600; border: none;")
-        layout.addWidget(self._lbl_title)
+        self._lbl_title.setStyleSheet("color: #777; font-size: 9px; font-weight: 600; border: none;")
+        left.addWidget(self._lbl_title)
+        layout.addLayout(left, 1)
 
         self._lbl_value = QLabel(str(value))
-        self._lbl_value.setFont(QFont("Lato", 20, QFont.Weight.Bold))
+        self._lbl_value.setFont(QFont("Lato", 15, QFont.Weight.Bold))
+        self._lbl_value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._lbl_value.setStyleSheet(f"color: {color}; border: none;")
         layout.addWidget(self._lbl_value)
 
@@ -62,6 +69,12 @@ class DashboardView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._kpi_cards: dict[str, KPICard] = {}
+        self._session = Session.get()
+        self._can_view_clientes = tiene_permiso(self._session.rol, "clientes.read")
+        self._can_view_expedientes = tiene_permiso(self._session.rol, "expedientes.read")
+        self._can_view_tareas = tiene_permiso(self._session.rol, "tareas.read")
+        self._can_view_turnos = tiene_permiso(self._session.rol, "turnos.read")
+        self._show_audit_kpi = tiene_permiso(self._session.rol, "auditoria.*")
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -69,8 +82,8 @@ class DashboardView(QWidget):
 
         content = QWidget()
         self._layout = QVBoxLayout(content)
-        self._layout.setContentsMargins(16, 12, 16, 16)
-        self._layout.setSpacing(12)
+        self._layout.setContentsMargins(12, 8, 12, 12)
+        self._layout.setSpacing(8)
 
         # ── Busqueda rapida por N° de carpeta, DNI o nombre ──
         search_frame = QFrame()
@@ -177,8 +190,8 @@ class DashboardView(QWidget):
             }
         """)
         stage_layout = QVBoxLayout(stage_frame)
-        stage_layout.setContentsMargins(10, 8, 10, 8)
-        stage_layout.setSpacing(6)
+        stage_layout.setContentsMargins(8, 6, 8, 6)
+        stage_layout.setSpacing(4)
         stage_header = QHBoxLayout()
         stage_header.addWidget(QLabel("Asignado a mí por etapa"))
         stage_header.addStretch()
@@ -195,11 +208,11 @@ class DashboardView(QWidget):
         self._table_asignado_etapa.setColumnCount(4)
         self._table_asignado_etapa.setHorizontalHeaderLabels(["Carpeta", "Cliente", "Etapa", "Que hacer"])
         self._table_asignado_etapa.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._table_asignado_etapa.horizontalHeader().setMinimumHeight(32)
+        self._table_asignado_etapa.horizontalHeader().setMinimumHeight(26)
         self._table_asignado_etapa.verticalHeader().setVisible(False)
-        self._table_asignado_etapa.verticalHeader().setDefaultSectionSize(42)
-        self._table_asignado_etapa.setMinimumHeight(200)
-        self._table_asignado_etapa.setMaximumHeight(300)
+        self._table_asignado_etapa.verticalHeader().setDefaultSectionSize(34)
+        self._table_asignado_etapa.setMinimumHeight(160)
+        self._table_asignado_etapa.setMaximumHeight(250)
         self._table_asignado_etapa.setStyleSheet("""
             QTableWidget {
                 background-color: #ffffff;
@@ -209,7 +222,7 @@ class DashboardView(QWidget):
                 gridline-color: #eeeeee;
             }
             QTableWidget::item {
-                padding: 8px 6px;
+                padding: 4px 4px;
                 border-bottom: 1px solid #f0f0f0;
                 color: #1a1a1a;
             }
@@ -219,7 +232,7 @@ class DashboardView(QWidget):
                 font-weight: 600;
                 border: none;
                 border-bottom: 2px solid #c9a84c;
-                padding: 8px 6px;
+                padding: 4px 4px;
             }
         """)
         self._table_asignado_etapa.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -227,63 +240,43 @@ class DashboardView(QWidget):
         self._table_asignado_etapa.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table_asignado_etapa.cellClicked.connect(self._on_asignado_etapa_clicked)
         stage_layout.addWidget(self._table_asignado_etapa)
-        self._layout.addWidget(stage_frame)
+        if self._can_view_expedientes:
+            self._layout.addWidget(stage_frame)
 
-        # KPI Grid
+        # KPI Grid - todas las cards visibles fluyen sin huecos
+        _COLS = 5
         kpi_grid = QGridLayout()
-        kpi_grid.setSpacing(10)
+        kpi_grid.setHorizontalSpacing(4)
+        kpi_grid.setVerticalSpacing(4)
 
-        session = Session.get()
-        self._show_eco_kpis = tiene_permiso(session.rol, "movimientos.read")
+        all_kpi_defs: list[tuple[str, str, str, str]] = []
 
-        cards_config = [
-            ("exp_activos", "Carpetas Activas", "0", "#c9a84c"),
-            ("exp_cerrados", "Carpetas Cerradas", "0", "#2d8f4e"),
-            ("tareas_pend", "Tareas Pendientes", "0", "#b8963c"),
-            ("tareas_venc", "Tareas Vencidas", "0", "#cc3333"),
-            ("total_clientes", "Total Clientes", "0", "#4a4a4a"),
-        ]
+        if self._can_view_expedientes:
+            all_kpi_defs.append(("exp_activos", "Carpetas Activas", "0", "#c9a84c"))
+            all_kpi_defs.append(("exp_cerrados", "Carpetas Cerradas", "0", "#2d8f4e"))
+        if self._can_view_tareas:
+            all_kpi_defs.append(("tareas_pend", "Tareas Pendientes", "0", "#b8963c"))
+            all_kpi_defs.append(("tareas_venc", "Tareas Vencidas", "0", "#cc3333"))
+        if self._can_view_clientes:
+            all_kpi_defs.append(("total_clientes", "Total Clientes", "0", "#4a4a4a"))
+        if self._can_view_expedientes:
+            all_kpi_defs.append(("tiempo_prom", "Tiempo Prom. Resolucion", "-", "#4a90d9"))
+        if self._can_view_turnos:
+            all_kpi_defs.append(("turnos_prox", "Turnos Prox. 7 dias", "0", "#c9a84c"))
+            all_kpi_defs.append(("turnos_hoy", "Turnos Hoy", "0", "#b8963c"))
+            all_kpi_defs.append(("turnos_sin_doc", "Sin Documentacion", "0", "#cc3333"))
+            all_kpi_defs.append(("turnos_pend_res", "Pend. Resultado", "0", "#a07c30"))
+        if self._can_view_expedientes:
+            all_kpi_defs.append(("plazos_crit", "Plazos criticos vencidos", "0", "#c62828"))
+            all_kpi_defs.append(("plazos_7", "Plazos prox. 7 dias", "0", "#e65100"))
+            all_kpi_defs.append(("plazos_hoy", "Plazos hoy", "0", "#f9a825"))
+        if self._show_audit_kpi:
+            all_kpi_defs.append(("acciones_hoy", "Acciones Hoy", "0", "#4a4a4a"))
 
-        if self._show_eco_kpis:
-            cards_config.append(("ingresos", "Ingresos Cobrados", "$0", "#2d8f4e"))
-            cards_config.append(("pendientes", "Pendientes Cobro", "$0", "#a07c30"))
-
-        cards_config.append(("tiempo_prom", "Tiempo Prom. Resolucion", "-", "#4a90d9"))
-
-        for i, (key, title_text, default, color) in enumerate(cards_config):
+        for idx, (key, title_text, default, color) in enumerate(all_kpi_defs):
             card = KPICard(title_text, default, color)
             self._kpi_cards[key] = card
-            kpi_grid.addWidget(card, i // 4, i % 4)
-
-        # Turnos KPIs (tercera fila)
-        turnos_kpis = [
-            ("turnos_prox", "Turnos Prox. 7 dias", "0", "#c9a84c"),
-            ("turnos_hoy", "Turnos Hoy", "0", "#b8963c"),
-            ("turnos_sin_doc", "Sin Documentacion", "0", "#cc3333"),
-            ("turnos_pend_res", "Pend. Resultado", "0", "#a07c30"),
-        ]
-        for j, (key, title_text, default, color) in enumerate(turnos_kpis):
-            card = KPICard(title_text, default, color)
-            self._kpi_cards[key] = card
-            kpi_grid.addWidget(card, 2, j)
-
-        plazos_kpis = [
-            ("plazos_crit", "Plazos criticos vencidos", "0", "#c62828"),
-            ("plazos_7", "Plazos prox. 7 dias", "0", "#e65100"),
-            ("plazos_hoy", "Plazos hoy", "0", "#f9a825"),
-        ]
-        for j, (key, title_text, default, color) in enumerate(plazos_kpis):
-            card = KPICard(title_text, default, color)
-            self._kpi_cards[key] = card
-            kpi_grid.addWidget(card, 3, j)
-
-        # KPI Auditoria (solo admin/superusuario)
-        self._show_audit_kpi = False
-        if tiene_permiso(session.rol, "auditoria.*"):
-            self._show_audit_kpi = True
-            card = KPICard("Acciones Hoy", "0", "#4a4a4a")
-            self._kpi_cards["acciones_hoy"] = card
-            kpi_grid.addWidget(card, 4, 0)
+            kpi_grid.addWidget(card, idx // _COLS, idx % _COLS)
 
         self._layout.addLayout(kpi_grid)
 
@@ -293,7 +286,7 @@ class DashboardView(QWidget):
             QFrame { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
         """)
         plazos_outer = QVBoxLayout(plazos_frame)
-        plazos_outer.setContentsMargins(10, 8, 10, 8)
+        plazos_outer.setContentsMargins(8, 6, 8, 6)
         lbl_pl = QLabel("Plazos de carpetas (pendientes de aviso)")
         lbl_pl.setFont(QFont("Lato", 13, QFont.Weight.Bold))
         lbl_pl.setStyleSheet("color: #7e57c2; border: none;")
@@ -319,7 +312,8 @@ class DashboardView(QWidget):
         plazos_split.setStretchFactor(0, 3)
         plazos_split.setStretchFactor(1, 1)
         plazos_outer.addWidget(plazos_split)
-        self._layout.addWidget(plazos_frame)
+        if self._can_view_expedientes:
+            self._layout.addWidget(plazos_frame)
         self._plazos_cache: list[dict] = []
 
         # ── Layout de 2 columnas: Turnos (izq) + Alertas/Vencidas (der) ──
@@ -331,7 +325,7 @@ class DashboardView(QWidget):
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 4, 0)
-        left_layout.setSpacing(6)
+        left_layout.setSpacing(4)
 
         lbl_turnos_hoy = QLabel("Turnos de Hoy")
         lbl_turnos_hoy.setFont(QFont("Lato", 13, QFont.Weight.Bold))
@@ -345,9 +339,9 @@ class DashboardView(QWidget):
         ])
         self._table_turnos_hoy.horizontalHeader().setStretchLastSection(True)
         self._table_turnos_hoy.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._table_turnos_hoy.horizontalHeader().setMinimumHeight(28)
+        self._table_turnos_hoy.horizontalHeader().setMinimumHeight(24)
         self._table_turnos_hoy.verticalHeader().setVisible(False)
-        self._table_turnos_hoy.verticalHeader().setDefaultSectionSize(32)
+        self._table_turnos_hoy.verticalHeader().setDefaultSectionSize(28)
         self._table_turnos_hoy.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._table_turnos_hoy.setStyleSheet("""
             QTableWidget {
@@ -358,7 +352,7 @@ class DashboardView(QWidget):
                 gridline-color: #eeeeee;
             }
             QTableWidget::item {
-                padding: 6px;
+                padding: 4px;
                 border-bottom: 1px solid #f0f0f0;
                 color: #1a1a1a;
             }
@@ -368,18 +362,23 @@ class DashboardView(QWidget):
                 font-weight: 600;
                 border: none;
                 border-bottom: 2px solid #c9a84c;
-                padding: 6px;
+                padding: 4px;
             }
         """)
+        self._table_turnos_hoy.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._table_turnos_hoy.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._table_turnos_hoy.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table_turnos_hoy.cellClicked.connect(self._on_turnos_hoy_clicked)
         left_layout.addWidget(self._table_turnos_hoy)
 
-        bottom_splitter.addWidget(left_panel)
+        if self._can_view_turnos:
+            bottom_splitter.addWidget(left_panel)
 
         # --- Columna derecha: Alertas + Tareas Vencidas ---
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(4, 0, 0, 0)
-        right_layout.setSpacing(10)
+        right_layout.setSpacing(8)
 
         lbl_alertas = QLabel("Alertas y Recordatorios")
         lbl_alertas.setFont(QFont("Lato", 13, QFont.Weight.Bold))
@@ -389,12 +388,12 @@ class DashboardView(QWidget):
         self._alertas_scroll = QScrollArea()
         self._alertas_scroll.setWidgetResizable(True)
         self._alertas_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._alertas_scroll.setMinimumHeight(200)
-        self._alertas_scroll.setMaximumHeight(300)
+        self._alertas_scroll.setMinimumHeight(160)
+        self._alertas_scroll.setMaximumHeight(240)
         alertas_widget = QWidget()
         self._alertas_container = QVBoxLayout(alertas_widget)
         self._alertas_container.setContentsMargins(0, 4, 0, 4)
-        self._alertas_container.setSpacing(8)
+        self._alertas_container.setSpacing(4)
         self._alertas_scroll.setWidget(alertas_widget)
 
         self._lbl_no_alertas = QLabel("Sin alertas pendientes")
@@ -415,10 +414,10 @@ class DashboardView(QWidget):
         ])
         self._table_vencidas.horizontalHeader().setStretchLastSection(True)
         self._table_vencidas.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._table_vencidas.horizontalHeader().setMinimumHeight(32)
+        self._table_vencidas.horizontalHeader().setMinimumHeight(26)
         self._table_vencidas.verticalHeader().setVisible(False)
-        self._table_vencidas.verticalHeader().setDefaultSectionSize(42)
-        self._table_vencidas.setMinimumHeight(200)
+        self._table_vencidas.verticalHeader().setDefaultSectionSize(34)
+        self._table_vencidas.setMinimumHeight(160)
         self._table_vencidas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._table_vencidas.setStyleSheet("""
             QTableWidget {
@@ -429,7 +428,7 @@ class DashboardView(QWidget):
                 gridline-color: #eeeeee;
             }
             QTableWidget::item {
-                padding: 8px 6px;
+                padding: 4px 4px;
                 border-bottom: 1px solid #f0f0f0;
                 color: #1a1a1a;
             }
@@ -439,7 +438,7 @@ class DashboardView(QWidget):
                 font-weight: 600;
                 border: none;
                 border-bottom: 2px solid #c9a84c;
-                padding: 8px 6px;
+                padding: 4px 4px;
             }
         """)
         self._table_vencidas.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -448,13 +447,19 @@ class DashboardView(QWidget):
         self._table_vencidas.cellClicked.connect(self._on_vencidas_clicked)
         right_layout.addWidget(self._table_vencidas)
 
-        bottom_splitter.addWidget(right_panel)
+        if not self._can_view_tareas:
+            lbl_vencidas.setVisible(False)
+            self._table_vencidas.setVisible(False)
+
+        if self._can_view_tareas or self._can_view_turnos or self._can_view_expedientes:
+            bottom_splitter.addWidget(right_panel)
 
         # Proporciones iniciales: 60% turnos, 40% alertas/vencidas
-        bottom_splitter.setStretchFactor(0, 6)
-        bottom_splitter.setStretchFactor(1, 4)
-
-        self._layout.addWidget(bottom_splitter, 1)
+        if bottom_splitter.count() > 0:
+            if bottom_splitter.count() == 2:
+                bottom_splitter.setStretchFactor(0, 6)
+                bottom_splitter.setStretchFactor(1, 4)
+            self._layout.addWidget(bottom_splitter, 1)
 
         scroll.setWidget(content)
         outer = QVBoxLayout(self)
@@ -466,84 +471,81 @@ class DashboardView(QWidget):
             check_recordatorios_expedientes()
         except Exception:
             logger.exception("Error al verificar recordatorios de expedientes")
-        session = Session.get()
-
-        # KPIs operativos (con scope)
-        exp_activos = len(ExpedienteController.get_scoped(
-            where="e.estado NOT IN ('Cerrado','Archivado')"))
-        exp_cerrados = len(ExpedienteController.get_scoped(
-            where="e.estado IN ('Cerrado','Archivado')"))
-        tareas_pend = len(TareaController.get_scoped(
-            where="estado IN ('Pendiente','En curso','En espera')"))
         from datetime import datetime, timedelta
         today = datetime.now().strftime("%Y-%m-%d")  # Fecha LOCAL (no UTC)
-        tareas_venc = len(TareaController.get_scoped(
-            where="estado IN ('Pendiente','En curso') AND fecha_vencimiento < ?",
-            params=(today,)))
 
-        self._kpi_cards["exp_activos"].update_value(str(exp_activos))
-        self._kpi_cards["exp_cerrados"].update_value(str(exp_cerrados))
-        self._kpi_cards["tareas_pend"].update_value(str(tareas_pend))
-        self._kpi_cards["tareas_venc"].update_value(str(tareas_venc))
+        # KPIs operativos (con scope + permiso)
+        if self._can_view_expedientes:
+            exp_activos = len(ExpedienteController.get_scoped(
+                where="e.estado NOT IN ('Cerrado','Archivado')"))
+            exp_cerrados = len(ExpedienteController.get_scoped(
+                where="e.estado IN ('Cerrado','Archivado')"))
+            self._kpi_cards["exp_activos"].update_value(str(exp_activos))
+            self._kpi_cards["exp_cerrados"].update_value(str(exp_cerrados))
 
-        # KPI total de clientes
-        total_clientes = ClienteController.count_all()
-        self._kpi_cards["total_clientes"].update_value(str(total_clientes))
+            tiempo_data = ReporteController.tiempo_promedio_resolucion()
+            prom = tiempo_data.get("promedio_dias", 0)
+            total_cerr = tiempo_data.get("total_cerrados", 0)
+            self._kpi_cards["tiempo_prom"].update_value(f"{prom:.0f} dias" if total_cerr > 0 else "-")
 
-        # KPI tiempo promedio de resolucion
-        tiempo_data = ReporteController.tiempo_promedio_resolucion()
-        prom = tiempo_data.get("promedio_dias", 0)
-        total_cerr = tiempo_data.get("total_cerrados", 0)
-        if total_cerr > 0:
-            self._kpi_cards["tiempo_prom"].update_value(f"{prom:.0f} dias")
+        if self._can_view_tareas:
+            tareas_pend = len(TareaController.get_scoped(
+                where="estado IN ('Pendiente','En curso','En espera')"))
+            tareas_venc = len(TareaController.get_scoped(
+                where="estado IN ('Pendiente','En curso') AND fecha_vencimiento < ?",
+                params=(today,)))
+            self._kpi_cards["tareas_pend"].update_value(str(tareas_pend))
+            self._kpi_cards["tareas_venc"].update_value(str(tareas_venc))
+
+        if self._can_view_clientes:
+            total_clientes = ClienteController.count_all()
+            self._kpi_cards["total_clientes"].update_value(str(total_clientes))
+
+        turnos_hoy: list[dict] = []
+        if self._can_view_turnos:
+            limit_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+            turnos_prox = TurnoController.get_scoped(
+                where="fecha_turno >= ? AND fecha_turno <= ? AND estado IN ('Pendiente','Confirmado')",
+                params=(today, limit_date))
+            turnos_hoy = TurnoController.get_scoped(
+                where="fecha_turno = ?", params=(today,), order_by="hora_turno ASC")
+            turnos_sin_doc = TurnoController.get_scoped(
+                where="documentacion_lista = 0 AND estado IN ('Pendiente','Confirmado') AND fecha_turno >= ?",
+                params=(today,))
+            turnos_pend_res = TurnoController.get_scoped(
+                where="estado = 'Asistido' AND (resultado IS NULL OR resultado = '')")
+
+            self._kpi_cards["turnos_prox"].update_value(str(len(turnos_prox)))
+            self._kpi_cards["turnos_hoy"].update_value(str(len(turnos_hoy)))
+            self._kpi_cards["turnos_sin_doc"].update_value(str(len(turnos_sin_doc)))
+            self._kpi_cards["turnos_pend_res"].update_value(str(len(turnos_pend_res)))
+
+            # Tabla turnos de hoy (con cache de clientes para evitar queries repetidas)
+            clientes_cache: dict[str, dict | None] = {}
+            self._table_turnos_hoy.setRowCount(len(turnos_hoy))
+            for i, t in enumerate(turnos_hoy):
+                it_hora = QTableWidgetItem(t.get("hora_turno", ""))
+                it_hora.setData(Qt.ItemDataRole.UserRole, (t.get("_id") or "").strip())
+                self._table_turnos_hoy.setItem(i, 0, it_hora)
+                cid = t.get("id_cliente", "")
+                if cid and cid not in clientes_cache:
+                    clientes_cache[cid] = ClienteController.get_by_id(cid)
+                cli = clientes_cache.get(cid)
+                nombre = cli.get("nombre_completo", "") if cli else ""
+                self._table_turnos_hoy.setItem(i, 1, QTableWidgetItem(nombre))
+                self._table_turnos_hoy.setItem(i, 2, QTableWidgetItem(t.get("tipo_tramite", "")))
+                self._table_turnos_hoy.setItem(i, 3, QTableWidgetItem(t.get("oficina_anses", "")))
+                self._table_turnos_hoy.setItem(i, 4, QTableWidgetItem(t.get("responsable", "")))
+                doc = "Si" if t.get("documentacion_lista") else "No"
+                self._table_turnos_hoy.setItem(i, 5, QTableWidgetItem(doc))
         else:
-            self._kpi_cards["tiempo_prom"].update_value("-")
+            self._table_turnos_hoy.setRowCount(0)
 
-        # KPIs economicos (solo roles con permiso de movimientos)
-        if self._show_eco_kpis:
-            eco = ReporteController.kpis_economicos()
-            self._kpi_cards["ingresos"].update_value(f'${eco["ingresos_cobrados"]:,.0f}')
-            self._kpi_cards["pendientes"].update_value(f'${eco["pendientes_cobro"]:,.0f}')
-
-        # KPIs turnos (con scope)
-        limit_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
-        turnos_prox = TurnoController.get_scoped(
-            where="fecha_turno >= ? AND fecha_turno <= ? AND estado IN ('Pendiente','Confirmado')",
-            params=(today, limit_date))
-        turnos_hoy = TurnoController.get_scoped(
-            where="fecha_turno = ?", params=(today,), order_by="hora_turno ASC")
-        turnos_sin_doc = TurnoController.get_scoped(
-            where="documentacion_lista = 0 AND estado IN ('Pendiente','Confirmado') AND fecha_turno >= ?",
-            params=(today,))
-        turnos_pend_res = TurnoController.get_scoped(
-            where="estado = 'Asistido' AND (resultado IS NULL OR resultado = '')")
-
-        self._kpi_cards["turnos_prox"].update_value(str(len(turnos_prox)))
-        self._kpi_cards["turnos_hoy"].update_value(str(len(turnos_hoy)))
-        self._kpi_cards["turnos_sin_doc"].update_value(str(len(turnos_sin_doc)))
-        self._kpi_cards["turnos_pend_res"].update_value(str(len(turnos_pend_res)))
-
-        plz = ExpedienteController.count_plazos_por_estado_scoped()
-        self._kpi_cards["plazos_crit"].update_value(str(plz.get("criticos_vencidos", 0)))
-        self._kpi_cards["plazos_7"].update_value(str(plz.get("proximos_7", 0)))
-        self._kpi_cards["plazos_hoy"].update_value(str(plz.get("hoy", 0)))
-
-        # Tabla turnos de hoy (con cache de clientes para evitar queries repetidas)
-        clientes_cache: dict[str, dict | None] = {}
-        self._table_turnos_hoy.setRowCount(len(turnos_hoy))
-        for i, t in enumerate(turnos_hoy):
-            self._table_turnos_hoy.setItem(i, 0, QTableWidgetItem(t.get("hora_turno", "")))
-            cid = t.get("id_cliente", "")
-            if cid and cid not in clientes_cache:
-                clientes_cache[cid] = ClienteController.get_by_id(cid)
-            cli = clientes_cache.get(cid)
-            nombre = cli.get("nombre_completo", "") if cli else ""
-            self._table_turnos_hoy.setItem(i, 1, QTableWidgetItem(nombre))
-            self._table_turnos_hoy.setItem(i, 2, QTableWidgetItem(t.get("tipo_tramite", "")))
-            self._table_turnos_hoy.setItem(i, 3, QTableWidgetItem(t.get("oficina_anses", "")))
-            self._table_turnos_hoy.setItem(i, 4, QTableWidgetItem(t.get("responsable", "")))
-            doc = "Si" if t.get("documentacion_lista") else "No"
-            self._table_turnos_hoy.setItem(i, 5, QTableWidgetItem(doc))
+        if self._can_view_expedientes:
+            plz = ExpedienteController.count_plazos_por_estado_scoped()
+            self._kpi_cards["plazos_crit"].update_value(str(plz.get("criticos_vencidos", 0)))
+            self._kpi_cards["plazos_7"].update_value(str(plz.get("proximos_7", 0)))
+            self._kpi_cards["plazos_hoy"].update_value(str(plz.get("hoy", 0)))
 
         # KPI Auditoria
         if self._show_audit_kpi:
@@ -551,42 +553,58 @@ class DashboardView(QWidget):
             self._kpi_cards["acciones_hoy"].update_value(str(acciones_hoy))
 
         # Alertas del scheduler
-        self._refresh_alertas()
-        self._refresh_asignado_por_etapa()
-        self._refresh_plazos_dashboard()
+        if self._can_view_tareas or self._can_view_turnos or self._can_view_expedientes:
+            self._refresh_alertas()
+        else:
+            self._table_vencidas.setRowCount(0)
+
+        if self._can_view_expedientes:
+            self._refresh_asignado_por_etapa()
+            self._refresh_plazos_dashboard()
+        else:
+            self._table_asignado_etapa.setRowCount(0)
+            self._table_plazos.setRowCount(0)
 
         # Tareas vencidas (con scope)
-        vencidas = TareaController.get_scoped(
-            where="estado IN ('Pendiente','En curso') AND fecha_vencimiento < ?",
-            params=(today,), order_by="fecha_vencimiento ASC")
-        expediente_cache: dict[str, dict | None] = {}
-        cliente_cache_vencidas: dict[str, dict | None] = {}
-        self._table_vencidas.setRowCount(len(vencidas[:20]))
-        for i, t in enumerate(vencidas[:20]):
-            it0 = QTableWidgetItem(t.get("descripcion", ""))
-            it0.setData(Qt.ItemDataRole.UserRole, (t.get("_id") or "").strip())
-            self._table_vencidas.setItem(i, 0, it0)
-            expediente_oid = t.get("id_expediente", "") or ""
-            nombre_cliente = ""
-            if expediente_oid:
-                if expediente_oid not in expediente_cache:
-                    expediente_cache[expediente_oid] = ExpedienteController.get_by_id(expediente_oid)
-                exp = expediente_cache.get(expediente_oid)
-                cliente_oid = exp.get("id_cliente", "") if exp else ""
-                if cliente_oid:
-                    if cliente_oid not in cliente_cache_vencidas:
-                        cliente_cache_vencidas[cliente_oid] = ClienteController.get_by_id(cliente_oid)
-                    cli = cliente_cache_vencidas.get(cliente_oid)
-                    nombre_cliente = cli.get("nombre_completo", "") if cli else ""
-            self._table_vencidas.setItem(i, 1, QTableWidgetItem(nombre_cliente))
-            self._table_vencidas.setItem(i, 2, QTableWidgetItem(t.get("responsable", "")))
-            self._table_vencidas.setItem(i, 3, QTableWidgetItem(t.get("fecha_vencimiento", "")))
-            self._table_vencidas.setItem(i, 4, QTableWidgetItem(t.get("estado", "")))
+        if self._can_view_tareas:
+            vencidas = TareaController.get_scoped(
+                where="estado IN ('Pendiente','En curso') AND fecha_vencimiento < ?",
+                params=(today,), order_by="fecha_vencimiento ASC")
+            expediente_cache: dict[str, dict | None] = {}
+            cliente_cache_vencidas: dict[str, dict | None] = {}
+            self._table_vencidas.setRowCount(len(vencidas[:20]))
+            for i, t in enumerate(vencidas[:20]):
+                it0 = QTableWidgetItem(t.get("descripcion", ""))
+                it0.setData(Qt.ItemDataRole.UserRole, (t.get("_id") or "").strip())
+                it0.setToolTip(t.get("descripcion", ""))
+                self._table_vencidas.setItem(i, 0, it0)
+                expediente_oid = t.get("id_expediente", "") or ""
+                nombre_cliente = ""
+                if expediente_oid:
+                    if expediente_oid not in expediente_cache:
+                        expediente_cache[expediente_oid] = ExpedienteController.get_by_id(expediente_oid)
+                    exp = expediente_cache.get(expediente_oid)
+                    cliente_oid = exp.get("id_cliente", "") if exp else ""
+                    if cliente_oid:
+                        if cliente_oid not in cliente_cache_vencidas:
+                            cliente_cache_vencidas[cliente_oid] = ClienteController.get_by_id(cliente_oid)
+                        cli = cliente_cache_vencidas.get(cliente_oid)
+                        nombre_cliente = cli.get("nombre_completo", "") if cli else ""
+                self._table_vencidas.setItem(i, 1, QTableWidgetItem(nombre_cliente))
+                self._table_vencidas.setItem(i, 2, QTableWidgetItem(t.get("responsable", "")))
+                self._table_vencidas.setItem(i, 3, QTableWidgetItem(t.get("fecha_vencimiento", "")))
+                self._table_vencidas.setItem(i, 4, QTableWidgetItem(t.get("estado", "")))
+        else:
+            self._table_vencidas.setRowCount(0)
 
     def _on_plazo_calendar_clicked(self, _qd: QDate):
         self._fill_plazos_table_filtered()
 
     def _refresh_plazos_dashboard(self):
+        if not self._can_view_expedientes:
+            self._plazos_cache = []
+            self._table_plazos.setRowCount(0)
+            return
         try:
             from datetime import datetime, timedelta
             today = datetime.now().date()
@@ -671,13 +689,14 @@ class DashboardView(QWidget):
         except Exception:
             logger.exception("Error al cargar notificaciones en dashboard")
 
-        if not alertas:
+        alertas_visibles = [a for a in alertas if self._can_show_alerta(a)]
+        if not alertas_visibles:
             lbl = QLabel("Sin alertas pendientes")
             lbl.setStyleSheet("color: #6b6b6b; font-style: italic; padding: 12px 8px;")
             self._alertas_container.addWidget(lbl)
             return
 
-        for alerta in alertas[:20]:
+        for alerta in alertas_visibles[:20]:
             tipo = alerta.get("tipo", "")
             if tipo == "tarea_vencida":
                 icon = "\u26A0"
@@ -707,20 +726,30 @@ class DashboardView(QWidget):
                 icon = "\u2139"
                 color = "#4a4a4a"
 
-            lbl = QLabel(f"{icon}  {alerta.get('mensaje', '')}")
-            lbl.setStyleSheet(f"""
-                color: {color};
-                background: #fafafa;
-                border: 1px solid #e0e0e0;
-                border-left: 3px solid {color};
-                border-radius: 4px;
-                padding: 10px 12px;
-                font-size: 11px;
+            btn = QPushButton(f"{icon}  {alerta.get('mensaje', '')}")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    text-align: left;
+                    color: {color};
+                    background: #fafafa;
+                    border: 1px solid #e0e0e0;
+                    border-left: 3px solid {color};
+                    border-radius: 4px;
+                    padding: 6px 8px;
+                    font-size: 11px;
+                }}
+                QPushButton:hover {{
+                    background: #f1f1f1;
+                }}
             """)
-            lbl.setWordWrap(True)
-            self._alertas_container.addWidget(lbl)
+            btn.clicked.connect(lambda _checked=False, a=alerta: self._open_alerta(a))
+            self._alertas_container.addWidget(btn)
 
     def _refresh_asignado_por_etapa(self):
+        if not self._can_view_expedientes:
+            self._table_asignado_etapa.setRowCount(0)
+            return
         session = Session.get()
         if not session.logged_in:
             self._table_asignado_etapa.setRowCount(0)
@@ -741,6 +770,46 @@ class DashboardView(QWidget):
             self._table_asignado_etapa.setItem(i, 1, QTableWidgetItem(row.get("cli_nombre", "")))
             self._table_asignado_etapa.setItem(i, 2, QTableWidgetItem(etapa_meta.get("titulo", row.get("etapa_codigo", ""))))
             self._table_asignado_etapa.setItem(i, 3, QTableWidgetItem(etapa_meta.get("instruccion_corta", "")))
+
+    def _can_show_alerta(self, alerta: dict) -> bool:
+        tipo = alerta.get("tipo", "")
+        if tipo.startswith("tarea_"):
+            return self._can_view_tareas
+        if tipo.startswith("turno_"):
+            return self._can_view_turnos
+        if tipo.startswith("expediente_") or tipo == "recordatorio_expediente":
+            return self._can_view_expedientes
+        return self._can_view_tareas or self._can_view_turnos or self._can_view_expedientes
+
+    def _open_alerta(self, alerta: dict):
+        tipo = alerta.get("tipo", "")
+        ref_id = (alerta.get("id") or "").strip()
+        if not ref_id:
+            return
+        if tipo.startswith("tarea_"):
+            self._open_tarea(ref_id)
+        elif tipo.startswith("turno_"):
+            self._open_turno(ref_id)
+        elif tipo.startswith("expediente_") or tipo == "recordatorio_expediente":
+            self._open_expediente(ref_id)
+
+    def _open_tarea(self, tarea_id: str):
+        from views.tareas.tarea_form import TareaFormDialog
+        dlg = TareaFormDialog(tarea_id=tarea_id, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.refresh()
+
+    def _open_turno(self, turno_id: str):
+        from views.turnos.turno_form import TurnoFormDialog
+        dlg = TurnoFormDialog(turno_id=turno_id, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.refresh()
+
+    def _open_expediente(self, expediente_id: str):
+        from views.expedientes.expediente_form import ExpedienteFormDialog
+        dlg = ExpedienteFormDialog(expediente_id=expediente_id, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.refresh()
 
     def _on_asignado_etapa_clicked(self, row: int, _col: int):
         """Abre la carpeta al hacer click en una fila."""
@@ -763,10 +832,17 @@ class DashboardView(QWidget):
         tid = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
         if not tid:
             return
-        from views.tareas.tarea_form import TareaFormDialog
-        dlg = TareaFormDialog(tarea_id=tid, parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            self.refresh()
+        self._open_tarea(tid)
+
+    def _on_turnos_hoy_clicked(self, row: int, _col: int):
+        """Abre el turno al hacer click en una fila."""
+        it = self._table_turnos_hoy.item(row, 0)
+        if not it:
+            return
+        turno_id = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not turno_id:
+            return
+        self._open_turno(turno_id)
 
     # ------------------------------------------------------------------
     # Busqueda rapida por N° de carpeta, DNI o nombre
