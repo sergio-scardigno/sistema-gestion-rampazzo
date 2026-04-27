@@ -28,11 +28,13 @@ class AuditController:
     """Consultas de solo lectura sobre la tabla audit_log."""
 
     @staticmethod
-    def get_all(usuario: str = "", coleccion: str = "", accion: str = "",
-                fecha_desde: str = "", fecha_hasta: str = "",
-                limit: int = 200,
-                resumen_detallado: bool = False) -> list[dict]:
-        """Log completo con filtros opcionales."""
+    def _build_get_all_filters(
+        usuario: str = "",
+        coleccion: str = "",
+        accion: str = "",
+        fecha_desde: str = "",
+        fecha_hasta: str = "",
+    ) -> tuple[str, list]:
         conditions = []
         params = []
 
@@ -46,31 +48,61 @@ class AuditController:
             conditions.append("accion = ?")
             params.append(accion)
         if fecha_desde:
-            conditions.append("timestamp >= ?")
+            conditions.append("SUBSTR(COALESCE(timestamp, ''), 1, 10) >= ?")
             params.append(fecha_desde)
         if fecha_hasta:
-            # Agregar un dia para incluir todo el dia seleccionado
-            conditions.append("timestamp <= ?")
-            params.append(fecha_hasta + "T23:59:59")
+            conditions.append("SUBSTR(COALESCE(timestamp, ''), 1, 10) <= ?")
+            params.append(fecha_hasta)
 
         where = " AND ".join(conditions) if conditions else ""
-        rows = db_local.find_all(
-            "audit_log",
-            where=where,
-            params=tuple(params),
-            order_by="timestamp DESC",
-            limit=limit,
+        return where, params
+
+    @staticmethod
+    def get_all(usuario: str = "", coleccion: str = "", accion: str = "",
+                fecha_desde: str = "", fecha_hasta: str = "",
+                limit: int = 200, offset: int = 0,
+                resumen_detallado: bool = False) -> list[dict]:
+        """Log completo con filtros opcionales."""
+        where, params = AuditController._build_get_all_filters(
+            usuario=usuario,
+            coleccion=coleccion,
+            accion=accion,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
         )
+        sql = "SELECT * FROM audit_log"
+        if where:
+            sql += f" WHERE {where}"
+        sql += " ORDER BY timestamp DESC"
+        run_params: list = list(params)
+        if limit and limit > 0:
+            sql += " LIMIT ? OFFSET ?"
+            run_params.extend([int(limit), max(0, int(offset))])
+        elif offset and offset > 0:
+            sql += " LIMIT -1 OFFSET ?"
+            run_params.append(max(0, int(offset)))
+        conn = db_local.get_connection()
+        db_rows = conn.execute(sql, tuple(run_params)).fetchall()
+        conn.close()
+        rows = db_local.rows_to_list(db_rows)
+
+        context_map = AuditController._build_context_map(rows)
 
         # Enriquecer cada registro con resumen legible.
         # En listados grandes usamos resumen rapido para mejorar rendimiento.
         for row in rows:
             row["accion_label"] = ACCION_LABELS.get(row.get("accion", ""), row.get("accion", ""))
             row["coleccion_label"] = COLECCION_LABELS.get(row.get("coleccion", ""), row.get("coleccion", ""))
+            contexto = context_map.get(row.get("_id", ""), {})
+            row["carpeta_label"] = contexto.get("carpeta_label", "-")
+            row["cliente_label"] = contexto.get("cliente_label", "-")
+            row["documento_label"] = contexto.get("documento_label", row.get("documento_id", "") or "-")
+            row["cambio_clave"] = AuditController._build_key_change(row)
             if resumen_detallado:
                 row["resumen"] = AuditController._generar_resumen(row)
             else:
                 row["resumen"] = AuditController._generar_resumen_rapido(row)
+            row["resumen"] = AuditController._append_context_to_summary(row["resumen"], row)
 
         return rows
 
@@ -513,6 +545,173 @@ class AuditController:
         if accion == "update":
             return f"Editado en {coleccion}"
         return accion or "Accion"
+
+    @staticmethod
+    def _append_context_to_summary(base_summary: str, row: dict) -> str:
+        parts = [base_summary or "Accion"]
+        carpeta = (row.get("carpeta_label") or "").strip()
+        cliente = (row.get("cliente_label") or "").strip()
+        cambio = (row.get("cambio_clave") or "").strip()
+        if carpeta and carpeta != "-":
+            parts.append(f"Carpeta: {carpeta}")
+        if cliente and cliente != "-":
+            parts.append(f"Cliente: {cliente}")
+        if cambio and cambio != "-":
+            parts.append(cambio)
+        return " | ".join(parts)
+
+    @staticmethod
+    def _build_key_change(row: dict) -> str:
+        anteriores = _parse_json(row.get("datos_anteriores"))
+        nuevos = _parse_json(row.get("datos_nuevos"))
+        if not isinstance(anteriores, dict):
+            anteriores = {}
+        if not isinstance(nuevos, dict):
+            nuevos = {}
+        hidden = {"_id", "sync_status", "created_by_machine", "version", "updated_at"}
+        for key in sorted(set(anteriores.keys()) | set(nuevos.keys())):
+            if key in hidden:
+                continue
+            old_val = _format_value(anteriores.get(key))
+            new_val = _format_value(nuevos.get(key))
+            if old_val != new_val:
+                old_txt = old_val if old_val else "-"
+                new_txt = new_val if new_val else "-"
+                return f"{key}: {old_txt} -> {new_txt}"
+        return "-"
+
+    @staticmethod
+    def _build_context_map(rows: list[dict]) -> dict[str, dict]:
+        exp_ids: set[str] = set()
+        cli_ids: set[str] = set()
+        doc_ids: set[str] = set()
+        row_refs: dict[str, dict[str, str]] = {}
+
+        for row in rows:
+            row_id = row.get("_id", "")
+            doc_id = (row.get("documento_id") or "").strip()
+            coleccion = (row.get("coleccion") or "").strip()
+            anteriores = _parse_json(row.get("datos_anteriores"))
+            nuevos = _parse_json(row.get("datos_nuevos"))
+            snap = {}
+            if isinstance(anteriores, dict):
+                snap.update(anteriores)
+            if isinstance(nuevos, dict):
+                snap.update(nuevos)
+
+            exp_id = str(snap.get("id_expediente", "") or "").strip()
+            cli_id = str(snap.get("id_cliente", "") or "").strip()
+            doc_ref = str(snap.get("id_documento", "") or "").strip()
+            if coleccion == "expedientes" and doc_id:
+                exp_id = exp_id or doc_id
+            if coleccion == "clientes" and doc_id:
+                cli_id = cli_id or doc_id
+            if coleccion == "documentos" and doc_id:
+                doc_ref = doc_ref or doc_id
+
+            if exp_id:
+                exp_ids.add(exp_id)
+            if cli_id:
+                cli_ids.add(cli_id)
+            if doc_ref:
+                doc_ids.add(doc_ref)
+            row_refs[row_id] = {
+                "exp_id": exp_id,
+                "cli_id": cli_id,
+                "doc_id": doc_ref,
+                "coleccion": coleccion,
+                "documento_id": doc_id,
+            }
+
+        docs = AuditController._fetch_documentos(doc_ids)
+        for data in docs.values():
+            exp_id = str(data.get("id_expediente", "") or "").strip()
+            if exp_id:
+                exp_ids.add(exp_id)
+        exps = AuditController._fetch_expedientes(exp_ids)
+        for data in exps.values():
+            cli_id = str(data.get("id_cliente", "") or "").strip()
+            if cli_id:
+                cli_ids.add(cli_id)
+        clis = AuditController._fetch_clientes(cli_ids)
+
+        context_map: dict[str, dict] = {}
+        for row in rows:
+            row_id = row.get("_id", "")
+            refs = row_refs.get(row_id, {})
+            exp_id = refs.get("exp_id", "")
+            cli_id = refs.get("cli_id", "")
+            doc_id = refs.get("doc_id", "")
+            coleccion = refs.get("coleccion", "")
+            raw_doc_id = refs.get("documento_id", "")
+
+            doc = docs.get(doc_id, {})
+            if not doc and coleccion == "documentos" and raw_doc_id:
+                doc = docs.get(raw_doc_id, {})
+            if not exp_id and doc:
+                exp_id = str(doc.get("id_expediente", "") or "").strip()
+            exp = exps.get(exp_id, {})
+            if not cli_id and exp:
+                cli_id = str(exp.get("id_cliente", "") or "").strip()
+            cli = clis.get(cli_id, {})
+
+            carpeta_label = "-"
+            if exp:
+                exp_num = str(exp.get("id_expediente", "") or "").strip()
+                carpeta_label = exp_num or "-"
+
+            cliente_label = "-"
+            if cli:
+                cliente_label = str(cli.get("nombre_completo", "") or "").strip() or "-"
+
+            documento_label = raw_doc_id or "-"
+            if doc:
+                doc_name = str(doc.get("nombre", "") or "").strip()
+                doc_id_txt = str(doc.get("id_documento", "") or "").strip()
+                documento_label = doc_name or doc_id_txt or raw_doc_id or "-"
+            elif coleccion == "expedientes":
+                documento_label = f"Expediente {carpeta_label}" if carpeta_label != "-" else (raw_doc_id or "-")
+            elif coleccion == "clientes":
+                documento_label = cliente_label if cliente_label != "-" else (raw_doc_id or "-")
+
+            context_map[row_id] = {
+                "carpeta_label": carpeta_label,
+                "cliente_label": cliente_label,
+                "documento_label": documento_label,
+            }
+        return context_map
+
+    @staticmethod
+    def _fetch_rows_by_ids(table: str, ids: list[str]) -> dict[str, dict]:
+        valid_ids = [x for x in ids if x]
+        if not valid_ids:
+            return {}
+        placeholders = ",".join(["?"] * len(valid_ids))
+        conn = db_local.get_connection()
+        rows = conn.execute(
+            f"SELECT * FROM {table} WHERE _id IN ({placeholders})",
+            tuple(valid_ids),
+        ).fetchall()
+        conn.close()
+        out: dict[str, dict] = {}
+        for row in rows:
+            item = db_local.dict_from_row(row) or {}
+            rid = item.get("_id", "")
+            if rid:
+                out[rid] = item
+        return out
+
+    @staticmethod
+    def _fetch_expedientes(ids: set[str]) -> dict[str, dict]:
+        return AuditController._fetch_rows_by_ids("expedientes", sorted(ids))
+
+    @staticmethod
+    def _fetch_clientes(ids: set[str]) -> dict[str, dict]:
+        return AuditController._fetch_rows_by_ids("clientes", sorted(ids))
+
+    @staticmethod
+    def _fetch_documentos(ids: set[str]) -> dict[str, dict]:
+        return AuditController._fetch_rows_by_ids("documentos", sorted(ids))
 
 
 # ── Helpers privados ──

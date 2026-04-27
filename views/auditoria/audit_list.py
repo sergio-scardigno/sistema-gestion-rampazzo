@@ -138,9 +138,10 @@ class AuditListView(QWidget):
 
         # ── Tabla de log ──
         self._log_table = QTableWidget()
-        self._log_table.setColumnCount(6)
+        self._log_table.setColumnCount(9)
         self._log_table.setHorizontalHeaderLabels([
-            "Fecha/Hora", "Usuario", "Accion", "Modulo", "Documento", "Resumen"
+            "Fecha/Hora", "Usuario", "Accion", "Modulo", "Carpeta", "Cliente",
+            "Documento", "Cambio clave", "Resumen"
         ])
         self._log_table.horizontalHeader().setStretchLastSection(True)
         self._log_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -148,13 +149,17 @@ class AuditListView(QWidget):
         self._log_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self._log_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self._log_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        self._log_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self._log_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self._log_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        self._log_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
+        self._log_table.horizontalHeader().setSectionResizeMode(8, QHeaderView.ResizeMode.Stretch)
         self._log_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._log_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._log_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._log_table.setAlternatingRowColors(True)
         self._log_table.verticalHeader().setVisible(False)
         self._log_table.doubleClicked.connect(self._on_log_double_click)
+        self._log_table.verticalScrollBar().valueChanged.connect(self._on_log_scroll)
         layout.addWidget(self._log_table)
 
         # ── Barra inferior ──
@@ -404,31 +409,68 @@ class AuditListView(QWidget):
 
     def _apply_filters(self):
         """Aplica los filtros seleccionados y recarga la tabla de log."""
-        usuario = self._cmb_usuario.currentData() or ""
-        coleccion = self._cmb_modulo.currentData() or ""
-        accion = self._cmb_accion.currentData() or ""
-        fecha_desde = self._date_desde.date().toString("yyyy-MM-dd")
-        fecha_hasta = self._date_hasta.date().toString("yyyy-MM-dd")
+        if self._date_desde.date() > self._date_hasta.date():
+            QMessageBox.warning(
+                self,
+                "Filtro de fechas",
+                "La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'.",
+            )
+            return
+        self._load_log_page(reset=True)
+
+    def _current_log_filters(self) -> dict:
+        return {
+            "usuario": self._cmb_usuario.currentData() or "",
+            "coleccion": self._cmb_modulo.currentData() or "",
+            "accion": self._cmb_accion.currentData() or "",
+            "fecha_desde": self._date_desde.date().toString("yyyy-MM-dd"),
+            "fecha_hasta": self._date_hasta.date().toString("yyyy-MM-dd"),
+        }
+
+    def _load_log_page(self, reset: bool = False):
+        if reset or not hasattr(self, "_log_page_size"):
+            self._log_page_size = 50
+            self._log_offset = 0
+            self._log_has_more = True
+            self._loading_more_logs = False
+            self._log_filters = self._current_log_filters()
+            self._log_data = []
+            self._log_table.setRowCount(0)
+        if getattr(self, "_loading_more_logs", False) or not getattr(self, "_log_has_more", True):
+            return
+        self._loading_more_logs = True
 
         data = AuditController.get_all(
-            usuario=usuario,
-            coleccion=coleccion,
-            accion=accion,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-            limit=200,
+            usuario=self._log_filters["usuario"],
+            coleccion=self._log_filters["coleccion"],
+            accion=self._log_filters["accion"],
+            fecha_desde=self._log_filters["fecha_desde"],
+            fecha_hasta=self._log_filters["fecha_hasta"],
+            limit=self._log_page_size,
+            offset=self._log_offset,
             resumen_detallado=False,
         )
+        append_mode = self._log_offset > 0
+        self._populate_log_table(data, append=append_mode)
+        self._log_offset += len(data)
+        self._log_has_more = len(data) == self._log_page_size
+        suffix = " (carga completa)" if not self._log_has_more else " (carga progresiva)"
+        self._lbl_log_count.setText(f"{len(self._log_data)} registros cargados{suffix}")
+        self._loading_more_logs = False
 
-        self._populate_log_table(data)
-        self._lbl_log_count.setText(f"{len(data)} registros encontrados (max 200)")
+    def _on_log_scroll(self, value: int):
+        if not hasattr(self, "_log_table"):
+            return
+        bar = self._log_table.verticalScrollBar()
+        if value >= max(0, bar.maximum() - 20):
+            self._load_log_page(reset=False)
 
     def _clear_filters(self):
         """Limpia todos los filtros."""
         self._cmb_usuario.setCurrentIndex(0)
         self._cmb_modulo.setCurrentIndex(0)
         self._cmb_accion.setCurrentIndex(0)
-        self._date_desde.setDate(QDate.currentDate().addDays(-30))
+        self._date_desde.setDate(QDate(2000, 1, 1))
         self._date_hasta.setDate(QDate.currentDate())
         self._apply_filters()
 
@@ -464,7 +506,7 @@ class AuditListView(QWidget):
         self._date_seg_hasta.setDate(QDate.currentDate())
         self._apply_task_tracking_filters()
 
-    def _populate_log_table(self, data: list[dict]):
+    def _populate_log_table(self, data: list[dict], append: bool = False):
         """Llena la tabla de log con los datos."""
         # Color badges para acciones
         accion_colors = {
@@ -472,11 +514,17 @@ class AuditListView(QWidget):
             "update": ("#3d3520", "#c9a84c"),
             "delete": ("#3d1f1f", "#ff8a8a"),
         }
+        if append and hasattr(self, "_log_data"):
+            start = len(self._log_data)
+            self._log_data.extend(data)
+            self._log_table.setRowCount(len(self._log_data))
+        else:
+            self._log_data = list(data)
+            start = 0
+            self._log_table.setRowCount(len(self._log_data))
 
-        self._log_data = data  # Guardar para doble clic
-        self._log_table.setRowCount(len(data))
-
-        for i, row in enumerate(data):
+        for rel_idx, row in enumerate(data):
+            i = start + rel_idx
             # Fecha/Hora
             ts = row.get("timestamp", "")
             if ts and len(ts) >= 19:
@@ -500,12 +548,20 @@ class AuditListView(QWidget):
             # Modulo
             self._log_table.setItem(i, 3, QTableWidgetItem(row.get("coleccion_label", "")))
 
-            # Documento ID (truncado)
-            doc_id = row.get("documento_id", "")
-            self._log_table.setItem(i, 4, QTableWidgetItem(doc_id[:12] + "..." if len(doc_id) > 12 else doc_id))
+            # Carpeta
+            self._log_table.setItem(i, 4, QTableWidgetItem(row.get("carpeta_label", "-")))
+
+            # Cliente
+            self._log_table.setItem(i, 5, QTableWidgetItem(row.get("cliente_label", "-")))
+
+            # Documento
+            self._log_table.setItem(i, 6, QTableWidgetItem(row.get("documento_label", "-")))
+
+            # Cambio clave
+            self._log_table.setItem(i, 7, QTableWidgetItem(row.get("cambio_clave", "-")))
 
             # Resumen
-            self._log_table.setItem(i, 5, QTableWidgetItem(row.get("resumen", "")))
+            self._log_table.setItem(i, 8, QTableWidgetItem(row.get("resumen", "")))
 
     def _populate_task_tracking_table(self, data: list[dict]):
         """Llena la tabla de seguimiento de tareas."""
