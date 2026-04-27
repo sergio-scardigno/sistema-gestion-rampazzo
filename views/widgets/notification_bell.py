@@ -398,7 +398,7 @@ class NotificationBell(QWidget):
                 self._notifications = []
                 self._badge.setVisible(False)
                 return
-            NotificacionController.sync_task_alerts_for_user(session.username, due_days=3)
+            NotificacionController.sync_task_alerts_for_user(session.username, due_days=30)
             self._notifications = NotificacionController.get_active_for_user(
                 session.username, limit=50
             )

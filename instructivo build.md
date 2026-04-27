@@ -79,7 +79,7 @@ Select-String -Path "config.py" -Pattern 'APP_VERSION\s*='
 
 ```powershell
 git add "config.py"
-git commit --author "Sergio Scardigno <sergioscardigno82@gmail.com>" -m "v1.7.5 - release multiplataforma"
+git commit --author "Sergio Scardigno <sergioscardigno82@gmail.com>" -m "v1.7.6 - release multiplataforma"
 git push origin HEAD
 ```
 
@@ -92,7 +92,7 @@ git log --oneline -5
 ### 5) Ejecutar release completo (local + multibuild)
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\release_multiplataforma.ps1" -Version "1.7.5"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\release_multiplataforma.ps1" -Version "1.7.6"
 ```
 
 Este script hace:
@@ -153,6 +153,50 @@ gh run download <RUN_ID> -R sergio-scardigno/sistema-gestion-rampazzo -D "dist_o
 Copy-Item -Force "dist_out\_tmp_download_1.7.5\SistemaRampazzo.zip" "dist_out\win-1.7.5\SistemaRampazzo-win-1.7.5.zip"
 Copy-Item -Force "dist_out\_tmp_download_1.7.5\SistemaRampazzo-Linux\SistemaRampazzo.zip" "dist_out\linux-1.7.5\SistemaRampazzo-linux-1.7.5.zip"
 Copy-Item -Force "dist_out\_tmp_download_1.7.5\SistemaRampazzo-macOS\SistemaRampazzo.zip" "dist_out\mac-1.7.5\SistemaRampazzo-mac-1.7.5.zip"
+```
+
+---
+
+## Tests (pytest)
+
+Desde la raiz del repo:
+
+```powershell
+cd "C:\Users\Sergio\proyectos\sistema-gestion-rampazzo"
+```
+
+### Suite completa
+
+```powershell
+pytest
+```
+
+### Windows: si `pytest` se corta sin resumen
+
+En algunos entornos (`win32` + PySide6 + `pytest-qt`) el test `TestFullSync::test_sync_emits_start_signal` puede **cerrar el proceso de Python** (crash nativo de Qt, no un `FAILED` con traceback). En ese caso correr la suite **excluyendo** ese caso:
+
+```powershell
+pytest -k "not test_sync_emits_start_signal"
+```
+
+Para comprobar solo ese test (si crashea, confirma el problema):
+
+```powershell
+pytest tests/integration/test_sync_engine.py::TestFullSync::test_sync_emits_start_signal -vv
+```
+
+### Por tipo de test
+
+```powershell
+pytest -m unit
+pytest -m integration
+pytest -m ui
+```
+
+### Cobertura (opcional)
+
+```powershell
+pytest --cov --cov-report=term-missing
 ```
 
 ---

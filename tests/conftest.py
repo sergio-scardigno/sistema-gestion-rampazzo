@@ -123,6 +123,74 @@ def session_secretaria(monkeypatch):
     return session
 
 
+@pytest.fixture
+def session_abogado(monkeypatch):
+    """Session con rol abogado."""
+    from core.auth import Session
+    session = Session()
+    session.usuario = {
+        "_id": "test-abo-id",
+        "username": "testabo",
+        "nombre_completo": "Test Abogado",
+        "rol": "abogado",
+        "activo": 1,
+        "eliminado": 0,
+    }
+    monkeypatch.setattr(Session, "_instance", session)
+    return session
+
+
+@pytest.fixture
+def session_agente(monkeypatch):
+    """Session con rol agente."""
+    from core.auth import Session
+    session = Session()
+    session.usuario = {
+        "_id": "test-age-id",
+        "username": "testagente",
+        "nombre_completo": "Test Agente",
+        "rol": "agente",
+        "activo": 1,
+        "eliminado": 0,
+    }
+    monkeypatch.setattr(Session, "_instance", session)
+    return session
+
+
+@pytest.fixture
+def session_analisis(monkeypatch):
+    """Session con rol analisis."""
+    from core.auth import Session
+    session = Session()
+    session.usuario = {
+        "_id": "test-ana-id",
+        "username": "testanalisis",
+        "nombre_completo": "Test Analisis",
+        "rol": "analisis",
+        "activo": 1,
+        "eliminado": 0,
+    }
+    monkeypatch.setattr(Session, "_instance", session)
+    return session
+
+
+@pytest.fixture
+def session_admin_visor(monkeypatch):
+    """Session con rol admin_visor."""
+    from core.auth import Session
+    session = Session()
+    session.usuario = {
+        "_id": "test-av-id",
+        "username": "testadminvisor",
+        "nombre_completo": "Test Admin Visor",
+        "rol": "admin_visor",
+        "activo": 1,
+        "eliminado": 0,
+    }
+    monkeypatch.setattr(Session, "_instance", session)
+    return session
+
+
 # ---------------------------------------------------------------------------
 # Fixtures de datos semilla
 # ---------------------------------------------------------------------------
@@ -284,3 +352,103 @@ def seed_usuario():
     }
     db_local.insert("usuarios", user)
     return user
+
+
+@pytest.fixture
+def populated_system(session_superusuario):
+    """Escenario completo con usuarios, clientes, expedientes y tareas."""
+    from core import db_local
+    from controllers.cliente_controller import ClienteController
+    from controllers.expediente_controller import ExpedienteController
+    from controllers.tarea_controller import TareaController
+
+    users = [
+        {"username": "abogado1", "rol": "abogado", "nombre_completo": "Abogado Uno"},
+        {"username": "agente1", "rol": "agente", "nombre_completo": "Agente Uno"},
+        {"username": "analisis1", "rol": "analisis", "nombre_completo": "Analisis Uno"},
+        {"username": "adminvisor1", "rol": "admin_visor", "nombre_completo": "Admin Visor Uno"},
+    ]
+    for user in users:
+        db_local.insert(
+            "usuarios",
+            {
+                "_id": f"user-{user['username']}",
+                "username": user["username"],
+                "password_hash": "x",
+                "nombre_completo": user["nombre_completo"],
+                "email": f"{user['username']}@test.com",
+                "rol": user["rol"],
+                "activo": 1,
+                "eliminado": 0,
+                "sync_status": "synced",
+                "version": 1,
+                "created_by_machine": "test-machine",
+            },
+        )
+
+    clientes = [
+        ClienteController.create({"nombre_completo": "Cliente Uno", "dni": "20111111", "numero_carpeta": "9001"}),
+        ClienteController.create({"nombre_completo": "Cliente Dos", "dni": "20222222", "numero_carpeta": "9002"}),
+        ClienteController.create({"nombre_completo": "Cliente Tres", "dni": "20333333", "numero_carpeta": "9003"}),
+    ]
+
+    expedientes = [
+        ExpedienteController.create({
+            "id_cliente": clientes[0]["_id"],
+            "tipo_tramite": "Jubilacion",
+            "estado": "Activo",
+            "etapa_codigo": "para_citar_o_videollamada",
+            "responsable": "Abogado Uno",
+            "responsable_username": "abogado1",
+        }),
+        ExpedienteController.create({
+            "id_cliente": clientes[1]["_id"],
+            "tipo_tramite": "Pension",
+            "estado": "Activo",
+            "etapa_codigo": "pendiente_turno",
+            "responsable": "Agente Uno",
+            "responsable_username": "agente1",
+        }),
+        ExpedienteController.create({
+            "id_cliente": clientes[2]["_id"],
+            "tipo_tramite": "Reclamo",
+            "estado": "En espera",
+            "etapa_codigo": "req_analizar",
+            "responsable": "Analisis Uno",
+            "responsable_username": "analisis1",
+        }),
+        ExpedienteController.create({
+            "id_cliente": clientes[0]["_id"],
+            "tipo_tramite": "Jubilacion",
+            "estado": "Cerrado",
+            "etapa_codigo": "favorable",
+            "responsable": "Abogado Uno",
+            "responsable_username": "abogado1",
+        }),
+    ]
+
+    tareas = [
+        TareaController.create({
+            "id_expediente": expedientes[0]["_id"],
+            "tipo_accion": "Seguimiento expediente",
+            "estado": "Pendiente",
+            "responsable": "Abogado Uno",
+            "responsable_username": "abogado1",
+        }),
+        TareaController.create({
+            "id_expediente": expedientes[1]["_id"],
+            "tipo_accion": "Turno ANSES",
+            "estado": "En curso",
+            "responsable": "Agente Uno",
+            "responsable_username": "agente1",
+        }),
+        TareaController.create({
+            "id_expediente": expedientes[2]["_id"],
+            "tipo_accion": "Analizar requerimiento",
+            "estado": "En espera",
+            "responsable": "Analisis Uno",
+            "responsable_username": "analisis1",
+        }),
+    ]
+
+    return {"users": users, "clientes": clientes, "expedientes": expedientes, "tareas": tareas}

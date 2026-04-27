@@ -4,7 +4,35 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
-**Versión de aplicación:** 1.7.2
+**Versión de aplicación:** 1.8.0
+
+---
+
+## Notas de versión — 1.8.0 (abril 2026)
+
+### 1. Módulo **Citas** (estudio)
+
+- **Controlador** `CitaController` y tabla local `citas` (fecha, hora, cliente, carpeta opcional, motivo, estado, observaciones, citado por, responsable).
+- **Vista** `CitaListView`: calendario por día (selector de fecha, Hoy, día anterior/siguiente), filtro por estado, tabla con búsqueda (cliente, DNI, N° carpeta, trámite, motivo), colores por urgencia/estado, alta y edición desde **+ Nueva Cita** / **Editar**.
+- **Formulario** `CitaFormDialog`: búsqueda de cliente con autocompletado (nombre, DNI, N° carpeta física o N° carpeta sistema); puede abrirse ya vinculado a cliente y/o carpeta.
+- **Estados:** Pendiente, Confirmada, Asistió, No asistió, Cancelada.
+- **Permisos:** `citas.read` / `citas.*` en RBAC; **Secretaría** puede **consultar** citas y ve el calendario (sin crear/editar salvo lo que defina el despliegue).
+- **Sincronización:** la colección `citas` en MongoDB Atlas (índices por fecha, cliente y carpeta) y la tabla SQLite participan en el **motor de sync** junto al resto de entidades.
+
+### 2. **Pendientes citar**
+
+- Vista dedicada en el sidebar (si el rol puede ver **Carpetas** y **Citas**): listado de carpetas en etapa **Para citar** o **Para citar o videollamada** **sin** cita en estado Pendiente o Confirmada.
+- Acciones por fila: **Crear cita** (abre el formulario con carpeta y cliente precargados) y **Abrir carpeta**; el botón de cita se deshabilita sin permiso `citas.create`.
+
+### 3. Ficha de **Carpeta**
+
+- Campo dedicado **CUIL/CUIT** (solo lectura) debajo del selector de cliente: muestra el CUIL del cliente y permite **copiar al portapapeles con un clic** (mismo patrón que claves Mi ANSES / Fiscal).
+- Al **guardar** una carpeta en etapa de citar sin cita pendiente/confirmada, el sistema puede **sugerir** crear una cita en el módulo Citas (si el usuario tiene permiso de creación).
+
+### 4. Núcleo y pruebas
+
+- Módulo **`core/dias_habiles.py`**: días hábiles de Argentina (lunes a viernes sin feriados nacionales, reglas 2025–2030 y adyacentes) para **recordatorios** / plazos en la ficha de carpeta.
+- Ampliación de la suite: tests de integración E2E, matriz RBAC, regresión de casos límite, unidad de días hábiles y `conftest` reforzado.
 
 ---
 
@@ -147,7 +175,7 @@ flowchart TD
         BaseController
         AuthController
         AuditController
-        SpecificControllers["ClienteController, ExpedienteController, TareaController, TurnoController, ConsultaController, ComunicacionController, DocumentoController, MovimientoController, ReporteController"]
+        SpecificControllers["ClienteController, ExpedienteController, TareaController, TurnoController, CitaController, ConsultaController, ComunicacionController, DocumentoController, MovimientoController, ReporteController, NotificacionController"]
     end
 
     subgraph core [Nucleo]
@@ -156,6 +184,7 @@ flowchart TD
         Permissions["permissions.py - RBAC"]
         SyncEngine["sync_engine.py - Sincronizacion"]
         Scheduler["scheduler.py - Jobs automaticos"]
+        DiasHabiles["dias_habiles.py - Plazos habiles AR"]
         ConnMonitor["connection_monitor.py"]
     end
 
@@ -205,7 +234,8 @@ sistema-gestion-rampazzo/
 │   ├── scheduler.py           #   APScheduler: sync, backups, alertas
 │   ├── connection_monitor.py  #   Monitoreo de conectividad
 │   ├── lock_manager.py        #   Bloqueo de edicion concurrente
-│   └── session_guard.py       #   Control de sesion activa
+│   ├── session_guard.py       #   Control de sesion activa
+│   └── dias_habiles.py        #   Dias habiles y feriados AR (plazos / recordatorios)
 │
 ├── controllers/               # Logica de negocio y CRUD
 │   ├── base_controller.py     #   Controlador CRUD generico
@@ -217,6 +247,7 @@ sistema-gestion-rampazzo/
 │   ├── expediente_etapa_responsable_controller.py # Encargado secundario por etapa
 │   ├── tarea_controller.py    #   CRUD de tareas
 │   ├── turno_controller.py    #   CRUD de turnos ANSES
+│   ├── cita_controller.py     #   CRUD de citas del estudio (agenda interna)
 │   ├── comunicacion_controller.py # CRUD de comunicaciones
 │   ├── documento_controller.py #  Gestion documental con versionado
 │   ├── movimiento_controller.py # Movimientos economicos
@@ -236,6 +267,8 @@ sistema-gestion-rampazzo/
 │   ├── expedientes/           #   Gestion de carpetas (con pestañas)
 │   ├── tareas/                #   Seguimiento de tareas
 │   ├── turnos/                #   Turnos ANSES
+│   ├── citas/                 #   Agenda de citas del estudio (listado y formulario)
+│   ├── pendientes_citar_view.py # Carpetas en etapa de citar sin cita agendada
 │   ├── comunicaciones/        #   Registro de comunicaciones
 │   ├── documentos/            #   Gestion documental
 │   ├── administracion/        #   Movimientos economicos
@@ -272,10 +305,10 @@ sistema-gestion-rampazzo/
 │   ├── backups/               #   Backups automaticos
 │   └── documentos/            #   Archivos de documentos adjuntos
 │
-├── tests/                     # Suite de testing (489 tests)
+├── tests/                     # Suite de testing (574 tests)
 │   ├── conftest.py            #   Fixtures globales
-│   ├── unit/                  #   156 tests unitarios
-│   ├── integration/           #   324 tests de integracion
+│   ├── unit/                  #   168 tests unitarios
+│   ├── integration/           #   397 tests de integracion
 │   └── ui/                    #   9 smoke tests de UI
 │
 └── .github/
@@ -329,6 +362,17 @@ Modulo central del sistema. Cada carpeta representa un tramite o caso legal:
   - Historial de auditoria de la carpeta
 - **Cierre formal** con resultado y fecha.
 - **Visibilidad por rol:** Roles restringidos ven las carpetas donde son responsables principales o **encargados de la etapa actual**.
+- **CUIL/CUIT en ficha:** campo dedicado (solo lectura) con **copia al clic** para pegar en otros sistemas.
+- **Etapas de citar:** al guardar sin cita Pendiente/Confirmada en el modulo Citas, puede ofrecerse crear la cita (segun permisos).
+
+### Citas (agenda del estudio)
+
+- Citas internas del estudio (no confundir con **Turnos ANSES**): fecha, hora, cliente, carpeta opcional, motivo, estado, quien cito y responsable.
+- Listado por dia con busqueda y acciones de edicion; sincronizacion entre **SQLite** y **MongoDB Atlas** como el resto de entidades de negocio.
+
+### Pendientes citar
+
+- Panel operativo: carpetas en etapa **Para citar** / **Para citar o videollamada** sin cita Pendiente o Confirmada; acceso directo a **Crear cita** o abrir la carpeta.
 
 ### Tareas
 
@@ -443,6 +487,8 @@ Ademas de los perfiles operativos, existen dos perfiles administrativos:
 | Carpetas | Leer | Completo | Completo | Completo | Completo | Completo |
 | Tareas | Leer | Completo | Completo | Completo | Completo | Completo |
 | Turnos | Leer | Completo | Completo | Completo | Completo | Completo |
+| Citas | Leer | Completo | Completo | Completo | Completo | Completo |
+| Pendientes citar | Ver | Ver | Ver | Ver | Ver | Ver |
 | Comunicaciones | Leer | Completo | Completo | Completo | Completo | Completo |
 | Documentos | - | Leer | Completo | Completo | Completo | Completo |
 | Administracion (movimientos de dinero) | - | - | - | Completo | - | Completo |
@@ -485,7 +531,7 @@ sequenceDiagram
     Note over App,Atlas: Al reconectar, se sincronizan los cambios acumulados.
 ```
 
-**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, comunicaciones, movimientos, documentos, modelos_escrito, escritos, expediente_estado_historial, notificaciones, expediente_recordatorios, expediente_etapa_responsables, audit_log.
+**Tablas sincronizadas:** usuarios, consultas, clientes, expedientes, tareas, turnos, citas, comunicaciones, movimientos, documentos, modelos_escrito, escritos, expediente_estado_historial, notificaciones, expediente_recordatorios, expediente_etapa_responsables, audit_log.
 
 **Resolucion de conflictos:** si el remoto tiene una version superior o hay cambios locales pendientes con choque de version, se registra un evento en `sync_conflicts` con snapshot local/remoto.
 
@@ -649,18 +695,18 @@ En la primera ejecucion (cuando no existen usuarios en la BD), se crean automati
 
 ## Testing
 
-El proyecto cuenta con una suite de **489 tests automatizados** organizados en 3 niveles con una cobertura de **81%+** sobre los modulos de negocio.
+El proyecto cuenta con una suite de **574 tests automatizados** organizados en 3 niveles con una cobertura de **81%+** sobre los modulos de negocio.
 
 ### Ejecutar tests
 
 ```bash
-# Suite completa (489 tests)
+# Suite completa (574 tests)
 python -m pytest tests/
 
-# Solo tests unitarios (156 tests)
+# Solo tests unitarios (168 tests)
 python -m pytest tests/unit/
 
-# Solo tests de integracion (324 tests)
+# Solo tests de integracion (397 tests)
 python -m pytest tests/integration/
 
 # Solo smoke tests de UI (9 tests)
@@ -687,8 +733,8 @@ start htmlcov\index.html
 
 | Directorio | Tests | Que cubre |
 |---|---|---|
-| `tests/unit/` | 156 | Validadores, modelos, formateadores, permisos, autenticacion (con mocks) |
-| `tests/integration/` | 324 | CRUD completo de todos los controladores, BD SQLite, auditoria, sincronizacion, reportes |
+| `tests/unit/` | 168 | Validadores, modelos, formateadores, permisos, autenticacion, dias habiles (con mocks) |
+| `tests/integration/` | 397 | CRUD de controladores, BD SQLite, auditoria, sincronizacion, reportes, E2E, matriz RBAC, regresiones |
 | `tests/ui/` | 9 | Renderizado de LoginView y MainWindow, flujo de login, permisos en sidebar |
 
 ### CI/CD

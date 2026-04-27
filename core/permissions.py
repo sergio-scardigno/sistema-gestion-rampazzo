@@ -43,6 +43,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.read",
         "turnos.read",
         "comunicaciones.read",
+        "citas.read",
     ],
     "agente": [
         "clientes.*",
@@ -50,6 +51,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.*",
         "turnos.*",
         "comunicaciones.*",
+        "citas.*",
         "documentos.read",
         "escritos.read",
     ],
@@ -59,6 +61,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.*",
         "turnos.*",
         "comunicaciones.*",
+        "citas.*",
         "documentos.*",
         "escritos.*",
     ],
@@ -68,6 +71,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.*",
         "turnos.*",
         "comunicaciones.*",
+        "citas.*",
         "documentos.*",
         "escritos.*",
     ],
@@ -77,6 +81,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.*",
         "turnos.*",
         "comunicaciones.*",
+        "citas.*",
         "documentos.*",
         "escritos.*",
         "movimientos.*",
@@ -90,6 +95,7 @@ PERMISOS: dict[str, list[str]] = {
         "tareas.*",
         "turnos.*",
         "comunicaciones.*",
+        "citas.*",
         "documentos.*",
         "escritos.*",
         "movimientos.read",
@@ -110,6 +116,7 @@ MODULO_PERMISOS = {
     "carpetas_iniciadas": "expedientes.read",
     "tareas": "tareas.read",
     "turnos": "turnos.read",
+    "citas": "citas.read",
     "comunicaciones": "comunicaciones.read",
     "documentos": "documentos.read",
     "administracion": "movimientos.read",
@@ -145,6 +152,13 @@ def modulos_permitidos(rol: str) -> list[str]:
     for modulo, permiso in MODULO_PERMISOS.items():
         if tiene_permiso(rol, permiso):
             permitidos.append(modulo)
+    # Modulo dedicado: requiere ver carpetas y el calendario de citas
+    if (
+        tiene_permiso(rol, "expedientes.read")
+        and tiene_permiso(rol, "citas.read")
+        and "pendientes_citar" not in permitidos
+    ):
+        permitidos.append("pendientes_citar")
     return permitidos
 
 
@@ -164,7 +178,7 @@ def es_scope_global_por_modulo(rol: str, modulo: str = "") -> bool:
         return True
     # Regla solicitada por cliente:
     # secretaria ve todos los clientes y carpetas.
-    if rol == "secretaria" and modulo in {"clientes", "expedientes"}:
+    if rol == "secretaria" and modulo in {"clientes", "expedientes", "citas"}:
         return True
     return False
 

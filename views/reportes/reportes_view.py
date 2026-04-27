@@ -156,6 +156,29 @@ class ReportesView(QWidget):
         tab_humanos_layout.addStretch()
         tabs.addTab(tab_humanos, "Indicadores Humanos")
 
+        # ── Tab: Trazabilidad citar → turno ANSES ──
+        tab_traz = QWidget()
+        tab_traz_layout = QVBoxLayout(tab_traz)
+        tab_traz_layout.setSpacing(10)
+        lbl_traz_help = QLabel(
+            "Días calendario entre el primer registro en etapa «Para citar» o "
+            "«Para citar o videollamada» (historial de carpetas) y la fecha del primer "
+            "turno ANSES vinculado a esa carpeta. Solo se incluyen carpetas con ambos datos."
+        )
+        lbl_traz_help.setWordWrap(True)
+        lbl_traz_help.setStyleSheet("color: #5a5a5a; font-size: 12px;")
+        tab_traz_layout.addWidget(lbl_traz_help)
+        self._lbl_traz_resumen = QLabel("")
+        self._lbl_traz_resumen.setStyleSheet("font-weight: bold; color: #1565c0; font-size: 13px;")
+        tab_traz_layout.addWidget(self._lbl_traz_resumen)
+        frame_traz = self._create_chart_frame(
+            "trazabilidad_citar_turno",
+            "Promedio de dias hasta el turno (por tipo de tramite)",
+        )
+        tab_traz_layout.addWidget(frame_traz)
+        tab_traz_layout.addStretch()
+        tabs.addTab(tab_traz, "Trazabilidad citar → turno")
+
         self._layout.addWidget(tabs)
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -206,6 +229,8 @@ class ReportesView(QWidget):
             self._render_chart_aperturas_cierres()
         elif index == 2:  # Indicadores humanos
             self._render_chart_indicadores_humanos()
+        elif index == 3:  # Trazabilidad citar → turno ANSES
+            self._render_chart_trazabilidad_citar_turno()
 
     # Paleta de colores para graficos (dorado/gris/negro)
     CHART_COLORS = [
@@ -491,6 +516,45 @@ class ReportesView(QWidget):
         self._chart_labels["vencidas_responsable"].setPixmap(
             self._fig_to_pixmap(fig2).scaled(400, 300, Qt.AspectRatioMode.KeepAspectRatio,
                                              Qt.TransformationMode.SmoothTransformation)
+        )
+
+    def _render_chart_trazabilidad_citar_turno(self):
+        res = ReporteController.trazabilidad_citar_a_turno_resumen()
+        det = ReporteController.trazabilidad_citar_a_turno_detalle()
+        self._lbl_traz_resumen.setText(
+            f"Carpetas con trazabilidad completa: {res['n']}  |  "
+            f"Promedio: {res['promedio_dias']} dias  |  Mediana: {res['mediana_dias']}  |  P90: {res['p90_dias']}"
+        )
+        if not det:
+            self._chart_labels["trazabilidad_citar_turno"].setText(
+                "Sin datos: no hay carpetas con historial en etapa para citar y turno ANSES posterior."
+            )
+            return
+        por_tipo = res.get("por_tipo") or []
+        if not por_tipo:
+            self._chart_labels["trazabilidad_citar_turno"].setText("Sin desglose por tipo")
+            return
+        fig, ax = plt.subplots(figsize=(6, 4))
+        tipos = [d["tipo_tramite"][:22] for d in por_tipo[:12]]
+        proms = [d["promedio_dias"] for d in por_tipo[:12]]
+        ns = [d["n"] for d in por_tipo[:12]]
+        colors = self.CHART_COLORS[: len(tipos)]
+        ax.barh(tipos, proms, color=colors)
+        ax.set_xlabel("Dias promedio hasta primer turno", color="#4a4a4a")
+        ax.set_title(
+            "Trazabilidad: para citar / videollamada → turno ANSES",
+            color="#1a1a1a",
+            fontweight="bold",
+            fontsize=10,
+        )
+        ax.tick_params(colors="#4a4a4a")
+        ax.invert_yaxis()
+        for i, (v, n) in enumerate(zip(proms, ns)):
+            ax.text(v + 0.3, i, f"{v:.1f}d (n={n})", va="center", color="#1a1a1a", fontsize=8)
+        fig.tight_layout()
+        self._chart_labels["trazabilidad_citar_turno"].setPixmap(
+            self._fig_to_pixmap(fig).scaled(520, 360, Qt.AspectRatioMode.KeepAspectRatio,
+                                            Qt.TransformationMode.SmoothTransformation)
         )
 
     def _export_pdf(self):

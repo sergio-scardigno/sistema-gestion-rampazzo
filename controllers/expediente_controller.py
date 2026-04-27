@@ -604,6 +604,36 @@ class ExpedienteController(BaseController):
         return cls.get_scoped_with_cliente(where=where, params=params, order_by="e.updated_at DESC", limit=limit)
 
     @classmethod
+    def get_pendientes_citar_sin_cita(
+        cls, username: str = "", limit: int = 50
+    ) -> list[dict]:
+        """Carpetas en etapa de citar sin cita Pendiente/Confirmada vinculada."""
+        not_exists = (
+            "NOT EXISTS (SELECT 1 FROM citas ci WHERE ci.id_expediente = e._id "
+            "AND (ci.is_deleted IS NULL OR ci.is_deleted = 0) "
+            "AND ci.estado IN ('Pendiente','Confirmada'))"
+        )
+        where_parts = [
+            "e.etapa_codigo IN (?, ?)",
+            "e.estado NOT IN ('Cerrado','Archivado')",
+            not_exists,
+        ]
+        params: list = ["para_citar_o_videollamada", "para_citar"]
+        if username:
+            where_parts.append(
+                "(e.responsable_username = ? OR COALESCE(NULLIF(TRIM(ee.responsable_secundario_username), ''), "
+                "e.responsable_secundario_username) = ?)"
+            )
+            params.extend([username, username])
+        where = " AND ".join(where_parts)
+        return cls.get_scoped_with_cliente(
+            where=where,
+            params=tuple(params),
+            order_by="e.updated_at DESC",
+            limit=limit,
+        )
+
+    @classmethod
     def get_by_cliente(cls, id_cliente: str, limit: int = 0) -> list[dict]:
         return cls.get_all(where="id_cliente = ?", params=(id_cliente,),
                            order_by="fecha_apertura DESC", limit=limit)

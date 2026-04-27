@@ -471,6 +471,124 @@ class ReporteController:
         result = sorted(data.values(), key=lambda x: x["iniciadas"], reverse=True)
         return result
 
+    # ── Trazabilidad: etapa «para citar» → primer turno ANSES ──
+
+    @staticmethod
+    def trazabilidad_citar_a_turno_detalle() -> list[dict]:
+        """Días calendario entre el primer ingreso a etapa para citar y el primer turno ANSES.
+
+        Requiere segmento en expediente_estado_historial y turno con id_expediente y fecha_turno
+        posterior o igual al día de inicio en historial.
+        """
+        conn = db_local.get_connection()
+        rows = conn.execute(f"""
+            WITH pc AS (
+                SELECT id_expediente, MIN(inicio_ts) AS inicio_ts
+                FROM expediente_estado_historial
+                WHERE estado IN ('para_citar_o_videollamada', 'para_citar')
+                  AND (is_deleted IS NULL OR is_deleted = 0)
+                GROUP BY id_expediente
+            )
+            SELECT
+                e._id AS id_expediente_mongo,
+                e.id_expediente AS id_expediente_num,
+                e.tipo_tramite,
+                e.responsable,
+                e.responsable_username,
+                e.etapa_codigo AS etapa_actual,
+                e.estado AS estado_carpeta,
+                pc.inicio_ts AS inicio_para_citar_ts,
+                (
+                    SELECT MIN(t.fecha_turno)
+                    FROM turnos t
+                    WHERE t.id_expediente = pc.id_expediente
+                      AND (t.is_deleted IS NULL OR t.is_deleted = 0)
+                      AND t.fecha_turno IS NOT NULL
+                      AND TRIM(t.fecha_turno) != ''
+                      AND date(t.fecha_turno) >= date(SUBSTR(pc.inicio_ts, 1, 10))
+                ) AS primer_turno_fecha
+            FROM pc
+            JOIN expedientes e ON e._id = pc.id_expediente
+            WHERE (e.is_deleted IS NULL OR e.is_deleted = 0)
+        """).fetchall()
+        conn.close()
+
+        out: list[dict] = []
+        for r in rows:
+            row = dict(r)
+            primer = row.get("primer_turno_fecha")
+            ini = row.get("inicio_para_citar_ts")
+            dias = None
+            if primer and ini:
+                try:
+                    d0 = ini[:10]
+                    d1 = (primer or "")[:10]
+                    t0 = datetime.strptime(d0, "%Y-%m-%d").date()
+                    t1 = datetime.strptime(d1, "%Y-%m-%d").date()
+                    dias = max((t1 - t0).days, 0)
+                except (ValueError, TypeError):
+                    dias = None
+            if primer is None:
+                continue
+            row["dias_calendario"] = dias
+            out.append(row)
+        return out
+
+    @staticmethod
+    def trazabilidad_citar_a_turno_resumen() -> dict:
+        """Agregados sobre trazabilidad_citar_a_turno_detalle (solo pares completos)."""
+        det = ReporteController.trazabilidad_citar_a_turno_detalle()
+        dias_vals = [d["dias_calendario"] for d in det if d.get("dias_calendario") is not None]
+        n = len(dias_vals)
+        if not n:
+            return {
+                "n": 0,
+                "promedio_dias": 0.0,
+                "mediana_dias": 0.0,
+                "p90_dias": 0.0,
+                "por_tipo": [],
+            }
+
+        dias_sorted = sorted(dias_vals)
+        prom = sum(dias_vals) / n
+        mid = n // 2
+        if n % 2 == 1:
+            med = float(dias_sorted[mid])
+        else:
+            med = (dias_sorted[mid - 1] + dias_sorted[mid]) / 2.0
+        # Percentil 90: posicion en lista ordenada (indice basado en n-1)
+        idx_p90 = min(max(int((n - 1) * 0.9), 0), n - 1) if n else 0
+        p90 = float(dias_sorted[idx_p90])
+
+        por_tipo_map: dict[str, list[int]] = {}
+        for d in det:
+            dv = d.get("dias_calendario")
+            if dv is None:
+                continue
+            tipo = (d.get("tipo_tramite") or "Sin tipo").strip() or "Sin tipo"
+            por_tipo_map.setdefault(tipo, []).append(int(dv))
+
+        por_tipo = [
+            {
+                "tipo_tramite": t,
+                "n": len(vals),
+                "promedio_dias": round(sum(vals) / len(vals), 1),
+            }
+            for t, vals in sorted(
+                por_tipo_map.items(),
+                key=lambda x: sum(x[1]) / len(x[1]),
+                reverse=True,
+            )
+        ]
+
+        return {
+            "n": n,
+            "promedio_dias": round(prom, 1),
+            "mediana_dias": round(med, 1),
+            "p90_dias": round(p90, 1),
+            "por_tipo": por_tipo,
+        }
+
     # ── Datasets de análisis (export separados) ──
 
     @staticmethod

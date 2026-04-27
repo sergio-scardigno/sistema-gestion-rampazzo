@@ -21,13 +21,16 @@ from config import APP_NAME, APP_VERSION
 
 logger = logging.getLogger(__name__)
 
-# Mapeo de modulos a iconos (unicode simples)
+# Mapeo de modulos a iconos (unicode simples).
+# El orden del dict define el orden en el sidebar.
 MODULO_CONFIG = {
     "dashboard":      {"label": "  Dashboard",       "icon": "\u2302"},
+    "citas":          {"label": "  Citas",           "icon": "\u2605"},
+    "pendientes_citar": {"label": "  Pendientes citar", "icon": "\u231A"},
+    "tareas":         {"label": "  Tareas",          "icon": "\u2611"},
     "clientes":       {"label": "  Clientes",        "icon": "\u263A"},
     "expedientes":    {"label": "  Carpetas",        "icon": "\u2630"},
     "carpetas_iniciadas": {"label": "  Carpetas Iniciadas", "icon": "+"},
-    "tareas":         {"label": "  Tareas",          "icon": "\u2611"},
     "turnos":         {"label": "  Turnos ANSES",    "icon": "\u23F0"},
     "comunicaciones": {"label": "  Comunicaciones",  "icon": "\u2709"},
     "documentos":     {"label": "  Documentos",      "icon": "\u2637"},
@@ -236,6 +239,12 @@ class MainWindow(QMainWindow):
         elif key == "turnos":
             from views.turnos.turno_list import TurnoListView
             self._register_view(key, TurnoListView())
+        elif key == "citas":
+            from views.citas.cita_list import CitaListView
+            self._register_view(key, CitaListView())
+        elif key == "pendientes_citar":
+            from views.pendientes_citar_view import PendientesCitarView
+            self._register_view(key, PendientesCitarView())
         elif key == "comunicaciones":
             from views.comunicaciones.comunicacion_list import ComunicacionListView
             self._register_view(key, ComunicacionListView())
@@ -383,7 +392,7 @@ class MainWindow(QMainWindow):
                 return
 
             notifications = NotificacionController.get_login_popup_notifications(
-                session.username, due_days=3, limit=20
+                session.username, due_days=30, limit=20
             )
             if not notifications:
                 return

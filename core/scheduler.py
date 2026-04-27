@@ -113,12 +113,12 @@ _recordatorios_turnos: list[dict] = []
 
 
 def check_turnos_proximos():
-    """Revisa turnos de los proximos 3 dias y genera recordatorios."""
+    """Revisa turnos de los proximos 30 dias y genera recordatorios."""
     global _recordatorios_turnos
     try:
         from controllers.turno_controller import TurnoController
         hoy = date.today().isoformat()
-        limite = (date.today() + timedelta(days=3)).isoformat()
+        limite = (date.today() + timedelta(days=30)).isoformat()
         from core import db_local
         turnos = db_local.find_all(
             "turnos",

@@ -116,6 +116,24 @@ def export_report_excel(path: str):
         df_kpi = pd.DataFrame(list(kpis.items()), columns=["Indicador", "Valor"])
         df_kpi.to_excel(writer, sheet_name="KPIs", index=False)
 
+        traz = ReporteController.trazabilidad_citar_a_turno_detalle()
+        if traz:
+            df_traz = pd.DataFrame(traz)
+            cols = [
+                "id_expediente_mongo",
+                "id_expediente_num",
+                "tipo_tramite",
+                "responsable",
+                "responsable_username",
+                "etapa_actual",
+                "estado_carpeta",
+                "inicio_para_citar_ts",
+                "primer_turno_fecha",
+                "dias_calendario",
+            ]
+            df_traz = df_traz[[c for c in cols if c in df_traz.columns]]
+            df_traz.to_excel(writer, sheet_name="Trazabilidad_citar_turno", index=False)
+
 
 def _normalize_for_analysis(rows: list[dict], columns: list[str]) -> list[dict]:
     """Normaliza campos complejos (dict/list) a JSON para export analítico."""

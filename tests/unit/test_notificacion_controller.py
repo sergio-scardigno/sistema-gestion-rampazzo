@@ -71,7 +71,7 @@ class TestNotificationTaskSync:
         _insert_task("task-open-1", "abogado1", "Pendiente", soon)
         _insert_task("task-open-2", "abogado1", "En curso", today)
 
-        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=3)
+        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=30)
         active = NotificacionController.get_active_for_user("abogado1", limit=50)
 
         tipos = {n.get("tipo") for n in active}
@@ -83,14 +83,14 @@ class TestNotificationTaskSync:
     def test_sync_resolves_when_task_is_closed(self):
         due = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         _insert_task("task-close-1", "abogado1", "Pendiente", due)
-        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=3)
+        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=30)
 
         db_local.update(
             "tareas",
             "task-close-1",
             {"estado": "Cumplida", "sync_status": "pending", "version": 2},
         )
-        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=3)
+        NotificacionController.sync_task_alerts_for_user("abogado1", due_days=30)
         active = NotificacionController.get_active_for_user("abogado1", limit=50)
         assert all(n.get("id_referencia") != "task-close-1" for n in active)
 

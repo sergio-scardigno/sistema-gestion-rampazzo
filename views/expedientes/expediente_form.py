@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox,
     QTabWidget, QWidget, QCompleter, QScrollArea, QFrame, QCheckBox,
+    QGroupBox, QSpinBox,
 )
 from PySide6.QtCore import Qt, QDate, QTimer, QUrl
 from PySide6.QtGui import QFont, QColor, QDesktopServices
@@ -33,6 +34,7 @@ from views.widgets.no_wheel_datetime import NoWheelDateEdit
 from views.widgets.expediente_etapas_timeline import ExpedienteEtapasTimeline
 from views.widgets.click_copy_line_edit import ClickCopyLineEdit, CLICK_COPY_CLAVE_STYLESHEET
 from controllers.expediente_recordatorio_controller import ExpedienteRecordatorioController
+from core.dias_habiles import restar_dias_habiles
 from controllers.expediente_etapa_responsable_controller import ExpedienteEtapaResponsableController
 from controllers.expediente_estado_controller import get_segmento_abierto
 
@@ -47,12 +49,55 @@ class RecordatorioEditDialog(QDialog):
         users: list[dict],
         initial: dict | None = None,
         default_etapa_codigo: str = "",
+        fecha_referencia_inicial: str | None = None,
     ):
         super().__init__(parent)
         self.setWindowTitle("Editar recordatorio" if initial else "Nuevo recordatorio")
         self._initial = initial
         layout = QVBoxLayout(self)
         form = QFormLayout()
+        self._date_ref = NoWheelDateEdit()
+        self._date_ref.setCalendarPopup(True)
+        self._date_ref.setDisplayFormat("dd/MM/yyyy")
+        if (fecha_referencia_inicial or "").strip():
+            self._date_ref.setDate(
+                QDate.fromString(fecha_referencia_inicial[:10], "yyyy-MM-dd")
+            )
+        else:
+            self._date_ref.setDate(QDate.currentDate())
+        form.addRow(
+            "Fecha de referencia (vencimiento / plazo):",
+            self._date_ref,
+        )
+        grp_hab = QGroupBox("Calcular fecha de disparo en dias habiles (Argentina)")
+        hab_layout = QVBoxLayout(grp_hab)
+        row_presets = QHBoxLayout()
+        btn30 = QPushButton("30 dias habiles antes")
+        btn30.clicked.connect(lambda: self._aplicar_dias_habiles(30))
+        btn60 = QPushButton("60 dias habiles antes")
+        btn60.clicked.connect(lambda: self._aplicar_dias_habiles(60))
+        row_presets.addWidget(btn30)
+        row_presets.addWidget(btn60)
+        hab_layout.addLayout(row_presets)
+        row_custom = QHBoxLayout()
+        row_custom.addWidget(QLabel("Otros (dias habiles):"))
+        self._spin_habiles = QSpinBox()
+        self._spin_habiles.setRange(1, 365)
+        self._spin_habiles.setValue(45)
+        row_custom.addWidget(self._spin_habiles)
+        btn_aplicar = QPushButton("Aplicar")
+        btn_aplicar.clicked.connect(self._aplicar_spin_habiles)
+        row_custom.addWidget(btn_aplicar)
+        row_custom.addStretch()
+        hab_layout.addLayout(row_custom)
+        lbl_info = QLabel(
+            "La fecha de disparo sera N dias habiles antes de la fecha de referencia "
+            "(sin contar sabados, domingos ni feriados nacionales)."
+        )
+        lbl_info.setWordWrap(True)
+        lbl_info.setStyleSheet("color: #555; font-size: 11px;")
+        hab_layout.addWidget(lbl_info)
+        form.addRow(grp_hab)
         self._date = NoWheelDateEdit()
         self._date.setCalendarPopup(True)
         self._date.setDisplayFormat("dd/MM/yyyy")
@@ -108,6 +153,20 @@ class RecordatorioEditDialog(QDialog):
         btn_row.addWidget(btn_cancel)
         btn_row.addWidget(btn_ok)
         layout.addLayout(btn_row)
+
+    def _qdate_to_pydate(self, qd: QDate) -> date:
+        return date(qd.year(), qd.month(), qd.day())
+
+    def _set_fecha_disparo_qdate(self, d: date) -> None:
+        self._date.setDate(QDate(d.year, d.month, d.day))
+
+    def _aplicar_dias_habiles(self, n: int) -> None:
+        ref = self._qdate_to_pydate(self._date_ref.date())
+        calc = restar_dias_habiles(ref, n)
+        self._set_fecha_disparo_qdate(calc)
+
+    def _aplicar_spin_habiles(self) -> None:
+        self._aplicar_dias_habiles(self._spin_habiles.value())
 
     def _on_accept(self):
         if not self._titulo.text().strip():
@@ -531,6 +590,13 @@ class ExpedienteFormDialog(QDialog):
         self._cmb_cliente.setCompleter(completer)
         form.addRow("Cliente:", self._cmb_cliente)
 
+        self._txt_cuil_cliente = ClickCopyLineEdit()
+        self._txt_cuil_cliente.setReadOnly(True)
+        self._txt_cuil_cliente.setPlaceholderText("CUIL/CUIT del cliente (clic para copiar)")
+        self._txt_cuil_cliente.setFixedHeight(30)
+        self._txt_cuil_cliente.setStyleSheet(CLICK_COPY_CLAVE_STYLESHEET)
+        form.addRow("CUIL/CUIT:", self._txt_cuil_cliente)
+
         self._txt_carpeta_cliente = QLineEdit()
         self._txt_carpeta_cliente.setReadOnly(True)
         self._txt_carpeta_cliente.setPlaceholderText("Se muestra al seleccionar un cliente")
@@ -935,6 +1001,8 @@ class ExpedienteFormDialog(QDialog):
         self._txt_clave_mi_anses.setText(clave_anses)
         self._txt_clave_fiscal.setText(clave_fiscal)
 
+        self._apply_responsables_y_flujo_lock()
+
         # Las pestañas relacionadas se cargan on-demand al activarlas (lazy).
 
     # ------------------------------------------------------------------
@@ -1166,18 +1234,18 @@ class ExpedienteFormDialog(QDialog):
         self._update_plazo_label_for_row(row)
 
     def _remove_estado_etapa_row(self, row: QWidget):
-        if self._readonly_guard():
+        if self._readonly_guard() or self._responsables_flujo_bloqueado():
             return
         self._estado_etapas_rows_layout.removeWidget(row)
         row.deleteLater()
 
     def _on_add_estado_etapa_row(self):
-        if self._readonly_guard() or not self._id:
+        if self._readonly_guard() or self._responsables_flujo_bloqueado() or not self._id:
             return
         self._add_estado_etapa_row("", "")
 
     def _edit_plazo_etapa_from_row(self, row: QWidget):
-        if self._readonly_guard() or not self._id:
+        if self._readonly_guard() or self._responsables_flujo_bloqueado() or not self._id:
             return
         cmb = getattr(row, "_cmb_etapa", None)
         if cmb is None:
@@ -1206,9 +1274,10 @@ class ExpedienteFormDialog(QDialog):
         }
         for code in self._codigos_etapa_a_mostrar_en_panel():
             self._add_estado_etapa_row(code, overrides.get(code, ""))
+        self._apply_responsables_y_flujo_lock()
 
     def _edit_plazo_etapa(self, etapa_codigo: str):
-        if self._readonly_guard() or not self._id:
+        if self._readonly_guard() or self._responsables_flujo_bloqueado() or not self._id:
             return
         pend = [
             r for r in ExpedienteRecordatorioController.list_by_expediente(self._id)
@@ -1390,6 +1459,44 @@ class ExpedienteFormDialog(QDialog):
             "para no perder de vista el proximo hito.",
         )
 
+    def _maybe_suggest_cita(self):
+        """Tras guardar en etapa de citar: sugerir crear cita si no hay pendiente/confirmada."""
+        eid = (self._id or "").strip()
+        if not eid:
+            return
+        from controllers.cita_controller import CitaController
+
+        if CitaController.tiene_cita_pendiente(eid):
+            return
+        resp = QMessageBox.question(
+            self,
+            "Cita",
+            "La carpeta esta en etapa de citar y aun no tiene una cita Pendiente o Confirmada "
+            "en el modulo de Citas.\n\n"
+            "¿Desea crear una cita ahora?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if resp != QMessageBox.StandardButton.Yes:
+            return
+        if not tiene_permiso(Session.get().rol, "citas.create"):
+            QMessageBox.information(
+                self,
+                "Citas",
+                "No tiene permiso para crear citas. Solicite a un usuario con permiso "
+                "que registre la cita en el modulo Citas.",
+            )
+            return
+        cliente_id = (self._cmb_cliente.currentData() or "").strip()
+        from views.citas.cita_form import CitaFormDialog
+
+        dlg = CitaFormDialog(
+            cliente_id=cliente_id or None,
+            expediente_id=eid,
+            parent=self,
+        )
+        dlg.exec()
+
     def _load_tab_docs(self):
         docs = DocumentoController.get_by_expediente(self._id)
         self._docs_table.set_data(docs)
@@ -1513,6 +1620,7 @@ class ExpedienteFormDialog(QDialog):
         cliente_id = self._cmb_cliente.currentData() or ""
         if not cliente_id:
             self._txt_carpeta_cliente.setText("")
+            self._txt_cuil_cliente.setText("")
             return
         # Buscar en cache local primero
         cliente = None
@@ -1525,12 +1633,14 @@ class ExpedienteFormDialog(QDialog):
             cliente = ClienteController.get_by_id(cliente_id)
         if cliente:
             self._txt_carpeta_cliente.setText(str(cliente.get("numero_carpeta", "") or ""))
+            self._txt_cuil_cliente.setText((cliente.get("cuil") or "").strip())
             if not self._txt_clave_mi_anses.text().strip():
                 self._txt_clave_mi_anses.setText(cliente.get("clave_mi_anses", "") or "")
             if not self._txt_clave_fiscal.text().strip():
                 self._txt_clave_fiscal.setText(cliente.get("clave_fiscal", "") or "")
         else:
             self._txt_carpeta_cliente.setText("")
+            self._txt_cuil_cliente.setText("")
 
     def _new_tarea(self):
         """Crear una nueva tarea pre-vinculada a este expediente."""
@@ -1898,15 +2008,40 @@ class ExpedienteFormDialog(QDialog):
                 "Esta carpeta esta en modo solo lectura (otro usuario edita o bloqueo no disponible).",
             )
             return
-        resp_username = self._cmb_responsable.currentData() or ""
-        resp_display = self._cmb_responsable.currentText().strip()
+        if self._is_edit and not self._puede_editar_responsables_y_flujo():
+            resp_username = (self._original_responsable_username or "").strip()
+            resp2_username = (self._original_responsable_secundario_username or "").strip()
+            if resp_username:
+                idx_r = self._cmb_responsable.findData(resp_username)
+                resp_display = (
+                    self._cmb_responsable.itemText(idx_r).strip()
+                    if idx_r >= 0
+                    else (self._original_responsable_display or "").strip()
+                )
+            else:
+                resp_display = (self._original_responsable_display or "").strip()
+            if resp2_username:
+                idx_r2 = self._cmb_responsable2.findData(resp2_username)
+                resp2_display = (
+                    self._cmb_responsable2.itemText(idx_r2).strip()
+                    if idx_r2 >= 0
+                    else (self._original_responsable_secundario_display or "").strip()
+                )
+            else:
+                resp2_display = (self._original_responsable_secundario_display or "").strip()
+        else:
+            resp_username = self._cmb_responsable.currentData() or ""
+            resp_display = self._cmb_responsable.currentText().strip()
+            resp2_username = self._cmb_responsable2.currentData() or ""
+            resp2_display = self._cmb_responsable2.currentText().strip()
+
         if not resp_username and not resp_display:
             QMessageBox.warning(self, "Atencion", "El responsable es obligatorio.")
             return
 
-        resp2_username = self._cmb_responsable2.currentData() or ""
-
-        if hasattr(self, "_iter_estado_etapa_rows"):
+        if hasattr(self, "_iter_estado_etapa_rows") and not (
+            self._is_edit and not self._puede_editar_responsables_y_flujo()
+        ):
             codes_fila: list[str] = []
             for row in self._iter_estado_etapa_rows():
                 cmb = getattr(row, "_cmb_etapa", None)
@@ -1931,9 +2066,7 @@ class ExpedienteFormDialog(QDialog):
                 self._original_responsable_secundario_username
                 or self._original_responsable_secundario_display
             ).strip().lower()
-            new_secondary = (
-                resp2_username or self._cmb_responsable2.currentText().strip()
-            ).strip().lower()
+            new_secondary = (resp2_username or resp2_display).strip().lower()
             changed_primary = old_primary != new_primary
             changed_secondary = old_secondary != new_secondary
             if changed_primary or changed_secondary:
@@ -1955,7 +2088,10 @@ class ExpedienteFormDialog(QDialog):
                     return
 
         estado = self._cmb_estado.currentText()
-        etapa_codigo = self._cmb_etapa.currentData() or "para_citar_o_videollamada"
+        if self._is_edit and not self._puede_editar_responsables_y_flujo():
+            etapa_codigo = self._original_etapa_codigo or "para_citar_o_videollamada"
+        else:
+            etapa_codigo = self._cmb_etapa.currentData() or "para_citar_o_videollamada"
 
         # Regla de negocio: cierre formal requiere resultado
         if estado in ExpedienteController.ESTADOS_CIERRE:
@@ -1982,7 +2118,7 @@ class ExpedienteFormDialog(QDialog):
 
         # Nombre legible para compatibilidad
         responsable_legible = resp_display.split("(")[0].strip() if resp_username else resp_display
-        resp2_legible = self._cmb_responsable2.currentText().split("(")[0].strip() if resp2_username else ""
+        resp2_legible = resp2_display.split("(")[0].strip() if resp2_username else ""
 
         clave_mi_anses = self._txt_clave_mi_anses.text().strip()
         clave_fiscal = self._txt_clave_fiscal.text().strip()
@@ -2092,14 +2228,22 @@ class ExpedienteFormDialog(QDialog):
 
         if self._is_edit:
             ExpedienteController.update(self._id, data)
-            self._persist_estado_etapas_encargados()
+            if self._puede_editar_responsables_y_flujo():
+                self._persist_estado_etapas_encargados()
             if etapa_codigo == "en_espera_condicion":
                 self._maybe_suggest_recordatorio_espera()
+            if etapa_codigo in ("para_citar_o_videollamada", "para_citar"):
+                self._maybe_suggest_cita()
             if data.get("observacion_transicion"):
                 self._txt_indicaciones_transicion.clear()
         else:
             created = ExpedienteController.create(data)
             self._persist_estado_etapas_encargados(expediente_id=created.get("_id", ""))
+            new_id = (created.get("_id", "") or "").strip()
+            if new_id:
+                self._id = new_id
+            if etapa_codigo in ("para_citar_o_videollamada", "para_citar") and new_id:
+                self._maybe_suggest_cita()
         self.accept()
 
     def closeEvent(self, event):
@@ -2168,6 +2312,63 @@ class ExpedienteFormDialog(QDialog):
             t = getattr(self, name, None)
             if t is not None and hasattr(t, "set_open_on_double_click_enabled"):
                 t.set_open_on_double_click_enabled(enabled)
+
+    _ROLES_EDICION_RESPONSABLES_FLUJO = frozenset(
+        {"administrador", "admin_visor", "superusuario"}
+    )
+
+    def _puede_editar_responsables_y_flujo(self) -> bool:
+        """Quien puede cambiar responsables, etapa de flujo y encargados por etapa."""
+        if self._readonly_guard():
+            return False
+        if not self._is_edit:
+            return True
+        session = Session.get()
+        rol = (session.rol or "").strip()
+        if rol == "secretaria":
+            return False
+        if rol in self._ROLES_EDICION_RESPONSABLES_FLUJO:
+            return True
+        uname = (session.username or "").strip().lower()
+        p = (self._original_responsable_username or "").strip().lower()
+        s = (self._original_responsable_secundario_username or "").strip().lower()
+        return bool(uname) and (uname == p or uname == s)
+
+    def _responsables_flujo_bloqueado(self) -> bool:
+        """True en edicion cuando no se puede modificar responsables ni flujo."""
+        return self._is_edit and not self._puede_editar_responsables_y_flujo()
+
+    def _apply_responsables_y_flujo_lock(self):
+        """Deshabilita controles de responsables y etapa si el rol no puede editarlos."""
+        if self._readonly_guard() or not getattr(self, "_cmb_responsable", None):
+            return
+        can = self._puede_editar_responsables_y_flujo()
+        tip = (
+            "Solo el responsable principal o secundario de la carpeta, o administracion, "
+            "pueden modificar esto."
+        )
+        for w in (
+            self._cmb_responsable,
+            self._cmb_responsable2,
+            self._cmb_etapa,
+        ):
+            w.setEnabled(can)
+            w.setToolTip("" if can else tip)
+        if hasattr(self, "_txt_indicaciones_transicion"):
+            self._txt_indicaciones_transicion.setReadOnly(not can)
+            self._txt_indicaciones_transicion.setToolTip("" if can else tip)
+        if hasattr(self, "_btn_add_estado_etapa"):
+            self._btn_add_estado_etapa.setEnabled(bool(self._id) and can)
+            self._btn_add_estado_etapa.setToolTip("" if can else tip)
+        for row in self._iter_estado_etapa_rows():
+            for attr in ("_cmb_etapa", "_cmb_encargado"):
+                c = getattr(row, attr, None)
+                if c is not None:
+                    c.setEnabled(can)
+                    c.setToolTip("" if can else tip)
+            for btn in row.findChildren(QPushButton):
+                btn.setEnabled(can)
+                btn.setToolTip("" if can else tip)
 
     def _readonly_guard(self) -> bool:
         return bool(getattr(self, "_is_read_only", False))

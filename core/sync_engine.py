@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 SYNC_TABLES = [
     "usuarios", "consultas", "clientes", "expedientes",
-    "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
+    "tareas", "turnos", "citas", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "notificaciones", "expediente_recordatorios",
     "expediente_etapa_responsables",
     "expediente_estado_historial", "audit_log"

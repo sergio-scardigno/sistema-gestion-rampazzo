@@ -397,7 +397,7 @@ class NotificacionController:
             )
 
     @classmethod
-    def sync_task_alerts_for_user(cls, username: str, due_days: int = 3):
+    def sync_task_alerts_for_user(cls, username: str, due_days: int = 30):
         """Sincroniza alertas de tareas asignadas y proximas a vencer para login/campana."""
         from controllers.tarea_controller import TareaController
 
@@ -449,7 +449,7 @@ class NotificacionController:
                 cls.resolve_for_tarea(task_id, resolved_by_status=True)
 
     @classmethod
-    def get_login_popup_notifications(cls, username: str, due_days: int = 3, limit: int = 20) -> list[dict]:
+    def get_login_popup_notifications(cls, username: str, due_days: int = 30, limit: int = 20) -> list[dict]:
         """Devuelve alertas activas para mostrar en popup de inicio de sesion.
 
         Se usa un pool amplio en BD: si solo se pidieran las ultimas 20 notificaciones,

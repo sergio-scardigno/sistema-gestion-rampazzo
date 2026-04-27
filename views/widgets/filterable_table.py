@@ -115,6 +115,7 @@ class FilterableTable(QWidget):
                     if search_digits and field in (
                         "cli_dni", "dni", "cli_cuil", "cuil",
                         "_dni_cliente", "_numero_carpeta_cliente", "numero_carpeta",
+                        "_numero_carpeta", "_carpeta_sistema",
                     ):
                         val_digits = _re.sub(r'[^\d]', '', val)
                         if not val_digits:

@@ -16,7 +16,7 @@ SYNCED_ENTITY_TABLES = [
     "usuarios", "consultas", "clientes", "expedientes",
     "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "expediente_estado_historial", "notificaciones",
-    "expediente_recordatorios", "expediente_etapa_responsables",
+    "expediente_recordatorios", "expediente_etapa_responsables", "citas",
 ]
 
 _TABLES_SQL = """
@@ -282,6 +282,29 @@ CREATE TABLE IF NOT EXISTS turnos (
     sync_status TEXT DEFAULT 'synced',
     created_by_machine TEXT,
     id_constancia_doc TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS citas (
+    _id TEXT PRIMARY KEY,
+    id_cita INTEGER,
+    id_cliente TEXT,
+    id_expediente TEXT,
+    fecha_cita TEXT,
+    hora_cita TEXT,
+    motivo TEXT,
+    estado TEXT DEFAULT 'Pendiente',
+    observaciones TEXT,
+    citado_por TEXT,
+    citado_por_username TEXT DEFAULT '',
+    responsable TEXT,
+    responsable_username TEXT DEFAULT '',
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT '',
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -609,6 +632,10 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_sync_conflicts_table_record ON sync_conflicts(table_name, record_id)",
         "CREATE INDEX IF NOT EXISTS idx_notificaciones_target_created ON notificaciones(target_username, created_at)",
         "CREATE INDEX IF NOT EXISTS idx_notificaciones_target_resuelta ON notificaciones(target_username, resuelta)",
+        # Indices para citas
+        "CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha_cita)",
+        "CREATE INDEX IF NOT EXISTS idx_citas_id_cliente ON citas(id_cliente)",
+        "CREATE INDEX IF NOT EXISTS idx_citas_id_expediente ON citas(id_expediente)",
     ]
     for idx_sql in _indices:
         conn.execute(idx_sql)
