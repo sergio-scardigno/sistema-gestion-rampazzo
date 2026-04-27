@@ -746,7 +746,8 @@ class ExpedienteController(BaseController):
             all_params.extend(sp)
         sql = (
             "SELECT e.*, c.numero_carpeta AS numero_carpeta_cliente, "
-            "c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil "
+            "c.nombre_completo AS cli_nombre, c.dni AS cli_dni, c.cuil AS cli_cuil, "
+            "c.telefonos AS cli_telefonos "
             "FROM expedientes e "
             "LEFT JOIN clientes c ON c._id = e.id_cliente "
             + cls._JOIN_ETAPA_ENCARGADO

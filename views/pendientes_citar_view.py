@@ -38,9 +38,9 @@ class PendientesCitarView(QWidget):
         layout.addWidget(lbl)
 
         self._table = QTableWidget()
-        self._table.setColumnCount(5)
+        self._table.setColumnCount(6)
         self._table.setHorizontalHeaderLabels([
-            "Carpeta", "Cliente", "Etapa", "Responsable", "Acciones",
+            "Carpeta", "Cliente", "Teléfono", "Etapa", "Responsable", "Acciones",
         ])
         self._table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents)
@@ -52,6 +52,8 @@ class PendientesCitarView(QWidget):
             3, QHeaderView.ResizeMode.ResizeToContents)
         self._table.horizontalHeader().setSectionResizeMode(
             4, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(
+            5, QHeaderView.ResizeMode.ResizeToContents)
         self._table.verticalHeader().setVisible(False)
         self._table.verticalHeader().setDefaultSectionSize(40)
         self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -83,14 +85,26 @@ class PendientesCitarView(QWidget):
             it0 = QTableWidgetItem(str(row.get("id_expediente", "")))
             it0.setData(Qt.ItemDataRole.UserRole, (eid, cid))
             self._table.setItem(i, 0, it0)
-            self._table.setItem(i, 1, QTableWidgetItem(row.get("cli_nombre", "")))
+            self._table.setItem(i, 1, QTableWidgetItem(self._format_cliente(row)))
+            self._table.setItem(i, 2, QTableWidgetItem(self._format_telefono(row)))
             self._table.setItem(
-                i, 2, QTableWidgetItem(etapa_meta.get("titulo", row.get("etapa_codigo", "")))
+                i, 3, QTableWidgetItem(etapa_meta.get("titulo", row.get("etapa_codigo", "")))
             )
-            self._table.setItem(i, 3, QTableWidgetItem(row.get("responsable", "")))
+            self._table.setItem(i, 4, QTableWidgetItem(row.get("responsable", "")))
             self._table.setCellWidget(
-                i, 4, self._widget_acciones(eid, cid)
+                i, 5, self._widget_acciones(eid, cid)
             )
+            self._table.setRowHeight(i, 42)
+        self._table.resizeColumnToContents(5)
+        self._table.setColumnWidth(5, max(self._table.columnWidth(5), 280))
+
+    @staticmethod
+    def _format_cliente(row: dict) -> str:
+        return str(row.get("cli_nombre", "") or "").strip()
+
+    @staticmethod
+    def _format_telefono(row: dict) -> str:
+        return str(row.get("cli_telefonos", "") or "").strip()
 
     def _widget_acciones(self, expediente_id: str, cliente_id: str) -> QWidget:
         w = QWidget()
@@ -98,10 +112,17 @@ class PendientesCitarView(QWidget):
         lay.setContentsMargins(2, 2, 2, 2)
         lay.setSpacing(4)
         btn_cita = QPushButton("Crear cita")
+        btn_cita.setMinimumWidth(120)
+        btn_cita.setStyleSheet("""
+            QPushButton { color: #1f2937; padding: 4px 10px; }
+            QPushButton:disabled { color: #6b7280; background-color: #f3f4f6; border: 1px solid #d1d5db; }
+        """)
         if not self._can_create_citas:
             btn_cita.setEnabled(False)
             btn_cita.setToolTip("Sin permiso para crear citas")
-        btn_exp = QPushButton("Abrir carpeta")
+        btn_exp = QPushButton("Ir a carpeta")
+        btn_exp.setMinimumWidth(120)
+        btn_exp.setStyleSheet("QPushButton { color: #1f2937; padding: 4px 10px; }")
         btn_cita.clicked.connect(
             lambda _=False, eid=expediente_id, cid=cliente_id: self._on_crear_cita(eid, cid)
         )

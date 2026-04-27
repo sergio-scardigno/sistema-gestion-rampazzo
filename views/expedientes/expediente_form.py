@@ -588,7 +588,16 @@ class ExpedienteFormDialog(QDialog):
         completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         completer.activated[str].connect(self._on_cliente_completer_activated)
         self._cmb_cliente.setCompleter(completer)
-        form.addRow("Cliente:", self._cmb_cliente)
+        cliente_row = QWidget()
+        cliente_row_lay = QHBoxLayout(cliente_row)
+        cliente_row_lay.setContentsMargins(0, 0, 0, 0)
+        cliente_row_lay.setSpacing(6)
+        cliente_row_lay.addWidget(self._cmb_cliente, 1)
+        self._btn_ir_cliente = QPushButton("Ir a cliente")
+        self._btn_ir_cliente.setToolTip("Abrir ficha del cliente seleccionado")
+        self._btn_ir_cliente.clicked.connect(self._open_selected_cliente)
+        cliente_row_lay.addWidget(self._btn_ir_cliente)
+        form.addRow("Cliente:", cliente_row)
 
         self._txt_cuil_cliente = ClickCopyLineEdit()
         self._txt_cuil_cliente.setReadOnly(True)
@@ -607,6 +616,7 @@ class ExpedienteFormDialog(QDialog):
         )
         form.addRow("N° Carpeta cliente:", self._txt_carpeta_cliente)
         self._cmb_cliente.currentIndexChanged.connect(self._on_cliente_changed)
+        self._sync_ir_cliente_button_state()
 
         self._txt_clave_mi_anses = ClickCopyLineEdit()
         self._txt_clave_mi_anses.setPlaceholderText("Clave de Mi ANSES del cliente")
@@ -1617,10 +1627,12 @@ class ExpedienteFormDialog(QDialog):
 
     def _on_cliente_changed(self, index: int):
         """Actualizar N° de carpeta y claves al cambiar el cliente seleccionado."""
+        del index
         cliente_id = self._cmb_cliente.currentData() or ""
         if not cliente_id:
             self._txt_carpeta_cliente.setText("")
             self._txt_cuil_cliente.setText("")
+            self._sync_ir_cliente_button_state()
             return
         # Buscar en cache local primero
         cliente = None
@@ -1641,6 +1653,25 @@ class ExpedienteFormDialog(QDialog):
         else:
             self._txt_carpeta_cliente.setText("")
             self._txt_cuil_cliente.setText("")
+        self._sync_ir_cliente_button_state()
+
+    def _sync_ir_cliente_button_state(self):
+        if not hasattr(self, "_btn_ir_cliente"):
+            return
+        self._btn_ir_cliente.setEnabled(bool((self._cmb_cliente.currentData() or "").strip()))
+
+    def _open_selected_cliente(self):
+        cliente_id = (self._cmb_cliente.currentData() or "").strip()
+        if not cliente_id:
+            QMessageBox.information(
+                self,
+                "Cliente",
+                "Seleccione un cliente para abrir su ficha.",
+            )
+            return
+        from views.clientes.cliente_form import ClienteFormDialog
+        dlg = ClienteFormDialog(cliente_id=cliente_id, parent=self)
+        dlg.exec()
 
     def _new_tarea(self):
         """Crear una nueva tarea pre-vinculada a este expediente."""

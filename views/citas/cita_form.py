@@ -139,9 +139,14 @@ class CitaFormDialog(QDialog):
         lay_carp.setContentsMargins(0, 0, 0, 0)
         lay_carp.setSpacing(2)
         lay_carp.addWidget(self._cmb_expediente)
+        self._btn_ir_carpeta = QPushButton("Ir a carpeta")
+        self._btn_ir_carpeta.clicked.connect(self._abrir_carpeta_seleccionada)
+        lay_carp.addWidget(self._btn_ir_carpeta, alignment=Qt.AlignmentFlag.AlignLeft)
+        self._cmb_expediente.currentIndexChanged.connect(self._sync_ir_carpeta_button_state)
         self._wrap_carpeta.installEventFilter(self)
         self._cmb_expediente.installEventFilter(self)
         form.addRow("Carpeta:", self._wrap_carpeta)
+        self._sync_ir_carpeta_button_state()
 
         # -- FECHA --
         self._date_cita = NoWheelDateEdit()
@@ -297,6 +302,7 @@ class CitaFormDialog(QDialog):
             self._txt_buscar_cliente.setEnabled(False)
         self._cmb_expediente.setEnabled(False)
         self._sync_carpeta_mouse_transparency()
+        self._sync_ir_carpeta_button_state()
         self._date_cita.setEnabled(False)
         self._time_cita.setEnabled(False)
         self._txt_motivo.setReadOnly(True)
@@ -506,6 +512,7 @@ class CitaFormDialog(QDialog):
         else:
             self._cmb_expediente.setCurrentIndex(0)
         self._cmb_expediente.blockSignals(False)
+        self._sync_ir_carpeta_button_state()
 
     # -- Carga de datos (edicion) --
 
@@ -544,6 +551,13 @@ class CitaFormDialog(QDialog):
         self._txt_motivo.setPlainText(data.get("motivo", ""))
         self._cmb_estado.setCurrentText(data.get("estado", "Pendiente"))
         self._txt_observaciones.setPlainText(data.get("observaciones", ""))
+        self._sync_ir_carpeta_button_state()
+
+    def _sync_ir_carpeta_button_state(self):
+        if not hasattr(self, "_btn_ir_carpeta"):
+            return
+        exp_id = self._cmb_expediente.currentData()
+        self._btn_ir_carpeta.setEnabled(bool(exp_id))
 
     # -- Guardar --
 
