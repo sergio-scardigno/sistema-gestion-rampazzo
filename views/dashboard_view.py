@@ -462,6 +462,7 @@ class DashboardView(QWidget):
             self._layout.addWidget(bottom_splitter, 1)
 
         scroll.setWidget(content)
+
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
