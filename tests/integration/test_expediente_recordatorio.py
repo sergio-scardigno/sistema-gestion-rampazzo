@@ -50,6 +50,61 @@ class TestExpedienteRecordatorioList:
         by_title2 = {r.get("titulo", ""): r for r in rows2}
         assert by_title2["Vencimiento"]["fecha_disparo"] == "2031-01-10"
 
+    def test_generar_plantilla_titulos_custom(self, session_superusuario, sample_expediente):
+        exp = ExpedienteController.create(sample_expediente)
+        result = ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
+            exp["_id"],
+            tema="Requerimiento",
+            fecha_vencimiento="2030-12-20",
+            creado_por_username="testsuper",
+            titulo_soft="Tramite nuevo — vence",
+            titulo_critico="Tramite nuevo — 2 dias",
+        )
+        assert result["creados"] == 2
+        rows = ExpedienteRecordatorioController.list_by_expediente(exp["_id"])
+        by_title = {r.get("titulo", ""): r for r in rows}
+        assert "Tramite nuevo — vence" in by_title
+        assert "Tramite nuevo — 2 dias" in by_title
+
+    def test_generar_plantilla_preserva_titulos_en_update(
+        self, session_superusuario, sample_expediente,
+    ):
+        exp = ExpedienteController.create(sample_expediente)
+        ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
+            exp["_id"],
+            tema="Requerimiento",
+            fecha_vencimiento="2030-12-20",
+            creado_por_username="testsuper",
+        )
+        rows = ExpedienteRecordatorioController.list_by_expediente(exp["_id"])
+        soft = next(
+            r for r in rows
+            if (r.get("template_key") or "").endswith(":alarma_soft")
+        )
+        ExpedienteRecordatorioController.update(soft["_id"], {"titulo": "Titulo personalizado soft"})
+        crit = next(
+            r for r in rows
+            if (r.get("template_key") or "").endswith(":alarma_critica_2dias")
+        )
+        ExpedienteRecordatorioController.update(crit["_id"], {"titulo": "Titulo personalizado critico"})
+        ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
+            exp["_id"],
+            tema="Requerimiento",
+            fecha_vencimiento="2031-06-15",
+            creado_por_username="testsuper",
+            titulo_soft="Deberia ignorarse",
+            titulo_critico="Deberia ignorarse crit",
+            preservar_titulos_en_update=True,
+        )
+        rows2 = ExpedienteRecordatorioController.list_by_expediente(exp["_id"])
+        by_key = {(r.get("template_key") or "").strip(): r for r in rows2}
+        k0 = "migraciones:requerimiento:alarma_soft"
+        k1 = "migraciones:requerimiento:alarma_critica_2dias"
+        assert by_key[k0]["titulo"] == "Titulo personalizado soft"
+        assert by_key[k1]["titulo"] == "Titulo personalizado critico"
+        assert by_key[k0]["fecha_disparo"] == "2031-06-15"
+        assert by_key[k1]["fecha_disparo"] == "2031-06-13"
+
 
 class TestCheckRecordatoriosDispara:
     def test_marca_disparado_y_crea_notificacion(

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox,
     QTabWidget, QWidget, QCompleter, QScrollArea, QFrame, QCheckBox,
-    QGroupBox, QSpinBox,
+    QGroupBox, QSpinBox, QInputDialog,
 )
 from PySide6.QtCore import Qt, QDate, QTimer, QUrl
 from PySide6.QtGui import QFont, QColor, QDesktopServices
@@ -50,10 +50,12 @@ class RecordatorioEditDialog(QDialog):
         initial: dict | None = None,
         default_etapa_codigo: str = "",
         fecha_referencia_inicial: str | None = None,
+        bloquear_fechas_y_prioridad: bool = False,
     ):
         super().__init__(parent)
         self.setWindowTitle("Editar recordatorio" if initial else "Nuevo recordatorio")
         self._initial = initial
+        self._bloquear_fechas_y_prioridad = bool(bloquear_fechas_y_prioridad)
         layout = QVBoxLayout(self)
         form = QFormLayout()
         self._date_ref = NoWheelDateEdit()
@@ -98,6 +100,7 @@ class RecordatorioEditDialog(QDialog):
         lbl_info.setStyleSheet("color: #555; font-size: 11px;")
         hab_layout.addWidget(lbl_info)
         form.addRow(grp_hab)
+        self._grp_habiles = grp_hab
         self._date = NoWheelDateEdit()
         self._date.setCalendarPopup(True)
         self._date.setDisplayFormat("dd/MM/yyyy")
@@ -154,6 +157,22 @@ class RecordatorioEditDialog(QDialog):
         btn_row.addWidget(btn_ok)
         layout.addLayout(btn_row)
 
+        if self._bloquear_fechas_y_prioridad:
+            self._date_ref.setEnabled(False)
+            self._date.setEnabled(False)
+            self._grp_habiles.setEnabled(False)
+            self._spin_habiles.setEnabled(False)
+            self._chk_critico.setEnabled(False)
+            for w in self._grp_habiles.findChildren(QPushButton):
+                w.setEnabled(False)
+            hint = QLabel(
+                "Este plazo ya genero aviso: puede cambiar titulo, mensaje, etapa y destinatario. "
+                "La fecha y la marca de critico no se modifican desde aqui."
+            )
+            hint.setWordWrap(True)
+            hint.setStyleSheet("color: #555; font-size: 11px;")
+            layout.insertWidget(1, hint)
+
     def _qdate_to_pydate(self, qd: QDate) -> date:
         return date(qd.year(), qd.month(), qd.day())
 
@@ -188,7 +207,14 @@ class RecordatorioEditDialog(QDialog):
 class GenerarPlazosMigracionesDialog(QDialog):
     """Dialogo para elegir vencimiento exacto y generar alarmas automaticas."""
 
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        titulo_soft_inicial: str = "",
+        titulo_critico_inicial: str = "",
+        mantener_titulos_al_actualizar_default: bool = False,
+    ):
         super().__init__(parent)
         self.setWindowTitle("Generar plazos migratorios")
         layout = QVBoxLayout(self)
@@ -210,6 +236,27 @@ class GenerarPlazosMigracionesDialog(QDialog):
         quick.addStretch()
         layout.addLayout(quick)
 
+        form_tit = QFormLayout()
+        self._titulo_soft = QLineEdit()
+        self._titulo_soft.setText(
+            (titulo_soft_inicial or "").strip()
+            or ExpedienteRecordatorioController.DEFAULT_TITULO_SOFT
+        )
+        form_tit.addRow("Titulo alarma en vencimiento:", self._titulo_soft)
+        self._titulo_critico = QLineEdit()
+        self._titulo_critico.setText(
+            (titulo_critico_inicial or "").strip()
+            or ExpedienteRecordatorioController.DEFAULT_TITULO_CRITICO
+        )
+        form_tit.addRow("Titulo alarma 2 dias antes:", self._titulo_critico)
+        layout.addLayout(form_tit)
+
+        self._chk_mantener_titulos = QCheckBox(
+            "Mantener titulos actuales al actualizar fechas (no sobrescribir si ya existia la plantilla)"
+        )
+        self._chk_mantener_titulos.setChecked(bool(mantener_titulos_al_actualizar_default))
+        layout.addWidget(self._chk_mantener_titulos)
+
         info = QLabel(
             "Se generan 2 alarmas automaticas:\n"
             "1) soft en fecha de vencimiento,\n"
@@ -224,7 +271,7 @@ class GenerarPlazosMigracionesDialog(QDialog):
         btn_cancel.setProperty("variant", "secondary")
         btn_cancel.clicked.connect(self.reject)
         btn_ok = QPushButton("Generar")
-        btn_ok.clicked.connect(self.accept)
+        btn_ok.clicked.connect(self._on_accept)
         btns.addWidget(btn_cancel)
         btns.addWidget(btn_ok)
         layout.addLayout(btns)
@@ -232,8 +279,22 @@ class GenerarPlazosMigracionesDialog(QDialog):
     def _set_venc_dias(self, dias: int):
         self._date_venc.setDate(QDate.currentDate().addDays(max(1, int(dias))))
 
+    def _on_accept(self):
+        if not self._titulo_soft.text().strip():
+            QMessageBox.warning(self, "Plazos", "Indique un titulo para la alarma en vencimiento.")
+            return
+        if not self._titulo_critico.text().strip():
+            QMessageBox.warning(self, "Plazos", "Indique un titulo para la alarma de 2 dias antes.")
+            return
+        self.accept()
+
     def get_data(self) -> dict:
-        return {"fecha_vencimiento": self._date_venc.date().toString("yyyy-MM-dd")}
+        return {
+            "fecha_vencimiento": self._date_venc.date().toString("yyyy-MM-dd"),
+            "titulo_soft": self._titulo_soft.text().strip(),
+            "titulo_critico": self._titulo_critico.text().strip(),
+            "preservar_titulos_en_update": self._chk_mantener_titulos.isChecked(),
+        }
 
 
 class ExpedienteFormDialog(QDialog):
@@ -1404,7 +1465,32 @@ class ExpedienteFormDialog(QDialog):
             and not (r.get("disparado_en") or "").strip()
         ]
         pend.sort(key=lambda x: (x.get("fecha_disparo") or ""))
-        initial = pend[0] if pend else None
+        initial = None
+        if len(pend) == 1:
+            initial = pend[0]
+        elif len(pend) > 1:
+            labels = []
+            for i, r in enumerate(pend):
+                fd = (r.get("fecha_disparo") or "")[:10]
+                crit = int(r.get("es_critico", 0) or 0)
+                tl = (r.get("titulo") or "").strip() or "(sin titulo)"
+                pref = "[CRIT] " if crit else ""
+                labels.append(f"{i + 1}. {fd} — {pref}{tl}")
+            choice, ok = QInputDialog.getItem(
+                self,
+                "Varios plazos",
+                "Seleccione el recordatorio a editar:",
+                labels,
+                0,
+                False,
+            )
+            if not ok:
+                return
+            try:
+                idx = labels.index(str(choice))
+            except ValueError:
+                return
+            initial = pend[idx]
         session = Session.get()
         dlg = RecordatorioEditDialog(
             self,
@@ -1541,27 +1627,35 @@ class ExpedienteFormDialog(QDialog):
         rec = ExpedienteRecordatorioController.get_by_id(rec_id)
         if not rec:
             return
-        if (rec.get("disparado_en") or "").strip():
-            QMessageBox.information(
-                self,
-                "Recordatorio",
-                "Este recordatorio ya fue disparado y no se puede editar.",
-            )
-            return
-        dlg = RecordatorioEditDialog(self, users=get_active_users_fresh(), initial=rec)
+        disparado = bool((rec.get("disparado_en") or "").strip())
+        dlg = RecordatorioEditDialog(
+            self,
+            users=get_active_users_fresh(),
+            initial=rec,
+            bloquear_fechas_y_prioridad=disparado,
+        )
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         payload = dlg.get_data()
-        ExpedienteRecordatorioController.update(rec_id, {
-            "fecha_disparo": payload["fecha_disparo"],
-            "titulo": payload["titulo"],
-            "mensaje": payload["mensaje"],
-            "notificar_a_username": payload["notificar_a_username"],
-            "etapa_codigo": payload.get("etapa_codigo", ""),
-            "es_critico": payload.get("es_critico", 0),
-        })
+        if disparado:
+            ExpedienteRecordatorioController.update(rec_id, {
+                "titulo": payload["titulo"],
+                "mensaje": payload["mensaje"],
+                "notificar_a_username": payload["notificar_a_username"],
+                "etapa_codigo": payload.get("etapa_codigo", ""),
+            })
+        else:
+            ExpedienteRecordatorioController.update(rec_id, {
+                "fecha_disparo": payload["fecha_disparo"],
+                "titulo": payload["titulo"],
+                "mensaje": payload["mensaje"],
+                "notificar_a_username": payload["notificar_a_username"],
+                "etapa_codigo": payload.get("etapa_codigo", ""),
+                "es_critico": payload.get("es_critico", 0),
+            })
         self._load_tab_recordatorios()
         self._refresh_estado_etapas_panel()
+        self._refresh_etapa_timeline()
 
     def _delete_recordatorio(self):
         if self._readonly_guard():
@@ -2210,19 +2304,46 @@ class ExpedienteFormDialog(QDialog):
                 "Seleccione un tema de requerimientos migratorios antes de generar plazos.",
             )
             return
-        dlg = GenerarPlazosMigracionesDialog(self)
+        tema_key = ExpedienteRecordatorioController._tema_to_key(tema)
+        k_soft = f"migraciones:{tema_key}:alarma_soft"
+        k_crit = f"migraciones:{tema_key}:alarma_critica_2dias"
+        recs = ExpedienteRecordatorioController.list_by_expediente(self._id)
+        by_tk = {
+            (r.get("template_key") or "").strip(): r
+            for r in recs
+            if (r.get("origen") or "").strip() == "plantilla_migraciones"
+        }
+        ex_soft = by_tk.get(k_soft)
+        ex_crit = by_tk.get(k_crit)
+        def_soft = ExpedienteRecordatorioController.DEFAULT_TITULO_SOFT
+        def_crit = ExpedienteRecordatorioController.DEFAULT_TITULO_CRITICO
+        tit_ini_soft = ((ex_soft or {}).get("titulo") or "").strip() if ex_soft else def_soft
+        tit_ini_crit = ((ex_crit or {}).get("titulo") or "").strip() if ex_crit else def_crit
+        if not tit_ini_soft:
+            tit_ini_soft = def_soft
+        if not tit_ini_crit:
+            tit_ini_crit = def_crit
+        plantilla_existe = bool(ex_soft and ex_crit)
+        dlg = GenerarPlazosMigracionesDialog(
+            self,
+            titulo_soft_inicial=tit_ini_soft,
+            titulo_critico_inicial=tit_ini_crit,
+            mantener_titulos_al_actualizar_default=plantilla_existe,
+        )
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         cfg = dlg.get_data()
         fecha_vencimiento = (cfg.get("fecha_vencimiento") or "").strip()
         session = Session.get()
-        from controllers.expediente_recordatorio_controller import ExpedienteRecordatorioController
 
         result = ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
             self._id,
             tema=tema,
             fecha_vencimiento=fecha_vencimiento,
             creado_por_username=session.username if session.logged_in else "",
+            titulo_soft=cfg.get("titulo_soft"),
+            titulo_critico=cfg.get("titulo_critico"),
+            preservar_titulos_en_update=bool(cfg.get("preservar_titulos_en_update")),
         )
         self._refresh_estado_etapas_panel()
         self._refresh_etapa_timeline()

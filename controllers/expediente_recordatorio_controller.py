@@ -8,6 +8,9 @@ from models.base_model import now_iso
 class ExpedienteRecordatorioController(BaseController):
     TABLE = "expediente_recordatorios"
     ID_FIELD = ""
+
+    DEFAULT_TITULO_SOFT = "Vencimiento"
+    DEFAULT_TITULO_CRITICO = "Alarma critica - 2 dias"
     @classmethod
     def _tema_to_key(cls, tema: str) -> str:
         txt = (tema or "").strip().lower()
@@ -98,6 +101,10 @@ class ExpedienteRecordatorioController(BaseController):
         tema: str,
         fecha_vencimiento: str,
         creado_por_username: str = "",
+        *,
+        titulo_soft: str | None = None,
+        titulo_critico: str | None = None,
+        preservar_titulos_en_update: bool = False,
     ) -> dict:
         if not id_expediente:
             return {"creados": 0, "omitidos": 0, "tema_key": ""}
@@ -108,18 +115,21 @@ class ExpedienteRecordatorioController(BaseController):
         venc = date.fromisoformat(fv)
         alarma_critica = (venc - timedelta(days=2)).isoformat()
 
+        t_soft = (titulo_soft or "").strip() or cls.DEFAULT_TITULO_SOFT
+        t_crit = (titulo_critico or "").strip() or cls.DEFAULT_TITULO_CRITICO
+
         plan = [
             {
                 "template_key": f"migraciones:{tema_key}:alarma_soft",
                 "fecha_disparo": fv,
-                "titulo": "Vencimiento",
+                "titulo": t_soft,
                 "mensaje": f"Vence tramite migratorio ({tema}).",
                 "es_critico": 0,
             },
             {
                 "template_key": f"migraciones:{tema_key}:alarma_critica_2dias",
                 "fecha_disparo": alarma_critica,
-                "titulo": "Alarma critica - 2 dias",
+                "titulo": t_crit,
                 "mensaje": f"Faltan 2 dias para el vencimiento ({tema}).",
                 "es_critico": 1,
             },
@@ -141,19 +151,18 @@ class ExpedienteRecordatorioController(BaseController):
         for item in plan:
             existing = existing_by_key.get(item["template_key"])
             if existing:
-                cls.update(
-                    existing["_id"],
-                    {
-                        "fecha_disparo": item["fecha_disparo"],
-                        "titulo": item["titulo"],
-                        "mensaje": item["mensaje"],
-                        "es_critico": item["es_critico"],
-                        "estado_plazo": "activo",
-                        "disparado_en": "",
-                        "ultimo_aviso_nivel": "",
-                        "ultimo_aviso_fecha": "",
-                    },
-                )
+                upd: dict = {
+                    "fecha_disparo": item["fecha_disparo"],
+                    "mensaje": item["mensaje"],
+                    "es_critico": item["es_critico"],
+                    "estado_plazo": "activo",
+                    "disparado_en": "",
+                    "ultimo_aviso_nivel": "",
+                    "ultimo_aviso_fecha": "",
+                }
+                if not preservar_titulos_en_update:
+                    upd["titulo"] = item["titulo"]
+                cls.update(existing["_id"], upd)
                 continue
             cls.create_for_expediente(
                 id_expediente,
