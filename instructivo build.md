@@ -66,7 +66,7 @@ git log --oneline -3
 ### 3) Actualizar version en `config.py`
 
 ```powershell
-(Get-Content "config.py" -Raw) -replace 'APP_VERSION\s*=\s*"[^"]+"', 'APP_VERSION = "1.7.5"' | Set-Content "config.py" -Encoding UTF8
+(Get-Content "config.py" -Raw) -replace 'APP_VERSION\s*=\s*"[^"]+"', 'APP_VERSION = "1.8.4"' | Set-Content "config.py" -Encoding UTF8
 ```
 
 Verificar:
@@ -79,7 +79,7 @@ Select-String -Path "config.py" -Pattern 'APP_VERSION\s*='
 
 ```powershell
 git add "config.py"
-git commit --author "Sergio Scardigno <sergioscardigno82@gmail.com>" -m "v1.7.6 - release multiplataforma"
+git commit --author "Sergio Scardigno <sergioscardigno82@gmail.com>" -m "v1.8.4 - release multiplataforma"
 git push origin HEAD
 ```
 
@@ -92,7 +92,7 @@ git log --oneline -5
 ### 5) Ejecutar release completo (local + multibuild)
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\release_multiplataforma.ps1" -Version "1.7.6"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\release_multiplataforma.ps1" -Version "1.8.4"
 ```
 
 Este script hace:

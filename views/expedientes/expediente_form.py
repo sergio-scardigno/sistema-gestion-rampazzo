@@ -1,7 +1,7 @@
 """Formulario de alta/edicion de Carpeta."""
 import json
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox,
@@ -36,7 +36,7 @@ from views.widgets.click_copy_line_edit import ClickCopyLineEdit, CLICK_COPY_CLA
 from controllers.expediente_recordatorio_controller import ExpedienteRecordatorioController
 from core.dias_habiles import restar_dias_habiles
 from controllers.expediente_etapa_responsable_controller import ExpedienteEtapaResponsableController
-from controllers.expediente_estado_controller import get_segmento_abierto
+from controllers.expediente_estado_controller import get_historial, get_segmento_abierto
 
 
 class RecordatorioEditDialog(QDialog):
@@ -407,9 +407,32 @@ class ExpedienteFormDialog(QDialog):
         datos_scroll.setWidget(datos_widget)
         tabs.addTab(datos_scroll, "Datos")
 
-        # Tab 1 – Tareas
+        # Tab 1 – Recorrido por etapas + tareas
         tareas_widget = QWidget()
         tareas_layout = QVBoxLayout(tareas_widget)
+        tareas_layout.setSpacing(10)
+        lbl_recorrido = QLabel("Recorrido por etapas")
+        lbl_recorrido.setFont(QFont("Lato", 12, QFont.Weight.Bold))
+        tareas_layout.addWidget(lbl_recorrido)
+        self._recorrido_etapas_table = FilterableTable([
+            ("inicio_fmt", "Inicio"),
+            ("fin_fmt", "Fin"),
+            ("etapa_label", "Etapa"),
+            ("desde_label", "Desde etapa"),
+            ("equipo_fmt", "Equipo"),
+            ("obs_preview", "Nota transicion"),
+            ("usuario", "Usuario"),
+            ("origen", "Origen"),
+        ])
+        self._recorrido_etapas_table.set_open_on_double_click_enabled(False)
+        tareas_layout.addWidget(self._recorrido_etapas_table)
+        sep_mov = QFrame()
+        sep_mov.setFrameShape(QFrame.Shape.HLine)
+        sep_mov.setFrameShadow(QFrame.Shadow.Sunken)
+        tareas_layout.addWidget(sep_mov)
+        lbl_tareas = QLabel("Tareas")
+        lbl_tareas.setFont(QFont("Lato", 12, QFont.Weight.Bold))
+        tareas_layout.addWidget(lbl_tareas)
         self._tareas_table = FilterableTable([
             ("descripcion", "Descripcion"),
             ("responsable", "Responsable"),
@@ -1200,7 +1223,7 @@ class ExpedienteFormDialog(QDialog):
         tab_name = self._tabs.tabText(index)
 
         if tab_name == "Movimientos":
-            self._load_tab_tareas()
+            self._load_tab_movimientos()
         elif tab_name == "Turnos ANSES":
             self._load_tab_turnos()
         elif tab_name == "Comunicaciones":
@@ -1219,6 +1242,67 @@ class ExpedienteFormDialog(QDialog):
             self._load_tab_tiempos()
         elif tab_name == "Historial de tiempos":
             self._load_tab_historial()
+
+    @staticmethod
+    def _format_segment_ts(ts: str | None) -> str:
+        if not ts or not str(ts).strip():
+            return "—"
+        s = str(ts).strip()
+        try:
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+        except (ValueError, TypeError, OSError):
+            return (s[:19] + "…") if len(s) > 19 else s
+
+    @staticmethod
+    def _label_for_etapa_codigo(codigo: str) -> str:
+        c = (codigo or "").strip()
+        if not c:
+            return "—"
+        for et in ExpedienteController.ETAPAS:
+            if et.get("codigo") == c:
+                return (et.get("titulo") or c).strip() or c
+        return c
+
+    def _load_tab_movimientos(self):
+        self._load_tab_recorrido_etapas()
+        self._load_tab_tareas()
+
+    def _load_tab_recorrido_etapas(self):
+        if not getattr(self, "_recorrido_etapas_table", None) or not self._id:
+            return
+        rows: list[dict] = []
+        for seg in get_historial(self._id):
+            code = (seg.get("estado") or "").strip()
+            prev = (seg.get("etapa_anterior") or "").strip()
+            obs = (seg.get("observacion_transicion") or "").strip()
+            if len(obs) > 120:
+                obs = obs[:117] + "..."
+            rp = (seg.get("responsable_username") or "").strip()
+            enc = (seg.get("encargado_username") or "").strip()
+            equipo_parts: list[str] = []
+            if rp:
+                equipo_parts.append(f"P: {rp}")
+            if enc:
+                equipo_parts.append(f"S: {enc}")
+            equipo_fmt = " | ".join(equipo_parts) if equipo_parts else "—"
+            fin_ts = seg.get("fin_ts")
+            rows.append({
+                "_id": seg.get("_id", ""),
+                "inicio_fmt": self._format_segment_ts(seg.get("inicio_ts")),
+                "fin_fmt": self._format_segment_ts(fin_ts) if fin_ts else "(actual)",
+                "etapa_label": self._label_for_etapa_codigo(code),
+                "desde_label": self._label_for_etapa_codigo(prev) if prev else "—",
+                "equipo_fmt": equipo_fmt,
+                "obs_preview": obs or "—",
+                "usuario": (seg.get("usuario") or "").strip() or "—",
+                "origen": (seg.get("origen") or "").strip() or "—",
+            })
+        self._recorrido_etapas_table.set_data(rows)
 
     def _load_tab_tareas(self):
         tareas = TareaController.get_by_expediente(self._id)
@@ -2671,11 +2755,17 @@ class ExpedienteFormDialog(QDialog):
         for container in (
             getattr(self, "_rama_datos_container", None),
             getattr(self, "_judicial_container", None),
-            getattr(self, "_timeline_container", None),
             getattr(self, "_scroll_estado_etapas", None),
         ):
             if container is not None:
                 container.setEnabled(False)
+        # Timeline de etapas: solo visualizacion; se mantiene visible en solo lectura.
+        tl = getattr(self, "_timeline_container", None)
+        if tl is not None:
+            tl.setEnabled(True)
+            tw = getattr(self, "_timeline_widget", None)
+            if tw is not None:
+                tw.setEnabled(True)
         for btn in self.findChildren(QPushButton):
             if btn.objectName() != "expediente_readonly_allow_close":
                 btn.setEnabled(False)
@@ -2697,6 +2787,7 @@ class ExpedienteFormDialog(QDialog):
             "_escritos_table",
             "_movs_table",
             "_tiempos_table",
+            "_recorrido_etapas_table",
             "_historial_table",
         ):
             t = getattr(self, name, None)
