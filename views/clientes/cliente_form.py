@@ -74,6 +74,12 @@ class ClienteFormDialog(QDialog):
         )
         form.addRow("DNI/LC:", self._txt_dni)
 
+        self._txt_nro_tramite_dni = ClickCopyLineEdit()
+        self._txt_nro_tramite_dni.setPlaceholderText("Nro de tramite DNI (copiar/pegar)")
+        self._txt_nro_tramite_dni.setFixedHeight(30)
+        self._txt_nro_tramite_dni.setStyleSheet(CLICK_COPY_CLAVE_STYLESHEET)
+        form.addRow("Nro tramite DNI:", self._txt_nro_tramite_dni)
+
         self._txt_cuil = QLineEdit()
         self._txt_cuil.setPlaceholderText("XX-XXXXXXXX-X")
         self._txt_cuil.setValidator(
@@ -200,6 +206,7 @@ class ClienteFormDialog(QDialog):
         self._txt_numero_carpeta.setText(str(data.get("numero_carpeta", "") or ""))
         self._txt_nombre.setText(data.get("nombre_completo", ""))
         self._txt_dni.setText(data.get("dni", ""))
+        self._txt_nro_tramite_dni.setText(data.get("nro_tramite_dni", "") or "")
         cuil_val = data.get("cuil", "") or ""
         self._txt_cuil.setText(format_cuil(cuil_val) if cuil_val else "")
 
@@ -246,7 +253,7 @@ class ClienteFormDialog(QDialog):
             self._txt_observaciones.setPlainText(p["observaciones"])
 
     def _set_readonly(self, readonly: bool):
-        for w in [self._txt_numero_carpeta, self._txt_nombre, self._txt_dni, self._txt_cuil,
+        for w in [self._txt_numero_carpeta, self._txt_nombre, self._txt_dni, self._txt_nro_tramite_dni, self._txt_cuil,
                    self._txt_direccion, self._txt_localidad, self._txt_telefonos, self._txt_email,
                    self._txt_obra_social, self._txt_actividad,
                    self._txt_clave_mi_anses, self._txt_clave_fiscal]:
@@ -290,6 +297,7 @@ class ClienteFormDialog(QDialog):
             "numero_carpeta": numero_carpeta,
             "nombre_completo": nombre.upper(),
             "dni": self._txt_dni.text().strip(),
+            "nro_tramite_dni": self._txt_nro_tramite_dni.text().strip(),
             "cuil": format_cuil(self._txt_cuil.text().strip()) if self._txt_cuil.text().strip() else "",
             "fecha_nacimiento": self._date_nacimiento.date().toString("yyyy-MM-dd"),
             "direccion": self._txt_direccion.text().strip(),

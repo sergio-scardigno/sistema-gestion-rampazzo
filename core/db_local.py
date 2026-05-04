@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     numero_carpeta TEXT,
     nombre_completo TEXT NOT NULL,
     dni TEXT,
+    nro_tramite_dni TEXT,
     cuil TEXT,
     fecha_nacimiento TEXT,
     direccion TEXT,
@@ -380,6 +381,12 @@ CREATE TABLE IF NOT EXISTS expediente_recordatorios (
     creado_por_username TEXT DEFAULT '',
     etapa_codigo TEXT DEFAULT '',
     es_critico INTEGER DEFAULT 0,
+    origen TEXT DEFAULT 'manual',
+    template_key TEXT DEFAULT '',
+    estado_plazo TEXT DEFAULT 'activo',
+    pospuesto_hasta TEXT DEFAULT '',
+    ultimo_aviso_nivel TEXT DEFAULT '',
+    ultimo_aviso_fecha TEXT DEFAULT '',
     created_at TEXT,
     updated_at TEXT,
     version INTEGER DEFAULT 1,
@@ -493,6 +500,12 @@ def init_db():
         conn.execute("SELECT localidad FROM clientes LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE clientes ADD COLUMN localidad TEXT")
+        conn.commit()
+    # Migracion: agregar nro_tramite_dni a clientes si no existe
+    try:
+        conn.execute("SELECT nro_tramite_dni FROM clientes LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE clientes ADD COLUMN nro_tramite_dni TEXT")
         conn.commit()
     # Migracion: agregar columnas clave_mi_anses y clave_fiscal a clientes
     for col in ["clave_mi_anses", "clave_fiscal"]:
@@ -846,6 +859,12 @@ def _migrate_expediente_etapa_y_recordatorio_plazos(conn):
     for col, col_def in [
         ("etapa_codigo", "TEXT DEFAULT ''"),
         ("es_critico", "INTEGER DEFAULT 0"),
+        ("origen", "TEXT DEFAULT 'manual'"),
+        ("template_key", "TEXT DEFAULT ''"),
+        ("estado_plazo", "TEXT DEFAULT 'activo'"),
+        ("pospuesto_hasta", "TEXT DEFAULT ''"),
+        ("ultimo_aviso_nivel", "TEXT DEFAULT ''"),
+        ("ultimo_aviso_fecha", "TEXT DEFAULT ''"),
     ]:
         try:
             conn.execute(f"SELECT {col} FROM expediente_recordatorios LIMIT 1")

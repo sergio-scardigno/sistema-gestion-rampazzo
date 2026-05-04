@@ -189,46 +189,98 @@ def auto_archivar_expedientes():
 
 
 def check_recordatorios_expedientes():
-    """Dispara notificaciones por recordatorios programados de carpetas."""
+    """Dispara notificaciones por recordatorios de carpetas con escalamiento."""
     try:
         from controllers.notificacion_controller import NotificacionController
         from controllers.expediente_controller import ExpedienteController
         hoy = date.today().isoformat()
+        hoy_dt = date.today()
         rows = db_local.find_all(
             "expediente_recordatorios",
             where=(
-                "fecha_disparo <= ? AND (disparado_en IS NULL OR disparado_en = '') "
+                "estado_plazo != 'resuelto' AND fecha_disparo <= ? "
                 "AND (is_deleted IS NULL OR is_deleted = 0)"
             ),
-            params=(hoy,),
+            params=((hoy_dt + timedelta(days=2)).isoformat(),),
             order_by="fecha_disparo ASC",
             limit=200,
         )
+        disparados = 0
         for rec in rows:
             exp = ExpedienteController.get_by_id(rec.get("id_expediente", ""))
             if not exp:
                 continue
-            target = rec.get("notificar_a_username", "") or exp.get("responsable_secundario_username", "") or exp.get("responsable_username", "")
-            if not target:
+            fecha = (rec.get("fecha_disparo") or "")[:10]
+            if len(fecha) != 10:
                 continue
-            pref = "[PLAZO CRITICO] " if int(rec.get("es_critico", 0) or 0) else ""
-            mensaje = (
-                f"{pref}Recordatorio de carpeta #{exp.get('id_expediente', '')}: "
+            fecha_dt = date.fromisoformat(fecha)
+            delta = (fecha_dt - hoy_dt).days
+            nivel = ""
+            pref = ""
+            if delta < 0:
+                nivel = "vencido"
+                pref = "[PLAZO VENCIDO] "
+            elif delta == 0:
+                nivel = "hoy"
+                pref = "[PLAZO HOY] "
+            elif delta <= 2:
+                nivel = "previo"
+                pref = "[PROXIMO VENCIMIENTO] "
+            if not nivel:
+                continue
+
+            ya_nivel = (rec.get("ultimo_aviso_nivel") or "").strip()
+            ya_fecha = (rec.get("ultimo_aviso_fecha") or "").strip()[:10]
+            if ya_nivel == nivel and ya_fecha == hoy:
+                continue
+
+            target_manual = (rec.get("notificar_a_username", "") or "").strip()
+            target_sec = (
+                ExpedienteController.secundario_efectivo_username(exp)
+                or (exp.get("responsable_secundario_username", "") or "").strip()
+            )
+            target_pri = (exp.get("responsable_username", "") or "").strip()
+            target_main = target_manual or target_sec or target_pri
+            targets: list[tuple[str, str]] = []
+            if target_main:
+                targets.append((target_main, "titular"))
+            if target_sec and target_sec != target_main:
+                targets.append((target_sec, "copia"))
+            if target_pri and target_pri != target_main:
+                targets.append((target_pri, "copia"))
+            if not targets:
+                continue
+
+            exp_num = exp.get("id_expediente", "")
+            base_msg = (
+                f"{pref}Recordatorio de carpeta #{exp_num}: "
                 f"{rec.get('titulo', 'Accion pendiente')}. {rec.get('mensaje', '')}".strip()
             )
-            NotificacionController.create_for_recordatorio_expediente(
-                target_username=target,
-                mensaje=mensaje,
-                id_referencia=exp.get("_id", ""),
+            for uname, rol_dest in targets:
+                msg = base_msg if rol_dest == "titular" else f"[COPIA] {base_msg}"
+                NotificacionController.create_for_recordatorio_expediente(
+                    target_username=uname,
+                    mensaje=msg,
+                    id_referencia=exp.get("_id", ""),
+                    force_new=True,
+                )
+            rec_estado = "vencido" if delta < 0 else "activo"
+            db_local.update(
+                "expediente_recordatorios",
+                rec["_id"],
+                {
+                    "disparado_en": datetime.now().isoformat(),
+                    "estado_plazo": rec_estado,
+                    "ultimo_aviso_nivel": nivel,
+                    "ultimo_aviso_fecha": hoy,
+                    "updated_at": datetime.now().isoformat(),
+                    "version": int(rec.get("version", 1) or 1) + 1,
+                    "sync_status": "pending",
+                },
             )
-            db_local.update("expediente_recordatorios", rec["_id"], {
-                "disparado_en": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
-                "version": int(rec.get("version", 1) or 1) + 1,
-                "sync_status": "pending",
-            })
-        if rows:
-            logger.info("Recordatorios de expedientes disparados: %d", len(rows))
+            disparados += 1
+        if disparados:
+            logger.info("Recordatorios de expedientes disparados: %d", disparados)
     except Exception:
         logger.exception("Error al procesar recordatorios de expedientes")
 
@@ -266,8 +318,8 @@ def setup_all_jobs(sync_engine=None):
     sched.add_job(auto_archivar_expedientes, 'cron', hour=3, minute=0,
                   id='auto_archivar_job', replace_existing=True)
 
-    # Recordatorios de expedientes (1 vez al dia a las 08:00)
-    sched.add_job(check_recordatorios_expedientes, 'cron', hour=8, minute=0,
+    # Recordatorios de expedientes (intervalico para no depender de hora fija)
+    sched.add_job(check_recordatorios_expedientes, 'interval', minutes=45,
                   id='recordatorios_expedientes_job', replace_existing=True)
 
     # Ejecutar checks iniciales

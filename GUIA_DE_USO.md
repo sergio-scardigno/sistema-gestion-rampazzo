@@ -25,6 +25,7 @@ Esta guia esta dividida en dos partes:
    - [Documentos](#46-documentos)
    - [Citas del estudio](#47-citas-del-estudio)
    - [Pendientes citar](#48-pendientes-citar)
+   - [Listados](#49-listados)
 5. [Tu dia a dia segun tu rol](#5-tu-dia-a-dia-segun-tu-rol)
 6. [Preguntas frecuentes](#6-preguntas-frecuentes)
 
@@ -428,6 +429,34 @@ Vista del sidebar (cuando tu usuario puede ver **Carpetas** y **Citas**): **Pend
 - **Abrir carpeta:** abre la ficha de la carpeta para revisar datos o dejar tareas anotadas.
 
 Usa **Pendientes citar** como cola de trabajo de recepcion o coordinacion para no dejar casos en etapa de citar sin fecha agendada en el estudio.
+
+---
+
+### 4.9 Listados
+
+El modulo **Listados** permite trabajo rápido por carpeta sin entrar al formulario completo.
+
+**Funciones principales:**
+
+- Filtros por **estado**, **etapa** y **cambios recientes**.
+- Copia al clic en: **DNI**, **Clave CUIT**, **Clave ANSES** y **Nro Trámite**.
+- Cambio de **estado/etapa** desde el mismo listado.
+
+**Tres observaciones separadas por carpeta (independientes):**
+
+1. **Observación de carpeta**  
+   Se guarda como nota general de la carpeta.
+2. **Mensaje para notificación**  
+   Se usa como texto del aviso interno al equipo.
+3. **Para chequear**  
+   Se guarda para seguimiento operativo de esa carpeta y control posterior.
+
+**Regla de uso clave:** no se mezclan entre sí. Cada campo tiene su propósito y se guarda por carpeta.
+
+**Notificaciones al equipo:**
+
+- Cuando hay cambios relevantes (estado/etapa/observaciones), el sistema notifica al responsable **primario** y **secundario** de la carpeta.
+- El texto de la notificación usa el campo **Mensaje para notificación** si está cargado.
 
 ---
 

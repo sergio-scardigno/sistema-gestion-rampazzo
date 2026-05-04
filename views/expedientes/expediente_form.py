@@ -185,7 +185,72 @@ class RecordatorioEditDialog(QDialog):
         }
 
 
+class GenerarPlazosMigracionesDialog(QDialog):
+    """Dialogo para elegir vencimiento exacto y generar alarmas automaticas."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Generar plazos migratorios")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._date_venc = NoWheelDateEdit()
+        self._date_venc.setCalendarPopup(True)
+        self._date_venc.setDisplayFormat("dd/MM/yyyy")
+        self._date_venc.setDate(QDate.currentDate().addDays(7))
+        form.addRow("Fecha de vencimiento:", self._date_venc)
+        layout.addLayout(form)
+
+        quick = QHBoxLayout()
+        quick.addWidget(QLabel("Atajos:"))
+        for dias in (7, 15, 30):
+            btn = QPushButton(f"+{dias} dias")
+            btn.setProperty("variant", "secondary")
+            btn.clicked.connect(lambda _=False, d=dias: self._set_venc_dias(d))
+            quick.addWidget(btn)
+        quick.addStretch()
+        layout.addLayout(quick)
+
+        info = QLabel(
+            "Se generan 2 alarmas automaticas:\n"
+            "1) soft en fecha de vencimiento,\n"
+            "2) critica 2 dias antes."
+        )
+        info.setStyleSheet("color: #4b5563;")
+        layout.addWidget(info)
+
+        btns = QHBoxLayout()
+        btns.addStretch()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setProperty("variant", "secondary")
+        btn_cancel.clicked.connect(self.reject)
+        btn_ok = QPushButton("Generar")
+        btn_ok.clicked.connect(self.accept)
+        btns.addWidget(btn_cancel)
+        btns.addWidget(btn_ok)
+        layout.addLayout(btns)
+
+    def _set_venc_dias(self, dias: int):
+        self._date_venc.setDate(QDate.currentDate().addDays(max(1, int(dias))))
+
+    def get_data(self) -> dict:
+        return {"fecha_vencimiento": self._date_venc.date().toString("yyyy-MM-dd")}
+
+
 class ExpedienteFormDialog(QDialog):
+    REQ_MIGRACIONES_CODIGO = "req_migraciones"
+    KEY_TEMA_REQ_MIGRACIONES = "tema_req_migraciones"
+    TEMAS_REQ_MIGRACIONES = [
+        "Para tramite nuevo",
+        "Resolucion",
+        "Pago",
+        "Firmar formularios",
+        "Requerimiento",
+        "Informar",
+        "Devolver",
+        "Residencia",
+        "Movimientos migratorios",
+    ]
+
     def __init__(self, expediente_id: str = None, cliente_id: str = None, parent=None):
         super().__init__(parent)
         self.setObjectName("expedienteFormDialog")
@@ -361,10 +426,18 @@ class ExpedienteFormDialog(QDialog):
         rec_btns = QHBoxLayout()
         btn_new_rec = QPushButton("+ Nuevo recordatorio")
         btn_new_rec.clicked.connect(self._new_recordatorio)
+        btn_posponer_rec = QPushButton("Posponer +3 dias")
+        btn_posponer_rec.setProperty("variant", "secondary")
+        btn_posponer_rec.clicked.connect(self._posponer_recordatorio_seleccionado)
+        btn_resolver_rec = QPushButton("Resolver")
+        btn_resolver_rec.setProperty("variant", "secondary")
+        btn_resolver_rec.clicked.connect(self._resolver_recordatorio_seleccionado)
         btn_del_rec = QPushButton("Eliminar")
         btn_del_rec.setProperty("variant", "secondary")
         btn_del_rec.clicked.connect(self._delete_recordatorio)
         rec_btns.addWidget(btn_new_rec, alignment=Qt.AlignmentFlag.AlignLeft)
+        rec_btns.addWidget(btn_posponer_rec, alignment=Qt.AlignmentFlag.AlignLeft)
+        rec_btns.addWidget(btn_resolver_rec, alignment=Qt.AlignmentFlag.AlignLeft)
         rec_btns.addWidget(btn_del_rec, alignment=Qt.AlignmentFlag.AlignLeft)
         rec_btns.addStretch()
         rec_layout.addLayout(rec_btns)
@@ -615,6 +688,12 @@ class ExpedienteFormDialog(QDialog):
             " font-size: 13px; padding: 4px 6px;"
         )
         form.addRow("N° Carpeta cliente:", self._txt_carpeta_cliente)
+
+        self._txt_nro_tramite_dni = ClickCopyLineEdit()
+        self._txt_nro_tramite_dni.setPlaceholderText("Nro de tramite DNI del cliente")
+        self._txt_nro_tramite_dni.setFixedHeight(30)
+        self._txt_nro_tramite_dni.setStyleSheet(CLICK_COPY_CLAVE_STYLESHEET)
+        form.addRow("Nro tramite DNI:", self._txt_nro_tramite_dni)
         self._cmb_cliente.currentIndexChanged.connect(self._on_cliente_changed)
         self._sync_ir_cliente_button_state()
 
@@ -777,6 +856,25 @@ class ExpedienteFormDialog(QDialog):
         self._lbl_clasificacion_etapa.hide()
         form.addRow("Clasificacion:", self._lbl_clasificacion_etapa)
 
+        self._lbl_tema_req_migraciones = QLabel("Tema req. migraciones:")
+        self._cmb_tema_req_migraciones = NoWheelComboBox()
+        self._cmb_tema_req_migraciones.addItem("")
+        for tema in self.TEMAS_REQ_MIGRACIONES:
+            self._cmb_tema_req_migraciones.addItem(tema)
+        self._lbl_tema_req_migraciones.hide()
+        self._cmb_tema_req_migraciones.hide()
+        tema_row = QWidget()
+        tema_row_lay = QHBoxLayout(tema_row)
+        tema_row_lay.setContentsMargins(0, 0, 0, 0)
+        tema_row_lay.setSpacing(6)
+        tema_row_lay.addWidget(self._cmb_tema_req_migraciones, 1)
+        self._btn_generar_plazos_migraciones = QPushButton("Generar plazos sugeridos")
+        self._btn_generar_plazos_migraciones.setProperty("variant", "secondary")
+        self._btn_generar_plazos_migraciones.clicked.connect(self._generar_plazos_req_migraciones)
+        self._btn_generar_plazos_migraciones.hide()
+        tema_row_lay.addWidget(self._btn_generar_plazos_migraciones)
+        form.addRow(self._lbl_tema_req_migraciones, tema_row)
+
         lbl_pe = QLabel(
             "Agregue solo las etapas que necesite. El responsable principal es el de RESPONSABLES; "
             "(Heredar) usa el secundario global. Los plazos se definen con el boton Plazo."
@@ -923,10 +1021,20 @@ class ExpedienteFormDialog(QDialog):
             k: v for k, v in datos_rama.items() if k not in ref_keys
         }
         datos_ref = {k: v for k, v in datos_rama.items() if k in ref_keys}
+        tema_req_migraciones = (datos_rama.get(self.KEY_TEMA_REQ_MIGRACIONES, "") or "").strip()
         if datos_rama_solo and self._rama_datos_widget:
             self._rama_datos_widget.set_data(datos_rama_solo)
         elif self._rama_datos_widget:
             self._rama_datos_widget.clear()
+        if tema_req_migraciones:
+            idx_tema = self._cmb_tema_req_migraciones.findText(tema_req_migraciones)
+            if idx_tema >= 0:
+                self._cmb_tema_req_migraciones.setCurrentIndex(idx_tema)
+            else:
+                self._cmb_tema_req_migraciones.addItem(tema_req_migraciones)
+                self._cmb_tema_req_migraciones.setCurrentIndex(self._cmb_tema_req_migraciones.count() - 1)
+        else:
+            self._cmb_tema_req_migraciones.setCurrentIndex(0)
         if datos_ref:
             self._expedientes_ref_widget.set_data(datos_ref)
         else:
@@ -1010,6 +1118,7 @@ class ExpedienteFormDialog(QDialog):
                     clave_fiscal = cli.get("clave_fiscal", "") or ""
         self._txt_clave_mi_anses.setText(clave_anses)
         self._txt_clave_fiscal.setText(clave_fiscal)
+        self._txt_nro_tramite_dni.setText((cliente_actual or {}).get("nro_tramite_dni", "") or "")
 
         self._apply_responsables_y_flujo_lock()
 
@@ -1357,8 +1466,15 @@ class ExpedienteFormDialog(QDialog):
         display = []
         for r in rows_raw:
             msg = (r.get("mensaje") or "").strip()
-            disp = (r.get("disparado_en") or "").strip()
             ec = (r.get("etapa_codigo") or "").strip()
+            estado_plazo = (r.get("estado_plazo") or "activo").strip()
+            estado_txt = (
+                "Resuelto"
+                if estado_plazo == "resuelto"
+                else ("Pospuesto" if estado_plazo == "pospuesto" else "Activo")
+            )
+            if (r.get("disparado_en") or "").strip():
+                estado_txt = f"{estado_txt} / Avisado"
             display.append({
                 "_id": r["_id"],
                 "fecha_disparo": r.get("fecha_disparo", "") or "",
@@ -1370,13 +1486,39 @@ class ExpedienteFormDialog(QDialog):
                     r.get("notificar_a_username", "") or "",
                     r.get("notificar_a_username", "") or "",
                 ),
-                "estado": (
-                    f"Disparado {disp[:10]}"
-                    if disp
-                    else "Pendiente"
-                ),
+                "estado": estado_txt,
             })
         self._recordatorios_table.set_data(display)
+
+    def _resolver_recordatorio_seleccionado(self):
+        if self._readonly_guard():
+            return
+        rid = self._recordatorios_table.get_selected_id()
+        if not rid:
+            QMessageBox.information(self, "Recordatorios", "Seleccione un recordatorio de la tabla.")
+            return
+        rec = ExpedienteRecordatorioController.get_by_id(rid)
+        if not rec:
+            return
+        ExpedienteRecordatorioController.marcar_resuelto(rid)
+        self._load_tab_recordatorios()
+        self._refresh_estado_etapas_panel()
+        self._refresh_etapa_timeline()
+
+    def _posponer_recordatorio_seleccionado(self):
+        if self._readonly_guard():
+            return
+        rid = self._recordatorios_table.get_selected_id()
+        if not rid:
+            QMessageBox.information(self, "Recordatorios", "Seleccione un recordatorio de la tabla.")
+            return
+        rec = ExpedienteRecordatorioController.get_by_id(rid)
+        if not rec:
+            return
+        ExpedienteRecordatorioController.posponer_dias(rid, 3)
+        self._load_tab_recordatorios()
+        self._refresh_estado_etapas_panel()
+        self._refresh_etapa_timeline()
 
     def _new_recordatorio(self):
         if self._readonly_guard():
@@ -1632,6 +1774,7 @@ class ExpedienteFormDialog(QDialog):
         if not cliente_id:
             self._txt_carpeta_cliente.setText("")
             self._txt_cuil_cliente.setText("")
+            self._txt_nro_tramite_dni.setText("")
             self._sync_ir_cliente_button_state()
             return
         # Buscar en cache local primero
@@ -1646,6 +1789,7 @@ class ExpedienteFormDialog(QDialog):
         if cliente:
             self._txt_carpeta_cliente.setText(str(cliente.get("numero_carpeta", "") or ""))
             self._txt_cuil_cliente.setText((cliente.get("cuil") or "").strip())
+            self._txt_nro_tramite_dni.setText((cliente.get("nro_tramite_dni", "") or "").strip())
             if not self._txt_clave_mi_anses.text().strip():
                 self._txt_clave_mi_anses.setText(cliente.get("clave_mi_anses", "") or "")
             if not self._txt_clave_fiscal.text().strip():
@@ -1653,6 +1797,7 @@ class ExpedienteFormDialog(QDialog):
         else:
             self._txt_carpeta_cliente.setText("")
             self._txt_cuil_cliente.setText("")
+            self._txt_nro_tramite_dni.setText("")
         self._sync_ir_cliente_button_state()
 
     def _sync_ir_cliente_button_state(self):
@@ -1976,6 +2121,7 @@ class ExpedienteFormDialog(QDialog):
         self._lbl_etapa_instruccion.setText(etapa_meta.get("instruccion_corta", ""))
         self._sync_modalidad_con_etapa_iniciada(etapa_codigo)
         self._refresh_clasificacion_etapa_label(etapa_codigo)
+        self._update_req_migraciones_ui(etapa_codigo)
         anterior, actual_hist = self._ultima_transicion_etapa() if self._is_edit else ("", etapa_codigo)
         actual = etapa_codigo or actual_hist
         plazos_por_etapa = self._proximos_plazos_por_etapa() if self._id else {}
@@ -2030,6 +2176,67 @@ class ExpedienteFormDialog(QDialog):
         self._lbl_clasificacion_etapa.setStyleSheet(estilos.get(cat, "padding: 8px;"))
         self._lbl_clasificacion_etapa.setText(info.get("texto", ""))
         self._lbl_clasificacion_etapa.show()
+
+    def _update_req_migraciones_ui(self, etapa_codigo: str):
+        show = (etapa_codigo or "").strip() == self.REQ_MIGRACIONES_CODIGO
+        self._lbl_tema_req_migraciones.setVisible(show)
+        self._cmb_tema_req_migraciones.setVisible(show)
+        self._btn_generar_plazos_migraciones.setVisible(show)
+        self._btn_generar_plazos_migraciones.setEnabled(bool(self._id))
+
+    def _generar_plazos_req_migraciones(self):
+        if self._readonly_guard():
+            return
+        if not self._id:
+            QMessageBox.information(
+                self,
+                "Plazos",
+                "Primero guarde la carpeta para poder generar plazos sugeridos.",
+            )
+            return
+        etapa_codigo = (self._cmb_etapa.currentData() or "").strip()
+        if etapa_codigo != self.REQ_MIGRACIONES_CODIGO:
+            QMessageBox.information(
+                self,
+                "Plazos",
+                "La generacion de plantilla aplica solo en etapa Requerimientos - Migraciones.",
+            )
+            return
+        tema = (self._cmb_tema_req_migraciones.currentText() or "").strip()
+        if not tema:
+            QMessageBox.warning(
+                self,
+                "Plazos",
+                "Seleccione un tema de requerimientos migratorios antes de generar plazos.",
+            )
+            return
+        dlg = GenerarPlazosMigracionesDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        cfg = dlg.get_data()
+        fecha_vencimiento = (cfg.get("fecha_vencimiento") or "").strip()
+        session = Session.get()
+        from controllers.expediente_recordatorio_controller import ExpedienteRecordatorioController
+
+        result = ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
+            self._id,
+            tema=tema,
+            fecha_vencimiento=fecha_vencimiento,
+            creado_por_username=session.username if session.logged_in else "",
+        )
+        self._refresh_estado_etapas_panel()
+        self._refresh_etapa_timeline()
+        if hasattr(self, "_recordatorios_table"):
+            self._load_tab_recordatorios()
+        QMessageBox.information(
+            self,
+            "Plazos sugeridos",
+            (
+                f"Plantilla aplicada para vencimiento {fecha_vencimiento}.\n"
+                f"Se crearon {result.get('creados', 0)} y se actualizaron/omitieron "
+                f"{result.get('omitidos', 0)}."
+            ),
+        )
 
     def _save(self):
         if self._is_read_only:
@@ -2123,6 +2330,25 @@ class ExpedienteFormDialog(QDialog):
             etapa_codigo = self._original_etapa_codigo or "para_citar_o_videollamada"
         else:
             etapa_codigo = self._cmb_etapa.currentData() or "para_citar_o_videollamada"
+        tema_req_migraciones = (self._cmb_tema_req_migraciones.currentText() or "").strip()
+        if (
+            self._is_edit
+            and (etapa_codigo or "").strip() == self.REQ_MIGRACIONES_CODIGO
+            and tema_req_migraciones
+        ):
+            plazos_activos = [
+                r
+                for r in ExpedienteRecordatorioController.list_by_expediente(self._id)
+                if (r.get("estado_plazo") or "activo").strip() != "resuelto"
+            ]
+            if not plazos_activos:
+                QMessageBox.warning(
+                    self,
+                    "Plazos migratorios",
+                    "Esta etapa requiere al menos un plazo activo. "
+                    "Use 'Generar plazos sugeridos' o cargue un recordatorio manual.",
+                )
+                return
 
         # Regla de negocio: cierre formal requiere resultado
         if estado in ExpedienteController.ESTADOS_CIERRE:
@@ -2194,6 +2420,10 @@ class ExpedienteFormDialog(QDialog):
                     if c.get("solo_virtual")
                 }
                 datos_rama = {k: v for k, v in datos_rama.items() if k not in virtual_keys}
+        if tema_req_migraciones:
+            datos_rama[self.KEY_TEMA_REQ_MIGRACIONES] = tema_req_migraciones
+        elif etapa_codigo == self.REQ_MIGRACIONES_CODIGO:
+            datos_rama.pop(self.KEY_TEMA_REQ_MIGRACIONES, None)
         datos_rama.update(self._expedientes_ref_widget.get_data())
 
         # Recolectar datos judiciales
@@ -2230,6 +2460,7 @@ class ExpedienteFormDialog(QDialog):
             "clave_fiscal": clave_fiscal,
             "observaciones": self._txt_obs.toPlainText().strip(),
         }
+        nro_tramite_dni = self._txt_nro_tramite_dni.text().strip()
 
         if self._is_edit:
             etapa_cambiada = etapa_codigo != (self._original_etapa_codigo or "para_citar_o_videollamada")
@@ -2247,15 +2478,22 @@ class ExpedienteFormDialog(QDialog):
             data["resultado"] = (self._cmb_resultado.currentData() or "").strip()
             data["fecha_cierre"] = self._date_cierre.date().toString("yyyy-MM-dd")
 
-        # Sincronizar claves al cliente (sin abortar si falla)
-        if cliente_id and (clave_mi_anses or clave_fiscal):
+        # Sincronizar claves + nro de tramite DNI al cliente (sin abortar si falla)
+        if cliente_id:
             try:
-                ClienteController.update(cliente_id, {
-                    "clave_mi_anses": clave_mi_anses,
-                    "clave_fiscal": clave_fiscal,
-                })
+                payload_cliente = {"nro_tramite_dni": nro_tramite_dni}
+                if clave_mi_anses or clave_fiscal:
+                    payload_cliente.update({
+                        "clave_mi_anses": clave_mi_anses,
+                        "clave_fiscal": clave_fiscal,
+                    })
+                ClienteController.update(cliente_id, payload_cliente)
             except Exception:
-                logger.warning("Error al sincronizar claves al cliente %s", cliente_id, exc_info=True)
+                logger.warning(
+                    "Error al sincronizar nro_tramite_dni/claves al cliente %s",
+                    cliente_id,
+                    exc_info=True,
+                )
 
         if self._is_edit:
             ExpedienteController.update(self._id, data)

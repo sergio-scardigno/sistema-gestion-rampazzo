@@ -215,6 +215,7 @@ $linuxDir = Join-Path $distOut ("linux-" + $Version)
 $macDir = Join-Path $distOut ("mac-" + $Version)
 $tmpDir = Join-Path $distOut ("_tmp_download_" + $Version)
 $workflow = "build.yml"
+$preDispatchRunIds = @()
 
 Step "[3/8] Preparando carpetas de salida..."
 New-Item -ItemType Directory -Force -Path $distOut | Out-Null
@@ -227,7 +228,18 @@ Write-Host "      OK"
 Write-Host ""
 
 Step "[4/8] Disparando workflow $workflow..."
- $dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddSeconds(-10)
+# Snapshot de runs existentes antes del dispatch para detectar el nuevo run por diferencia de IDs.
+try {
+    $beforeRunsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 100 --json databaseId 2>$null
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($beforeRunsRaw)) {
+        $beforeRuns = $beforeRunsRaw | ConvertFrom-Json
+        $preDispatchRunIds = @($beforeRuns | ForEach-Object { [string]$_.databaseId })
+    }
+} catch {
+    $preDispatchRunIds = @()
+}
+
+$dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddMinutes(-2)
 & $gh workflow run $workflow -R $Repo --ref $Branch
 Ensure-Success "No se pudo disparar el workflow. Verificar permisos y nombre del workflow."
 Write-Host "      Workflow disparado."
@@ -235,34 +247,64 @@ Write-Host ""
 
 Step "[5/8] Obteniendo run_id..."
 $runId = $null
-$maxAttempts = 20
+$maxAttempts = 40
 $sleepSeconds = 3
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-    $runsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 20 --json databaseId,createdAt,status,conclusion,headBranch,event 2>$null
+    # Primero intentamos por API (mas estable justo despues del dispatch).
+    $runsRaw = & $gh api "repos/$Repo/actions/workflows/$workflow/runs?event=workflow_dispatch&branch=$Branch&per_page=50" 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runsRaw)) {
         try {
-            $runs = $runsRaw | ConvertFrom-Json
-            $runsArray = @($runs)
+            $runsObj = $runsRaw | ConvertFrom-Json
+            $runsArray = @($runsObj.workflow_runs)
             $recentCandidates = @(
                 $runsArray | Where-Object {
-                    $_.databaseId -and
+                    $_.id -and
                     $_.event -eq "workflow_dispatch" -and
-                    $_.headBranch -eq $Branch -and
-                    $_.createdAt -and
-                    ([datetime]$_.createdAt).ToUniversalTime() -ge $dispatchStartedAtUtc
-                } | Sort-Object { [datetime]$_.createdAt } -Descending
+                    $_.head_branch -eq $Branch -and
+                    (
+                        ($preDispatchRunIds.Count -gt 0 -and -not ($preDispatchRunIds -contains ([string]$_.id))) -or
+                        ($_.created_at -and ([datetime]$_.created_at).ToUniversalTime() -ge $dispatchStartedAtUtc)
+                    )
+                } | Sort-Object { [int64]$_.id } -Descending
             )
 
             if ($recentCandidates.Count -gt 0) {
-                $runId = [string]$recentCandidates[0].databaseId
+                $runId = [string]$recentCandidates[0].id
                 break
             }
         } catch {}
     }
+
+    # Fallback: run list de gh CLI sin filtro de evento.
+    if ([string]::IsNullOrWhiteSpace($runId)) {
+        $runsListRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --limit 30 --json databaseId,createdAt,status,conclusion,headBranch,event 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runsListRaw)) {
+            try {
+                $runs = $runsListRaw | ConvertFrom-Json
+                $runsArray = @($runs)
+                $recentCandidates = @(
+                    $runsArray | Where-Object {
+                        $_.databaseId -and
+                        $_.headBranch -eq $Branch -and
+                        (
+                            ($preDispatchRunIds.Count -gt 0 -and -not ($preDispatchRunIds -contains ([string]$_.databaseId))) -or
+                            ($_.createdAt -and ([datetime]$_.createdAt).ToUniversalTime() -ge $dispatchStartedAtUtc)
+                        )
+                    } | Sort-Object { [int64]$_.databaseId } -Descending
+                )
+
+                if ($recentCandidates.Count -gt 0) {
+                    $runId = [string]$recentCandidates[0].databaseId
+                    break
+                }
+            } catch {}
+        }
+    }
+
     Start-Sleep -Seconds $sleepSeconds
 }
 if ([string]::IsNullOrWhiteSpace($runId)) {
-    throw "No se pudo obtener run_id del workflow. Reintentar en unos segundos."
+    throw "No se pudo obtener run_id del workflow (timeout $($maxAttempts * $sleepSeconds)s). Reintentar en unos segundos."
 }
 Write-Host "      Run ID: $runId"
 Write-Host ""

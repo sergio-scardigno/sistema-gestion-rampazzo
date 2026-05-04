@@ -320,8 +320,20 @@ class ExpedienteController(BaseController):
     _ROLES_SECUNDARIO_NOTIF = {"abogado", "analisis", "administrador", "secretaria"}
 
     @classmethod
-    def _is_notifiable_role_for_assignment(cls, username: str) -> bool:
+    def _is_active_user(cls, username: str) -> bool:
         if not username:
+            return False
+        rows = db_local.find_all(
+            "usuarios",
+            where="username = ? AND (activo = 1) AND (eliminado = 0 OR eliminado IS NULL)",
+            params=(username,),
+            limit=1,
+        )
+        return bool(rows)
+
+    @classmethod
+    def _is_notifiable_role_for_assignment(cls, username: str) -> bool:
+        if not cls._is_active_user(username):
             return False
         rows = db_local.find_all(
             "usuarios",
@@ -336,7 +348,7 @@ class ExpedienteController(BaseController):
     @classmethod
     def _is_notifiable_for_secondary_assignment(cls, username: str) -> bool:
         """Roles que reciben notificacion como responsable secundario (incluye secretaria)."""
-        if not username:
+        if not cls._is_active_user(username):
             return False
         rows = db_local.find_all(
             "usuarios",
@@ -450,6 +462,7 @@ class ExpedienteController(BaseController):
 
         payload = dict(data)
         observacion_transicion = (payload.pop("observacion_transicion", None) or "").strip()
+        mensaje_notificacion_equipo = (payload.pop("mensaje_notificacion_equipo", None) or "").strip()
         if payload.get("etapa_codigo") == "iniciada_virtual":
             payload["modalidad"] = "Virtual"
         elif payload.get("etapa_codigo") == "iniciada_presencial":
@@ -462,14 +475,20 @@ class ExpedienteController(BaseController):
         actor_username = session.username if session.logged_in else ""
 
         old_etapa = existing.get("etapa_codigo", "para_citar_o_videollamada")
+        old_estado = existing.get("estado", "")
+        old_observaciones = (existing.get("observaciones", "") or "").strip()
         old_resp = (existing.get("responsable_username", "") or "")
         old_encargado = (existing.get("responsable_secundario_username", "") or "")
         new_etapa = result.get("etapa_codigo", old_etapa)
+        new_estado = result.get("estado", old_estado)
+        new_observaciones = (result.get("observaciones", "") or "").strip()
         new_resp = (result.get("responsable_username", old_resp) or "")
         new_encargado = (result.get("responsable_secundario_username", old_encargado) or "")
         hubo_cambio_gestion = (
             new_etapa != old_etapa or new_resp != old_resp or new_encargado != old_encargado
         )
+        hubo_cambio_estado = new_estado != old_estado
+        hubo_cambio_observacion = new_observaciones != old_observaciones
 
         try:
             if hubo_cambio_gestion:
@@ -548,6 +567,67 @@ class ExpedienteController(BaseController):
                     )
         except Exception:
             logger.warning("Error al notificar cambio de etapa o responsables (update)", exc_info=True)
+
+        try:
+            if hubo_cambio_estado or hubo_cambio_observacion:
+                from controllers.notificacion_controller import NotificacionController
+
+                secundario_efectivo = cls.secundario_efectivo_username(result)
+                targets = {
+                    (result.get("responsable_username", "") or "").strip(),
+                    secundario_efectivo,
+                }
+                targets.discard("")
+                if actor_username:
+                    targets.discard(actor_username)
+
+                exp_num = result.get("id_expediente", "")
+                etapa_meta = cls.etapa_por_codigo(new_etapa)
+                transicion_suffix = f" Nota: {observacion_transicion}" if observacion_transicion else ""
+
+                for uname in targets:
+                    # Para alertas de equipo (observacion/estado), notificamos a ambos
+                    # responsables activos, independientemente de su rol.
+                    if not cls._is_active_user(uname):
+                        continue
+
+                    if hubo_cambio_estado:
+                        if mensaje_notificacion_equipo:
+                            msg_estado = (
+                                f"Carpeta #{exp_num}: {mensaje_notificacion_equipo}{transicion_suffix}"
+                            )
+                        else:
+                            msg_estado = (
+                                f"Se actualizo la carpeta #{exp_num}: estado '{old_estado}' -> '{new_estado}'. "
+                                f"Etapa actual: {etapa_meta.get('titulo', new_etapa)}."
+                                f"{transicion_suffix}"
+                            )
+                        NotificacionController.create_for_expediente_estado_cambiado(
+                            target_username=uname,
+                            mensaje=msg_estado,
+                            id_referencia=result.get("_id", ""),
+                        )
+
+                    if hubo_cambio_observacion:
+                        obs_preview = new_observaciones
+                        if len(obs_preview) > 240:
+                            obs_preview = obs_preview[:240] + "..."
+                        if mensaje_notificacion_equipo:
+                            msg_obs = (
+                                f"Carpeta #{exp_num}: {mensaje_notificacion_equipo}"
+                            )
+                        else:
+                            msg_obs = (
+                                f"Se actualizo la observacion al equipo en la carpeta #{exp_num}. "
+                                f"Nuevo texto: {obs_preview or '(sin observacion)'}"
+                            )
+                        NotificacionController.create_for_expediente_observacion_equipo(
+                            target_username=uname,
+                            mensaje=msg_obs,
+                            id_referencia=result.get("_id", ""),
+                        )
+        except Exception:
+            logger.warning("Error al notificar cambio de estado u observacion (update)", exc_info=True)
 
         return result
 

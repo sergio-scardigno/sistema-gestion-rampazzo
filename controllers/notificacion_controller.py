@@ -14,6 +14,8 @@ POPUP_ALERT_TYPES = (
     "expediente_asignado",
     "expediente_etapa_encargado",
     "recordatorio_expediente",
+    "expediente_observacion_equipo",
+    "expediente_estado_cambiado",
 )
 
 DISMISSIBLE_TYPES = (
@@ -21,6 +23,8 @@ DISMISSIBLE_TYPES = (
     "turno_asignado",
     "expediente_etapa_encargado",
     "recordatorio_expediente",
+    "expediente_observacion_equipo",
+    "expediente_estado_cambiado",
     "tarea_asignada",
     "tarea_proxima_vencer",
 )
@@ -72,6 +76,20 @@ NOTIF_STYLES = {
         "icon": "\u23F0",
         "icon_color": "#c9a84c",
         "label": "TURNO",
+    },
+    "expediente_observacion_equipo": {
+        "bg": "#eef6ff",
+        "border": "#2563eb",
+        "icon": "\u270D",
+        "icon_color": "#2563eb",
+        "label": "OBS.",
+    },
+    "expediente_estado_cambiado": {
+        "bg": "#f0fdf4",
+        "border": "#15803d",
+        "icon": "\u21BB",
+        "icon_color": "#15803d",
+        "label": "ESTADO",
     },
 }
 _DEFAULT_NOTIF_STYLE = {
@@ -242,12 +260,50 @@ class NotificacionController:
 
     @classmethod
     def create_for_recordatorio_expediente(
-        cls, target_username: str, mensaje: str, id_referencia: str
+        cls,
+        target_username: str,
+        mensaje: str,
+        id_referencia: str,
+        *,
+        force_new: bool = False,
     ) -> dict:
         """Crear o refrescar recordatorio programado de expediente."""
+        if force_new:
+            record = cls._base_record(
+                target_username,
+                "recordatorio_expediente",
+                mensaje,
+                id_referencia,
+            )
+            db_local.insert("notificaciones", record)
+            return record
         return cls._upsert_task_notification(
             target_username=target_username,
             tipo="recordatorio_expediente",
+            mensaje=mensaje,
+            id_referencia=id_referencia,
+        )
+
+    @classmethod
+    def create_for_expediente_observacion_equipo(
+        cls, target_username: str, mensaje: str, id_referencia: str
+    ) -> dict:
+        """Crear o refrescar notificacion por observacion al equipo en carpeta."""
+        return cls._upsert_task_notification(
+            target_username=target_username,
+            tipo="expediente_observacion_equipo",
+            mensaje=mensaje,
+            id_referencia=id_referencia,
+        )
+
+    @classmethod
+    def create_for_expediente_estado_cambiado(
+        cls, target_username: str, mensaje: str, id_referencia: str
+    ) -> dict:
+        """Crear o refrescar notificacion por cambio de estado/etapa en carpeta."""
+        return cls._upsert_task_notification(
+            target_username=target_username,
+            tipo="expediente_estado_cambiado",
             mensaje=mensaje,
             id_referencia=id_referencia,
         )

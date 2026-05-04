@@ -30,6 +30,7 @@ MODULO_CONFIG = {
     "tareas":         {"label": "  Tareas",          "icon": "\u2611"},
     "clientes":       {"label": "  Clientes",        "icon": "\u263A"},
     "expedientes":    {"label": "  Carpetas",        "icon": "\u2630"},
+    "listados":       {"label": "  Listados",        "icon": "\u2261"},
     "carpetas_iniciadas": {"label": "  Carpetas Iniciadas", "icon": "+"},
     "turnos":         {"label": "  Turnos ANSES",    "icon": "\u23F0"},
     "comunicaciones": {"label": "  Comunicaciones",  "icon": "\u2709"},
@@ -230,6 +231,9 @@ class MainWindow(QMainWindow):
         elif key == "expedientes":
             from views.expedientes.expediente_list import ExpedienteListView
             self._register_view(key, ExpedienteListView())
+        elif key == "listados":
+            from views.expedientes.listados_view import ListadosView
+            self._register_view(key, ListadosView())
         elif key == "carpetas_iniciadas":
             from views.expedientes.carpetas_iniciadas_view import CarpetasIniciadasView
             self._register_view(key, CarpetasIniciadasView())
@@ -364,7 +368,13 @@ class MainWindow(QMainWindow):
             view = self._views.get("turnos")
             if view and hasattr(view, "refresh"):
                 view.refresh()
-        elif tipo in {"expediente_asignado", "expediente_etapa_encargado", "recordatorio_expediente"}:
+        elif tipo in {
+            "expediente_asignado",
+            "expediente_etapa_encargado",
+            "recordatorio_expediente",
+            "expediente_observacion_equipo",
+            "expediente_estado_cambiado",
+        }:
             from controllers.expediente_controller import ExpedienteController
             exp = ExpedienteController.get_by_id(id_referencia)
             if not exp:
@@ -433,7 +443,13 @@ class MainWindow(QMainWindow):
             active = NotificacionController.get_active_for_user(session.username, limit=30)
             pending = [
                 n for n in active
-                if n.get("tipo") in {"expediente_asignado", "expediente_etapa_encargado", "recordatorio_expediente"}
+                if n.get("tipo") in {
+                    "expediente_asignado",
+                    "expediente_etapa_encargado",
+                    "recordatorio_expediente",
+                    "expediente_observacion_equipo",
+                    "expediente_estado_cambiado",
+                }
                 and int(n.get("leida", 0) or 0) == 0
                 and n.get("_id", "") not in self._shown_assignment_popup_ids
             ]

@@ -4,7 +4,28 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
-**Versión de aplicación:** 1.8.0
+**Versión de aplicación:** 1.8.3
+
+---
+
+## Notas de versión — 1.8.3 (abril 2026)
+
+### Resumen breve de implementaciones
+
+- Nuevo módulo lateral **Listados** para seguimiento operativo de carpetas.
+- Filtros combinables por **estado** y **etapa**, con opción de cambios recientes.
+- Copia al clic en columnas de uso diario: **DNI**, **Clave CUIT**, **Clave ANSES** y **Nro Trámite**.
+- Flujo de **3 observaciones separadas por carpeta**:
+  - observación de carpeta;
+  - mensaje para notificación;
+  - observación para chequear (seguimiento).
+- Notificaciones internas al responsable **primario** y **secundario** por cambios de estado/etapa y observaciones del equipo.
+
+### Detalle funcional del módulo Listados
+
+- Vista con acciones rápidas para abrir carpeta, cambiar estado/etapa y guardar observaciones sin salir del listado.
+- El mensaje de notificación se mantiene independiente de la observación de carpeta.
+- La observación para chequear se conserva por carpeta para seguimiento posterior del equipo.
 
 ---
 
