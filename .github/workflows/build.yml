@@ -94,7 +94,7 @@ jobs:
           print(f"[OK] El ZIP contiene {len(names)} entradas en total")
 
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: SistemaRampazzo-${{ runner.os }}
           path: SistemaRampazzo.zip
