@@ -15,7 +15,9 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QPlainTextEdit,
+    QSizePolicy,
 )
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from controllers.expediente_controller import ExpedienteController
@@ -158,32 +160,55 @@ class ListadosView(QWidget):
         self._table.row_double_clicked.connect(self._open_detail)
         self._table.row_selected.connect(self._on_row_selected)
         self._table._table.cellClicked.connect(self._copy_cell_if_needed)
-        layout.addWidget(self._table)
+        self._table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        layout.addWidget(self._table, 1)
 
-        editor_block = QVBoxLayout()
+        self._editor_panel = QWidget()
+        self._editor_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        editor_block = QVBoxLayout(self._editor_panel)
+        editor_block.setContentsMargins(0, 0, 0, 0)
+        editor_block.setSpacing(6)
         self._lbl_selected = QLabel("Carpeta seleccionada: -")
         self._lbl_selected.setStyleSheet("font-weight: 600; color: #1f2937;")
         editor_block.addWidget(self._lbl_selected)
+
+        # Campos compactos (~10% de la altura que tomaban al expandirse); scroll si hace falta.
+        _compact_h = 36
 
         self._txt_obs_editor = QPlainTextEdit()
         self._txt_obs_editor.setPlaceholderText(
             "Observacion de carpeta (interna de la carpeta)..."
         )
-        self._txt_obs_editor.setMinimumHeight(90)
+        self._txt_obs_editor.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        self._txt_obs_editor.setMinimumHeight(27)
+        self._txt_obs_editor.setMaximumHeight(_compact_h)
+        self._txt_obs_editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         editor_block.addWidget(self._txt_obs_editor)
 
         self._txt_msg_notif = QPlainTextEdit()
         self._txt_msg_notif.setPlaceholderText(
             "Mensaje para notificacion al responsable primario/secundario..."
         )
-        self._txt_msg_notif.setMinimumHeight(70)
+        self._txt_msg_notif.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        self._txt_msg_notif.setMinimumHeight(27)
+        self._txt_msg_notif.setMaximumHeight(_compact_h)
+        self._txt_msg_notif.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         editor_block.addWidget(self._txt_msg_notif)
 
         self._txt_para_chequear = QPlainTextEdit()
         self._txt_para_chequear.setPlaceholderText(
             "Observacion para chequear (seguimiento de la carpeta)..."
         )
-        self._txt_para_chequear.setMinimumHeight(70)
+        self._txt_para_chequear.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        self._txt_para_chequear.setMinimumHeight(27)
+        self._txt_para_chequear.setMaximumHeight(_compact_h)
+        self._txt_para_chequear.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         editor_block.addWidget(self._txt_para_chequear)
 
         actions = QHBoxLayout()
@@ -192,7 +217,7 @@ class ListadosView(QWidget):
         btn_guardar_obs.clicked.connect(self._guardar_observacion_inline)
         actions.addWidget(btn_guardar_obs)
         editor_block.addLayout(actions)
-        layout.addLayout(editor_block)
+        layout.addWidget(self._editor_panel, 0)
 
         self._current_expediente_id = ""
 

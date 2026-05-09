@@ -239,11 +239,13 @@ try {
     $preDispatchRunIds = @()
 }
 
-$dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddMinutes(-2)
 & $gh workflow run $workflow -R $Repo --ref $Branch
 Ensure-Success "No se pudo disparar el workflow. Verificar permisos y nombre del workflow."
 Write-Host "      Workflow disparado."
 Write-Host ""
+# Solo runs creados despues del dispatch (margen breve por skew); si se calcula antes del dispatch,
+# puede elegirse un run viejo ya "success" cuyos artifacts se borraron en el purge.
+$dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddSeconds(-20)
 
 Step "[5/8] Obteniendo run_id..."
 $runId = $null
