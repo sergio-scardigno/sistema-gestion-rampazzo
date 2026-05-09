@@ -228,24 +228,34 @@ Write-Host "      OK"
 Write-Host ""
 
 Step "[4/8] Disparando workflow $workflow..."
-# Snapshot de runs existentes antes del dispatch para detectar el nuevo run por diferencia de IDs.
+# Snapshot de TODOS los runs recientes del workflow en la rama (cualquier evento) para obtener
+# el max databaseId antes del dispatch. El run nuevo siempre tiene id mayor; la ventana por
+# created_at sola puede colarse un run reciente cuyos artifacts ya se purgaron.
+$maxPreDispatchRunId = [int64]0
 try {
-    $beforeRunsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --event workflow_dispatch --limit 100 --json databaseId 2>$null
+    $beforeRunsRaw = & $gh run list -R $Repo --workflow $workflow --branch $Branch --limit 50 --json databaseId 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($beforeRunsRaw)) {
         $beforeRuns = $beforeRunsRaw | ConvertFrom-Json
         $preDispatchRunIds = @($beforeRuns | ForEach-Object { [string]$_.databaseId })
+        foreach ($rid in $preDispatchRunIds) {
+            try {
+                $n = [int64]$rid
+                if ($n -gt $maxPreDispatchRunId) { $maxPreDispatchRunId = $n }
+            } catch {}
+        }
     }
 } catch {
     $preDispatchRunIds = @()
 }
 
+$beforeDispatchUtc = (Get-Date).ToUniversalTime()
 & $gh workflow run $workflow -R $Repo --ref $Branch
 Ensure-Success "No se pudo disparar el workflow. Verificar permisos y nombre del workflow."
 Write-Host "      Workflow disparado."
 Write-Host ""
-# Solo runs creados despues del dispatch (margen breve por skew); si se calcula antes del dispatch,
-# puede elegirse un run viejo ya "success" cuyos artifacts se borraron en el purge.
-$dispatchStartedAtUtc = (Get-Date).ToUniversalTime().AddSeconds(-20)
+Start-Sleep -Seconds 10
+# Respaldo por tiempo si no hubo snapshot de ids (GitHub crea el run justo despues del dispatch).
+$dispatchStartedAtUtc = $beforeDispatchUtc.AddSeconds(-5)
 
 Step "[5/8] Obteniendo run_id..."
 $runId = $null
@@ -264,8 +274,12 @@ for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
                     $_.event -eq "workflow_dispatch" -and
                     $_.head_branch -eq $Branch -and
                     (
-                        ($preDispatchRunIds.Count -gt 0 -and -not ($preDispatchRunIds -contains ([string]$_.id))) -or
-                        ($_.created_at -and ([datetime]$_.created_at).ToUniversalTime() -ge $dispatchStartedAtUtc)
+                        ([int64]$_.id -gt $maxPreDispatchRunId) -or
+                        (
+                            $maxPreDispatchRunId -eq 0 -and
+                            $_.created_at -and
+                            ([datetime]$_.created_at).ToUniversalTime() -ge $dispatchStartedAtUtc
+                        )
                     )
                 } | Sort-Object { [int64]$_.id } -Descending
             )
@@ -288,9 +302,14 @@ for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
                     $runsArray | Where-Object {
                         $_.databaseId -and
                         $_.headBranch -eq $Branch -and
+                        $_.event -eq "workflow_dispatch" -and
                         (
-                            ($preDispatchRunIds.Count -gt 0 -and -not ($preDispatchRunIds -contains ([string]$_.databaseId))) -or
-                            ($_.createdAt -and ([datetime]$_.createdAt).ToUniversalTime() -ge $dispatchStartedAtUtc)
+                            ([int64]$_.databaseId -gt $maxPreDispatchRunId) -or
+                            (
+                                $maxPreDispatchRunId -eq 0 -and
+                                $_.createdAt -and
+                                ([datetime]$_.createdAt).ToUniversalTime() -ge $dispatchStartedAtUtc
+                            )
                         )
                     } | Sort-Object { [int64]$_.databaseId } -Descending
                 )
