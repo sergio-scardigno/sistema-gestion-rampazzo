@@ -43,6 +43,8 @@ class ExpedienteRecordatorioController(BaseController):
             crit_i = 0
         payload = {
             "id_expediente": id_expediente,
+            "id_migracion_requerimiento": (data.get("id_migracion_requerimiento") or "").strip(),
+            "id_migracion_etapa": (data.get("id_migracion_etapa") or "").strip(),
             "fecha_disparo": (data.get("fecha_disparo") or "").strip()[:10],
             "titulo": (data.get("titulo") or "").strip(),
             "mensaje": (data.get("mensaje") or "").strip(),

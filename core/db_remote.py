@@ -21,6 +21,7 @@ SYNC_COLLECTIONS = [
     "modelos_escrito", "escritos", "expediente_estado_historial", "audit_log",
     "notificaciones", "expediente_recordatorios", "expediente_etapa_responsables",
     "session_signals", "sync_conflicts", "citas",
+    "migracion_requerimiento", "migracion_requerimiento_etapa", "migracion_requerimiento_historial",
 ]
 
 
@@ -77,6 +78,9 @@ def ensure_indexes():
     db.citas.create_index("fecha_cita")
     db.citas.create_index("id_cliente")
     db.citas.create_index("id_expediente")
+    db.migracion_requerimiento.create_index("id_expediente")
+    db.migracion_requerimiento_etapa.create_index("id_requerimiento")
+    db.migracion_requerimiento_historial.create_index("id_requerimiento")
     db.sync_conflicts.create_index("status")
     db.sync_conflicts.create_index([("table_name", pymongo.ASCENDING), ("record_id", pymongo.ASCENDING)])
     db.record_locks.create_index("expires_at", expireAfterSeconds=0)
@@ -87,6 +91,7 @@ def ensure_indexes():
         "modelos_escrito", "escritos", "expediente_estado_historial", "expediente_recordatorios",
         "expediente_etapa_responsables",
         "audit_log", "notificaciones", "sync_conflicts", "citas",
+        "migracion_requerimiento", "migracion_requerimiento_etapa", "migracion_requerimiento_historial",
     ]:
         db[col_name].create_index("updated_at")
 

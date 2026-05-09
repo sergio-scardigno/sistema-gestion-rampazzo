@@ -17,6 +17,7 @@ SYNCED_ENTITY_TABLES = [
     "tareas", "turnos", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "expediente_estado_historial", "notificaciones",
     "expediente_recordatorios", "expediente_etapa_responsables", "citas",
+    "migracion_requerimiento", "migracion_requerimiento_etapa", "migracion_requerimiento_historial",
 ]
 
 _TABLES_SQL = """
@@ -134,6 +135,7 @@ CREATE TABLE IF NOT EXISTS tareas (
     _id TEXT PRIMARY KEY,
     id_tarea INTEGER,
     id_expediente TEXT,
+    id_migracion_requerimiento TEXT DEFAULT '',
     tipo_accion TEXT,
     descripcion TEXT,
     responsable TEXT,
@@ -373,6 +375,8 @@ CREATE TABLE IF NOT EXISTS expediente_estado_historial (
 CREATE TABLE IF NOT EXISTS expediente_recordatorios (
     _id TEXT PRIMARY KEY,
     id_expediente TEXT NOT NULL,
+    id_migracion_requerimiento TEXT DEFAULT '',
+    id_migracion_etapa TEXT DEFAULT '',
     fecha_disparo TEXT NOT NULL,
     titulo TEXT DEFAULT '',
     mensaje TEXT DEFAULT '',
@@ -410,6 +414,61 @@ CREATE TABLE IF NOT EXISTS expediente_etapa_responsables (
     is_deleted INTEGER DEFAULT 0,
     deleted_at TEXT,
     deleted_by TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS migracion_requerimiento (
+    _id TEXT PRIMARY KEY,
+    id_migracion_requerimiento INTEGER,
+    id_expediente TEXT NOT NULL,
+    titulo TEXT NOT NULL DEFAULT '',
+    tipo TEXT DEFAULT '',
+    estado_ciclo TEXT NOT NULL DEFAULT 'iniciado',
+    notas TEXT DEFAULT '',
+    orden INTEGER DEFAULT 0,
+    finalizado_en TEXT DEFAULT '',
+    created_by_username TEXT DEFAULT '',
+    created_at TEXT,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS migracion_requerimiento_etapa (
+    _id TEXT PRIMARY KEY,
+    id_migracion_etapa INTEGER,
+    id_requerimiento TEXT NOT NULL,
+    codigo TEXT NOT NULL DEFAULT '',
+    titulo TEXT NOT NULL DEFAULT '',
+    orden INTEGER DEFAULT 0,
+    fecha_vencimiento TEXT DEFAULT '',
+    estado_avance TEXT NOT NULL DEFAULT 'pendiente',
+    notas TEXT DEFAULT '',
+    created_at TEXT,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    deleted_at TEXT,
+    deleted_by TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS migracion_requerimiento_historial (
+    _id TEXT PRIMARY KEY,
+    id_requerimiento TEXT NOT NULL,
+    evento_tipo TEXT NOT NULL DEFAULT '',
+    id_etapa TEXT DEFAULT '',
+    detalle TEXT DEFAULT '',
+    usuario TEXT DEFAULT '',
+    created_at TEXT,
+    updated_at TEXT,
+    version INTEGER DEFAULT 1,
+    sync_status TEXT DEFAULT 'synced',
+    created_by_machine TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sync_meta (
@@ -605,6 +664,7 @@ def init_db():
     _migrate_notificaciones_resolution(conn)
     _migrate_expediente_historial_etapas(conn)
     _migrate_expediente_etapa_y_recordatorio_plazos(conn)
+    _migrate_migracion_requerimientos_modulo(conn)
 
     # ── Reparar caracteres corruptos (U+FFFD) de importaciones previas ──
     _fix_replacement_characters(conn)
@@ -649,6 +709,12 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha_cita)",
         "CREATE INDEX IF NOT EXISTS idx_citas_id_cliente ON citas(id_cliente)",
         "CREATE INDEX IF NOT EXISTS idx_citas_id_expediente ON citas(id_expediente)",
+        "CREATE INDEX IF NOT EXISTS idx_migr_req_expediente ON migracion_requerimiento(id_expediente)",
+        "CREATE INDEX IF NOT EXISTS idx_migr_req_ciclo ON migracion_requerimiento(estado_ciclo)",
+        "CREATE INDEX IF NOT EXISTS idx_migr_req_etapa_req ON migracion_requerimiento_etapa(id_requerimiento)",
+        "CREATE INDEX IF NOT EXISTS idx_migr_hist_req ON migracion_requerimiento_historial(id_requerimiento)",
+        "CREATE INDEX IF NOT EXISTS idx_recordatorios_migr_req ON expediente_recordatorios(id_migracion_requerimiento, fecha_disparo)",
+        "CREATE INDEX IF NOT EXISTS idx_tareas_migr_req ON tareas(id_migracion_requerimiento)",
     ]
     for idx_sql in _indices:
         conn.execute(idx_sql)
@@ -871,6 +937,48 @@ def _migrate_expediente_etapa_y_recordatorio_plazos(conn):
         except sqlite3.OperationalError:
             conn.execute(f"ALTER TABLE expediente_recordatorios ADD COLUMN {col} {col_def}")
             conn.commit()
+
+
+def _migrate_migracion_requerimientos_modulo(conn):
+    """Modulo Requerimientos Migraciones: columnas en tareas/recordatorios."""
+    for col, col_def in [
+        ("id_migracion_requerimiento", "TEXT DEFAULT ''"),
+        ("id_migracion_etapa", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            conn.execute(f"SELECT {col} FROM expediente_recordatorios LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute(f"ALTER TABLE expediente_recordatorios ADD COLUMN {col} {col_def}")
+            conn.commit()
+    try:
+        conn.execute("SELECT id_migracion_requerimiento FROM tareas LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE tareas ADD COLUMN id_migracion_requerimiento TEXT DEFAULT ''")
+        conn.commit()
+    try:
+        conn.execute("SELECT finalizado_en FROM migracion_requerimiento LIMIT 1")
+    except sqlite3.OperationalError:
+        try:
+            conn.execute(
+                "ALTER TABLE migracion_requerimiento ADD COLUMN finalizado_en TEXT DEFAULT ''"
+            )
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+    for col, col_def in [
+        ("updated_at", "TEXT"),
+        ("version", "INTEGER DEFAULT 1"),
+    ]:
+        try:
+            conn.execute(f"SELECT {col} FROM migracion_requerimiento_historial LIMIT 1")
+        except sqlite3.OperationalError:
+            try:
+                conn.execute(
+                    f"ALTER TABLE migracion_requerimiento_historial ADD COLUMN {col} {col_def}"
+                )
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
 
 
 def dict_from_row(row: sqlite3.Row | None) -> dict | None:

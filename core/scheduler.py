@@ -252,18 +252,50 @@ def check_recordatorios_expedientes():
                 continue
 
             exp_num = exp.get("id_expediente", "")
+            extra_migr = ""
+            id_me = (rec.get("id_migracion_etapa") or "").strip()
+            id_mr = (rec.get("id_migracion_requerimiento") or "").strip()
+            if id_me or id_mr:
+                try:
+                    from controllers.migracion_requerimiento_controller import (
+                        MigracionRequerimientoController,
+                        MigracionRequerimientoEtapaController,
+                    )
+
+                    parts: list[str] = []
+                    if id_mr:
+                        rq = MigracionRequerimientoController.get_by_id(id_mr)
+                        if rq and (rq.get("titulo") or "").strip():
+                            parts.append((rq.get("titulo") or "").strip())
+                    if id_me:
+                        er = MigracionRequerimientoEtapaController.get_by_id(id_me)
+                        if er and (er.get("titulo") or "").strip():
+                            parts.append((er.get("titulo") or "").strip())
+                    if parts:
+                        extra_migr = " [" + " / ".join(parts) + "]"
+                except Exception:
+                    logger.debug("Enriquecimiento mensaje migracion recordatorio", exc_info=True)
             base_msg = (
                 f"{pref}Recordatorio de carpeta #{exp_num}: "
-                f"{rec.get('titulo', 'Accion pendiente')}. {rec.get('mensaje', '')}".strip()
-            )
+                f"{rec.get('titulo', 'Accion pendiente')}. "
+                f"{rec.get('mensaje', '')}{extra_migr}"
+            ).strip()
             for uname, rol_dest in targets:
                 msg = base_msg if rol_dest == "titular" else f"[COPIA] {base_msg}"
-                NotificacionController.create_for_recordatorio_expediente(
-                    target_username=uname,
-                    mensaje=msg,
-                    id_referencia=exp.get("_id", ""),
-                    force_new=True,
-                )
+                if id_me:
+                    NotificacionController.create_for_recordatorio_migracion_etapa(
+                        target_username=uname,
+                        mensaje=msg,
+                        id_referencia=exp.get("_id", ""),
+                        force_new=True,
+                    )
+                else:
+                    NotificacionController.create_for_recordatorio_expediente(
+                        target_username=uname,
+                        mensaje=msg,
+                        id_referencia=exp.get("_id", ""),
+                        force_new=True,
+                    )
             rec_estado = "vencido" if delta < 0 else "activo"
             db_local.update(
                 "expediente_recordatorios",

@@ -5,7 +5,16 @@ from __future__ import annotations
 import math
 
 from PySide6.QtCore import Qt, QSize, QPointF, QRectF, QTimer
-from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QFont, QPainterPath, QLinearGradient
+from PySide6.QtGui import (
+    QColor,
+    QPainter,
+    QPen,
+    QBrush,
+    QFont,
+    QPainterPath,
+    QLinearGradient,
+    QFontMetricsF,
+)
 from PySide6.QtWidgets import QWidget
 
 # Etiquetas cortas para caber en la franja
@@ -30,6 +39,12 @@ _SHORT_LABELS: dict[str, str] = {
 
 _REQ_CODES = {"req_analizar", "req_migraciones", "req_citar"}
 _NEEDS_EDIT_CODES = set(_REQ_CODES)
+# Texto corto en el distintivo (sustituye el antiguo "ed"); se dibuja con ancho dinámico.
+_REQ_BADGE_LABELS: dict[str, str] = {
+    "req_analizar": "Analizar",
+    "req_migraciones": "Migrac.",
+    "req_citar": "Citar",
+}
 _PHASES: list[dict] = [
     {
         "label": "Pre-tramite",
@@ -245,7 +260,7 @@ class ExpedienteEtapasTimeline(QWidget):
         phase_inner_h = phase_title_h + phase_title_to_pills + pill_h + bottom_pad_phase
         phase_h = phase_inner_h + 10.0
         main_cy = phase_rect_y + phase_title_h + phase_title_to_pills + pill_h / 2.0
-        # Separa visualmente la fila "No Iniciada" del bloque "Iniciada".
+        # Separa la fila de etapas tipo "requisito" del bloque INICIADA (V/P) en el diagrama.
         req_cy = phase_top + phase_h + (30.0 if compact_mode else 34.0)
 
         if current_requires_edit:
@@ -257,9 +272,9 @@ class ExpedienteEtapasTimeline(QWidget):
             painter.setPen(QColor("#92400e"))
             painter.setFont(QFont("Lato", 9 if compact_mode else 10, QFont.Weight.Bold))
             banner_txt = (
-                f"ATENCION: Carpeta NO INICIADA - requiere edicion ({actual_label})."
+                f"Requerimiento pendiente: completar datos en etapa «{actual_label}»."
                 if not compact_mode
-                else f"ATENCION: NO INICIADA - req. edicion ({actual_label})."
+                else f"Requerimiento: revisar «{actual_label}»."
             )
             painter.drawText(
                 brect.adjusted(9, 0, -9, 0),
@@ -359,7 +374,7 @@ class ExpedienteEtapasTimeline(QWidget):
                 painter.drawText(
                     req_rect.adjusted(6, 3, -6, -36),
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
-                    "No Iniciada",
+                    "Requisitos (flujo global)",
                 )
 
         code_to_point = {c: p for c, p in centers}
@@ -431,13 +446,30 @@ class ExpedienteEtapasTimeline(QWidget):
             painter.setFont(QFont("Lato", 7 if ultra_compact_mode else 8, QFont.Weight.Bold))
             painter.drawText(r, Qt.AlignmentFlag.AlignCenter, label)
             if is_current and code in _NEEDS_EDIT_CODES:
-                tag = QRectF(r.right() - 14.0, r.top() - 7.0, 14.0, 12.0)
-                painter.setPen(QPen(QColor("#f59e0b"), 0.9))
-                painter.setBrush(QBrush(QColor("#fff7ed")))
-                painter.drawRoundedRect(tag, 4.0, 4.0)
-                painter.setPen(QColor("#9a3412"))
-                painter.setFont(QFont("Lato", 6, QFont.Weight.Bold))
-                painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, "ed")
+                badge_txt = _REQ_BADGE_LABELS.get(code, "Req.")
+                badge_pt = 6.5 if ultra_compact_mode else 7.5
+                badge_font = QFont("Lato")
+                badge_font.setPointSizeF(badge_pt)
+                badge_font.setWeight(QFont.Weight.DemiBold)
+                fm = QFontMetricsF(badge_font)
+                tw = float(fm.horizontalAdvance(badge_txt)) + 11.0
+                th = 15.0 if ultra_compact_mode else 16.0
+                rad_b = 6.0
+                tag = QRectF(r.right() - tw + 2.0, r.top() - th + 2.0, tw, th)
+                shadow = tag.translated(0.0, 1.0)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QBrush(QColor(15, 23, 42, 28)))
+                painter.drawRoundedRect(shadow, rad_b, rad_b)
+                grad_b = QLinearGradient(tag.topLeft(), tag.bottomLeft())
+                grad_b.setColorAt(0.0, QColor("#fffdfb"))
+                grad_b.setColorAt(0.45, QColor("#fff7ed"))
+                grad_b.setColorAt(1.0, QColor("#ffedd5"))
+                painter.setBrush(QBrush(grad_b))
+                painter.setPen(QPen(QColor("#fb923c"), 1.05))
+                painter.drawRoundedRect(tag, rad_b, rad_b)
+                painter.setPen(QColor("#7c2d12"))
+                painter.setFont(badge_font)
+                painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, badge_txt)
 
         for code in main_codes:
             _draw_pill_node(code, code_to_point[code])

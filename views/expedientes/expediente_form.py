@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QTextEdit, QDateEdit, QPushButton, QLabel, QComboBox, QMessageBox,
     QTabWidget, QWidget, QCompleter, QScrollArea, QFrame, QCheckBox,
-    QGroupBox, QSpinBox, QInputDialog,
+    QGroupBox, QSpinBox, QInputDialog, QListWidget,
 )
 from PySide6.QtCore import Qt, QDate, QTimer, QUrl
 from PySide6.QtGui import QFont, QColor, QDesktopServices
@@ -34,9 +34,11 @@ from views.widgets.no_wheel_datetime import NoWheelDateEdit
 from views.widgets.expediente_etapas_timeline import ExpedienteEtapasTimeline
 from views.widgets.click_copy_line_edit import ClickCopyLineEdit, CLICK_COPY_CLAVE_STYLESHEET
 from controllers.expediente_recordatorio_controller import ExpedienteRecordatorioController
+from controllers.migracion_requerimiento_controller import MigracionRequerimientoController
 from core.dias_habiles import restar_dias_habiles
 from controllers.expediente_etapa_responsable_controller import ExpedienteEtapaResponsableController
 from controllers.expediente_estado_controller import get_historial, get_segmento_abierto
+from views.expedientes.migracion_requerimientos_view import MigracionRequerimientosForCarpetaWidget
 
 
 class RecordatorioEditDialog(QDialog):
@@ -204,113 +206,13 @@ class RecordatorioEditDialog(QDialog):
         }
 
 
-class GenerarPlazosMigracionesDialog(QDialog):
-    """Dialogo para elegir vencimiento exacto y generar alarmas automaticas."""
-
-    def __init__(
-        self,
-        parent=None,
-        *,
-        titulo_soft_inicial: str = "",
-        titulo_critico_inicial: str = "",
-        mantener_titulos_al_actualizar_default: bool = False,
-    ):
-        super().__init__(parent)
-        self.setWindowTitle("Generar plazos migratorios")
-        layout = QVBoxLayout(self)
-        form = QFormLayout()
-        self._date_venc = NoWheelDateEdit()
-        self._date_venc.setCalendarPopup(True)
-        self._date_venc.setDisplayFormat("dd/MM/yyyy")
-        self._date_venc.setDate(QDate.currentDate().addDays(7))
-        form.addRow("Fecha de vencimiento:", self._date_venc)
-        layout.addLayout(form)
-
-        quick = QHBoxLayout()
-        quick.addWidget(QLabel("Atajos:"))
-        for dias in (7, 15, 30):
-            btn = QPushButton(f"+{dias} dias")
-            btn.setProperty("variant", "secondary")
-            btn.clicked.connect(lambda _=False, d=dias: self._set_venc_dias(d))
-            quick.addWidget(btn)
-        quick.addStretch()
-        layout.addLayout(quick)
-
-        form_tit = QFormLayout()
-        self._titulo_soft = QLineEdit()
-        self._titulo_soft.setText(
-            (titulo_soft_inicial or "").strip()
-            or ExpedienteRecordatorioController.DEFAULT_TITULO_SOFT
-        )
-        form_tit.addRow("Titulo alarma en vencimiento:", self._titulo_soft)
-        self._titulo_critico = QLineEdit()
-        self._titulo_critico.setText(
-            (titulo_critico_inicial or "").strip()
-            or ExpedienteRecordatorioController.DEFAULT_TITULO_CRITICO
-        )
-        form_tit.addRow("Titulo alarma 2 dias antes:", self._titulo_critico)
-        layout.addLayout(form_tit)
-
-        self._chk_mantener_titulos = QCheckBox(
-            "Mantener titulos actuales al actualizar fechas (no sobrescribir si ya existia la plantilla)"
-        )
-        self._chk_mantener_titulos.setChecked(bool(mantener_titulos_al_actualizar_default))
-        layout.addWidget(self._chk_mantener_titulos)
-
-        info = QLabel(
-            "Se generan 2 alarmas automaticas:\n"
-            "1) soft en fecha de vencimiento,\n"
-            "2) critica 2 dias antes."
-        )
-        info.setStyleSheet("color: #4b5563;")
-        layout.addWidget(info)
-
-        btns = QHBoxLayout()
-        btns.addStretch()
-        btn_cancel = QPushButton("Cancelar")
-        btn_cancel.setProperty("variant", "secondary")
-        btn_cancel.clicked.connect(self.reject)
-        btn_ok = QPushButton("Generar")
-        btn_ok.clicked.connect(self._on_accept)
-        btns.addWidget(btn_cancel)
-        btns.addWidget(btn_ok)
-        layout.addLayout(btns)
-
-    def _set_venc_dias(self, dias: int):
-        self._date_venc.setDate(QDate.currentDate().addDays(max(1, int(dias))))
-
-    def _on_accept(self):
-        if not self._titulo_soft.text().strip():
-            QMessageBox.warning(self, "Plazos", "Indique un titulo para la alarma en vencimiento.")
-            return
-        if not self._titulo_critico.text().strip():
-            QMessageBox.warning(self, "Plazos", "Indique un titulo para la alarma de 2 dias antes.")
-            return
-        self.accept()
-
-    def get_data(self) -> dict:
-        return {
-            "fecha_vencimiento": self._date_venc.date().toString("yyyy-MM-dd"),
-            "titulo_soft": self._titulo_soft.text().strip(),
-            "titulo_critico": self._titulo_critico.text().strip(),
-            "preservar_titulos_en_update": self._chk_mantener_titulos.isChecked(),
-        }
-
-
 class ExpedienteFormDialog(QDialog):
-    REQ_MIGRACIONES_CODIGO = "req_migraciones"
-    KEY_TEMA_REQ_MIGRACIONES = "tema_req_migraciones"
-    TEMAS_REQ_MIGRACIONES = [
-        "Para tramite nuevo",
-        "Resolucion",
-        "Pago",
-        "Firmar formularios",
-        "Requerimiento",
-        "Informar",
-        "Devolver",
-        "Residencia",
-        "Movimientos migratorios",
-    ]
+    _LEGACY_TEMA_REQ_MIGRACIONES_KEY = "tema_req_migraciones"
+    _ETAPAS_CREAR_REQ_MIGRACION = frozenset({
+        "req_migraciones",
+        "iniciada_virtual",
+        "iniciada_presencial",
+    })
 
     def __init__(self, expediente_id: str = None, cliente_id: str = None, parent=None):
         super().__init__(parent)
@@ -525,7 +427,20 @@ class ExpedienteFormDialog(QDialog):
         rec_btns.addWidget(btn_del_rec, alignment=Qt.AlignmentFlag.AlignLeft)
         rec_btns.addStretch()
         rec_layout.addLayout(rec_btns)
+        self._btn_req_migraciones = QPushButton("Requerimientos de migracion…")
+        self._btn_req_migraciones.setProperty("variant", "secondary")
+        self._btn_req_migraciones.clicked.connect(self._abrir_modulo_migraciones_carpeta)
+        self._btn_req_migraciones.setVisible(False)
+        rec_layout.addWidget(self._btn_req_migraciones, alignment=Qt.AlignmentFlag.AlignLeft)
         tabs.addTab(rec_widget, "Recordatorios")
+
+        # Tab Req. Migraciones (mismo contenido que el modulo de lista + detalle / alertas)
+        req_mig_container = QWidget()
+        req_mig_layout = QVBoxLayout(req_mig_container)
+        req_mig_layout.setContentsMargins(8, 8, 8, 8)
+        self._widget_req_migraciones = MigracionRequerimientosForCarpetaWidget(self._id, req_mig_container)
+        req_mig_layout.addWidget(self._widget_req_migraciones)
+        tabs.addTab(req_mig_container, "Req. Migraciones")
 
         session = Session.get()
 
@@ -667,6 +582,18 @@ class ExpedienteFormDialog(QDialog):
         tabs.currentChanged.connect(self._on_tab_changed)
         parent_layout.addWidget(tabs)
 
+    def _tab_index_by_title(self, title: str) -> int:
+        if not self._tabs:
+            return -1
+        for i in range(self._tabs.count()):
+            if self._tabs.tabText(i) == title:
+                return i
+        return -1
+
+    def _refresh_widget_req_migraciones(self):
+        if hasattr(self, "_widget_req_migraciones") and self._widget_req_migraciones:
+            self._widget_req_migraciones.refresh()
+
     def _reorder_tabs(self, tabs: QTabWidget):
         desired_order = [
             "Datos",
@@ -676,6 +603,7 @@ class ExpedienteFormDialog(QDialog):
             "Documentos",
             "Comunicaciones",
             "Recordatorios",
+            "Req. Migraciones",
             "Escritos",
             "Contable",
             "Tiempos",
@@ -940,24 +868,39 @@ class ExpedienteFormDialog(QDialog):
         self._lbl_clasificacion_etapa.hide()
         form.addRow("Clasificacion:", self._lbl_clasificacion_etapa)
 
-        self._lbl_tema_req_migraciones = QLabel("Tema req. migraciones:")
-        self._cmb_tema_req_migraciones = NoWheelComboBox()
-        self._cmb_tema_req_migraciones.addItem("")
-        for tema in self.TEMAS_REQ_MIGRACIONES:
-            self._cmb_tema_req_migraciones.addItem(tema)
-        self._lbl_tema_req_migraciones.hide()
-        self._cmb_tema_req_migraciones.hide()
-        tema_row = QWidget()
-        tema_row_lay = QHBoxLayout(tema_row)
-        tema_row_lay.setContentsMargins(0, 0, 0, 0)
-        tema_row_lay.setSpacing(6)
-        tema_row_lay.addWidget(self._cmb_tema_req_migraciones, 1)
-        self._btn_generar_plazos_migraciones = QPushButton("Generar plazos sugeridos")
-        self._btn_generar_plazos_migraciones.setProperty("variant", "secondary")
-        self._btn_generar_plazos_migraciones.clicked.connect(self._generar_plazos_req_migraciones)
-        self._btn_generar_plazos_migraciones.hide()
-        tema_row_lay.addWidget(self._btn_generar_plazos_migraciones)
-        form.addRow(self._lbl_tema_req_migraciones, tema_row)
+        self._lbl_tramite_migracion = QLabel("Tramite nuevo (req. migraciones):")
+        self._txt_tramite_nuevo_migracion = QLineEdit()
+        self._txt_tramite_nuevo_migracion.setPlaceholderText("Describa el tipo de tramite (texto libre)...")
+        self._lbl_tramite_migracion.hide()
+        self._txt_tramite_nuevo_migracion.hide()
+        tramite_row = QWidget()
+        tramite_row_lay = QHBoxLayout(tramite_row)
+        tramite_row_lay.setContentsMargins(0, 0, 0, 0)
+        tramite_row_lay.setSpacing(6)
+        tramite_row_lay.addWidget(self._txt_tramite_nuevo_migracion, 1)
+        self._btn_crear_tramite_migracion = QPushButton("Crear tramite nuevo")
+        self._btn_crear_tramite_migracion.setProperty("variant", "secondary")
+        self._btn_crear_tramite_migracion.clicked.connect(self._crear_tramite_migracion_nuevo)
+        self._btn_crear_tramite_migracion.hide()
+        tramite_row_lay.addWidget(self._btn_crear_tramite_migracion)
+        form.addRow(self._lbl_tramite_migracion, tramite_row)
+        self._lbl_tramite_migracion_ayuda = QLabel(
+            "Rama Migraciones: disponible en etapa Requerimientos - Migraciones o INICIADA "
+            "(Virtual / Presencial). Escriba el tipo a mano; cada creacion es un requisito aparte. "
+            "Plazos y etapas internas en Req. migraciones."
+        )
+        self._lbl_tramite_migracion_ayuda.setWordWrap(True)
+        self._lbl_tramite_migracion_ayuda.setStyleSheet("color: #5a6475; font-size: 11px;")
+        self._lbl_tramite_migracion_ayuda.hide()
+        form.addRow("", self._lbl_tramite_migracion_ayuda)
+        self._lbl_lista_req_migraciones_header = QLabel("Requisitos de migracion en esta carpeta:")
+        self._lbl_lista_req_migraciones_header.setStyleSheet("color: #5a6475; font-size: 11px;")
+        self._lbl_lista_req_migraciones_header.hide()
+        self._list_req_migraciones_carpeta = QListWidget()
+        self._list_req_migraciones_carpeta.setMaximumHeight(88)
+        self._list_req_migraciones_carpeta.setAlternatingRowColors(True)
+        self._list_req_migraciones_carpeta.hide()
+        form.addRow(self._lbl_lista_req_migraciones_header, self._list_req_migraciones_carpeta)
 
         lbl_pe = QLabel(
             "Agregue solo las etapas que necesite. El responsable principal es el de RESPONSABLES; "
@@ -1105,20 +1048,10 @@ class ExpedienteFormDialog(QDialog):
             k: v for k, v in datos_rama.items() if k not in ref_keys
         }
         datos_ref = {k: v for k, v in datos_rama.items() if k in ref_keys}
-        tema_req_migraciones = (datos_rama.get(self.KEY_TEMA_REQ_MIGRACIONES, "") or "").strip()
         if datos_rama_solo and self._rama_datos_widget:
             self._rama_datos_widget.set_data(datos_rama_solo)
         elif self._rama_datos_widget:
             self._rama_datos_widget.clear()
-        if tema_req_migraciones:
-            idx_tema = self._cmb_tema_req_migraciones.findText(tema_req_migraciones)
-            if idx_tema >= 0:
-                self._cmb_tema_req_migraciones.setCurrentIndex(idx_tema)
-            else:
-                self._cmb_tema_req_migraciones.addItem(tema_req_migraciones)
-                self._cmb_tema_req_migraciones.setCurrentIndex(self._cmb_tema_req_migraciones.count() - 1)
-        else:
-            self._cmb_tema_req_migraciones.setCurrentIndex(0)
         if datos_ref:
             self._expedientes_ref_widget.set_data(datos_ref)
         else:
@@ -1207,6 +1140,8 @@ class ExpedienteFormDialog(QDialog):
         self._apply_responsables_y_flujo_lock()
 
         # Las pestañas relacionadas se cargan on-demand al activarlas (lazy).
+        self._update_btn_req_migraciones_visibility()
+        self._refresh_widget_req_migraciones()
 
     # ------------------------------------------------------------------
     # Carga diferida (lazy) de pestanas
@@ -1214,6 +1149,9 @@ class ExpedienteFormDialog(QDialog):
 
     def _on_tab_changed(self, index: int):
         """Cargar datos de la pestana solo la primera vez que se activa."""
+        if self._tabs and index >= 0 and self._is_edit and self._id:
+            if self._tabs.tabText(index) == "Req. Migraciones":
+                self._refresh_widget_req_migraciones()
         if not self._is_edit or not self._id or index in self._loaded_tabs:
             return
         self._loaded_tabs.add(index)
@@ -2227,6 +2165,48 @@ class ExpedienteFormDialog(QDialog):
             self._rebuild_rama_datos_widget(preserve_data=False)
         if hasattr(self, "_refresh_etapa_timeline"):
             self._refresh_etapa_timeline()
+        self._update_btn_req_migraciones_visibility()
+
+    def _debe_mostrar_modulo_req_migraciones(self) -> bool:
+        """Pestaña y botón: rama Migraciones, etapa global Req. migraciones, o superusuario."""
+        if not self._id:
+            return False
+        session = Session.get()
+        if getattr(session, "rol", "") == "superusuario":
+            return True
+        rama = (self._cmb_rama.currentText() or "").strip()
+        if rama == "Migraciones":
+            return True
+        etapa = (self._cmb_etapa.currentData() or "").strip()
+        return etapa == "req_migraciones"
+
+    def _update_btn_req_migraciones_visibility(self):
+        if not hasattr(self, "_btn_req_migraciones"):
+            return
+        show = self._debe_mostrar_modulo_req_migraciones()
+        self._btn_req_migraciones.setVisible(show)
+        if self._tabs:
+            idx = self._tab_index_by_title("Req. Migraciones")
+            if idx >= 0:
+                self._tabs.tabBar().setTabVisible(idx, show)
+
+    def _abrir_modulo_migraciones_carpeta(self):
+        if self._readonly_guard():
+            return
+        if not self._id:
+            QMessageBox.information(
+                self,
+                "Requerimientos migracion",
+                "Guarde la carpeta antes de gestionar requerimientos de migracion.",
+            )
+            return
+        idx = self._tab_index_by_title("Req. Migraciones")
+        if idx >= 0 and self._tabs:
+            self._tabs.setCurrentIndex(idx)
+            self._refresh_widget_req_migraciones()
+        if self._id:
+            self._load_tab_recordatorios()
+            self._refresh_lista_req_migraciones_en_form()
 
     def _on_modalidad_changed(self, _modalidad: str):
         """Regenera campos de rama para aplicar campos exclusivos virtuales."""
@@ -2309,6 +2289,7 @@ class ExpedienteFormDialog(QDialog):
             anterior=anterior,
             plazos_por_etapa=plazos_por_etapa,
         )
+        self._update_btn_req_migraciones_visibility()
 
     def _sync_modalidad_con_etapa_iniciada(self, etapa_codigo: str):
         """Si la rama usa modalidad y la etapa es INICIADA, alinear combo con la etapa."""
@@ -2334,6 +2315,10 @@ class ExpedienteFormDialog(QDialog):
                 "background-color: #fff7ed; color: #9a3412; border: 1px solid #fdba74; "
                 "border-radius: 6px; padding: 8px;"
             ),
+            "migracion_flujo_global": (
+                "background-color: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; "
+                "border-radius: 6px; padding: 8px;"
+            ),
             "iniciada": (
                 "background-color: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; "
                 "border-radius: 6px; padding: 8px;"
@@ -2356,91 +2341,102 @@ class ExpedienteFormDialog(QDialog):
         self._lbl_clasificacion_etapa.show()
 
     def _update_req_migraciones_ui(self, etapa_codigo: str):
-        show = (etapa_codigo or "").strip() == self.REQ_MIGRACIONES_CODIGO
-        self._lbl_tema_req_migraciones.setVisible(show)
-        self._cmb_tema_req_migraciones.setVisible(show)
-        self._btn_generar_plazos_migraciones.setVisible(show)
-        self._btn_generar_plazos_migraciones.setEnabled(bool(self._id))
+        rama = (self._cmb_rama.currentText() or "").strip()
+        code = (etapa_codigo or "").strip()
+        show = code in self._ETAPAS_CREAR_REQ_MIGRACION and (
+            rama == "Migraciones" or code == "req_migraciones"
+        )
+        self._lbl_tramite_migracion.setVisible(show)
+        self._txt_tramite_nuevo_migracion.setVisible(show)
+        self._btn_crear_tramite_migracion.setVisible(show)
+        self._lbl_tramite_migracion_ayuda.setVisible(show)
+        self._lbl_lista_req_migraciones_header.setVisible(show)
+        self._list_req_migraciones_carpeta.setVisible(show)
+        self._btn_crear_tramite_migracion.setEnabled(bool(self._id) and show)
+        if show and self._id:
+            self._refresh_lista_req_migraciones_en_form()
+        elif hasattr(self, "_list_req_migraciones_carpeta"):
+            self._list_req_migraciones_carpeta.clear()
 
-    def _generar_plazos_req_migraciones(self):
+    def _refresh_lista_req_migraciones_en_form(self):
+        if not hasattr(self, "_list_req_migraciones_carpeta"):
+            return
+        self._list_req_migraciones_carpeta.clear()
+        if not self._id:
+            return
+        for r in MigracionRequerimientoController.list_by_expediente(self._id):
+            titulo = (r.get("titulo") or "").strip() or "(sin titulo)"
+            ciclo = (r.get("estado_ciclo") or "").strip()
+            extra = f" — {ciclo}" if ciclo else ""
+            self._list_req_migraciones_carpeta.addItem(f"{titulo}{extra}")
+
+    def _crear_tramite_migracion_nuevo(self):
         if self._readonly_guard():
             return
         if not self._id:
             QMessageBox.information(
                 self,
-                "Plazos",
-                "Primero guarde la carpeta para poder generar plazos sugeridos.",
+                "Requerimiento migracion",
+                "Guarde la carpeta antes de crear un tramite de migracion.",
             )
             return
+        rama = (self._cmb_rama.currentText() or "").strip()
         etapa_codigo = (self._cmb_etapa.currentData() or "").strip()
-        if etapa_codigo != self.REQ_MIGRACIONES_CODIGO:
+        if etapa_codigo not in self._ETAPAS_CREAR_REQ_MIGRACION:
             QMessageBox.information(
                 self,
-                "Plazos",
-                "La generacion de plantilla aplica solo en etapa Requerimientos - Migraciones.",
+                "Etapa",
+                "Esta accion solo aplica en etapa Requerimientos - Migraciones o INICIADA "
+                "(Virtual o Presencial).",
             )
             return
-        tema = (self._cmb_tema_req_migraciones.currentText() or "").strip()
-        if not tema:
+        if etapa_codigo != "req_migraciones" and rama != "Migraciones":
+            QMessageBox.information(
+                self,
+                "Area",
+                "Para crear tramites de migracion en INICIADA, el area de la carpeta debe ser Migraciones.",
+            )
+            return
+        texto = (self._txt_tramite_nuevo_migracion.text() or "").strip()
+        if not texto:
             QMessageBox.warning(
                 self,
-                "Plazos",
-                "Seleccione un tema de requerimientos migratorios antes de generar plazos.",
+                "Tipo de tramite",
+                "Indique el tipo de tramite o una descripcion breve.",
             )
             return
-        tema_key = ExpedienteRecordatorioController._tema_to_key(tema)
-        k_soft = f"migraciones:{tema_key}:alarma_soft"
-        k_crit = f"migraciones:{tema_key}:alarma_critica_2dias"
-        recs = ExpedienteRecordatorioController.list_by_expediente(self._id)
-        by_tk = {
-            (r.get("template_key") or "").strip(): r
-            for r in recs
-            if (r.get("origen") or "").strip() == "plantilla_migraciones"
-        }
-        ex_soft = by_tk.get(k_soft)
-        ex_crit = by_tk.get(k_crit)
-        def_soft = ExpedienteRecordatorioController.DEFAULT_TITULO_SOFT
-        def_crit = ExpedienteRecordatorioController.DEFAULT_TITULO_CRITICO
-        tit_ini_soft = ((ex_soft or {}).get("titulo") or "").strip() if ex_soft else def_soft
-        tit_ini_crit = ((ex_crit or {}).get("titulo") or "").strip() if ex_crit else def_crit
-        if not tit_ini_soft:
-            tit_ini_soft = def_soft
-        if not tit_ini_crit:
-            tit_ini_crit = def_crit
-        plantilla_existe = bool(ex_soft and ex_crit)
-        dlg = GenerarPlazosMigracionesDialog(
-            self,
-            titulo_soft_inicial=tit_ini_soft,
-            titulo_critico_inicial=tit_ini_crit,
-            mantener_titulos_al_actualizar_default=plantilla_existe,
+        existentes = MigracionRequerimientoController.list_by_expediente(self._id)
+        max_orden = 0
+        for r in existentes:
+            try:
+                max_orden = max(max_orden, int(r.get("orden") or 0))
+            except (TypeError, ValueError):
+                pass
+        rec = MigracionRequerimientoController.create(
+            {
+                "id_expediente": self._id,
+                "titulo": texto,
+                "tipo": texto,
+                "orden": max_orden + 1,
+            }
         )
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+        if not rec:
+            QMessageBox.warning(
+                self,
+                "Requerimiento migracion",
+                "No se pudo crear el requerimiento (permisos o datos invalidos).",
+            )
             return
-        cfg = dlg.get_data()
-        fecha_vencimiento = (cfg.get("fecha_vencimiento") or "").strip()
-        session = Session.get()
-
-        result = ExpedienteRecordatorioController.generar_plantilla_req_migraciones(
-            self._id,
-            tema=tema,
-            fecha_vencimiento=fecha_vencimiento,
-            creado_por_username=session.username if session.logged_in else "",
-            titulo_soft=cfg.get("titulo_soft"),
-            titulo_critico=cfg.get("titulo_critico"),
-            preservar_titulos_en_update=bool(cfg.get("preservar_titulos_en_update")),
-        )
+        self._txt_tramite_nuevo_migracion.clear()
         self._refresh_estado_etapas_panel()
         self._refresh_etapa_timeline()
+        self._refresh_widget_req_migraciones()
         if hasattr(self, "_recordatorios_table"):
             self._load_tab_recordatorios()
         QMessageBox.information(
             self,
-            "Plazos sugeridos",
-            (
-                f"Plantilla aplicada para vencimiento {fecha_vencimiento}.\n"
-                f"Se crearon {result.get('creados', 0)} y se actualizaron/omitieron "
-                f"{result.get('omitidos', 0)}."
-            ),
+            "Requerimiento creado",
+            "Se creo un requisito de migracion. Gestione plazos y etapas en la pestana Req. Migraciones.",
         )
 
     def _save(self):
@@ -2535,26 +2531,6 @@ class ExpedienteFormDialog(QDialog):
             etapa_codigo = self._original_etapa_codigo or "para_citar_o_videollamada"
         else:
             etapa_codigo = self._cmb_etapa.currentData() or "para_citar_o_videollamada"
-        tema_req_migraciones = (self._cmb_tema_req_migraciones.currentText() or "").strip()
-        if (
-            self._is_edit
-            and (etapa_codigo or "").strip() == self.REQ_MIGRACIONES_CODIGO
-            and tema_req_migraciones
-        ):
-            plazos_activos = [
-                r
-                for r in ExpedienteRecordatorioController.list_by_expediente(self._id)
-                if (r.get("estado_plazo") or "activo").strip() != "resuelto"
-            ]
-            if not plazos_activos:
-                QMessageBox.warning(
-                    self,
-                    "Plazos migratorios",
-                    "Esta etapa requiere al menos un plazo activo. "
-                    "Use 'Generar plazos sugeridos' o cargue un recordatorio manual.",
-                )
-                return
-
         # Regla de negocio: cierre formal requiere resultado
         if estado in ExpedienteController.ESTADOS_CIERRE:
             if not (self._cmb_resultado.currentData() or "").strip():
@@ -2625,10 +2601,8 @@ class ExpedienteFormDialog(QDialog):
                     if c.get("solo_virtual")
                 }
                 datos_rama = {k: v for k, v in datos_rama.items() if k not in virtual_keys}
-        if tema_req_migraciones:
-            datos_rama[self.KEY_TEMA_REQ_MIGRACIONES] = tema_req_migraciones
-        elif etapa_codigo == self.REQ_MIGRACIONES_CODIGO:
-            datos_rama.pop(self.KEY_TEMA_REQ_MIGRACIONES, None)
+        if rama == "Migraciones":
+            datos_rama.pop(self._LEGACY_TEMA_REQ_MIGRACIONES_KEY, None)
         datos_rama.update(self._expedientes_ref_widget.get_data())
 
         # Recolectar datos judiciales
@@ -2716,6 +2690,7 @@ class ExpedienteFormDialog(QDialog):
             new_id = (created.get("_id", "") or "").strip()
             if new_id:
                 self._id = new_id
+            self._update_btn_req_migraciones_visibility()
             if etapa_codigo in ("para_citar_o_videollamada", "para_citar") and new_id:
                 self._maybe_suggest_cita()
         self.accept()

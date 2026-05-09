@@ -295,12 +295,38 @@ class NotificationHistoryPopup(QFrame):
             self._items_layout.insertWidget(i, item)
 
 
+_BADGE_STYLE_ETAPA_MIGR = (
+    "background-color: #5e35b1;"
+    "color: #ffffff;"
+    "border-radius: 9px;"
+    "font-size: 10px;"
+    "font-weight: bold;"
+    "font-family: 'Lato', 'Segoe UI', sans-serif;"
+    "border: none;"
+    "min-width: 18px;"
+    "min-height: 18px;"
+    "padding: 0px;"
+)
+
+
 class NotificationBell(QWidget):
     """Widget de campanita con badge y popup de notificaciones."""
     notification_clicked = Signal(str, str)  # (tipo, id_referencia)
 
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        only_tipos: tuple[str, ...] | None = None,
+        exclude_tipos: tuple[str, ...] = (),
+        bell_tooltip: str = "Notificaciones",
+        history_tooltip: str = "Historial de notificaciones",
+        bell_glyph: str = "\U0001F514",
+        badge_style: str | None = None,
+    ):
         super().__init__(parent)
+        self._only_tipos = only_tipos
+        self._exclude_tipos = () if only_tipos else exclude_tipos
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 0, 4, 0)
         layout.setSpacing(0)
@@ -313,14 +339,14 @@ class NotificationBell(QWidget):
         self._history_btn.setObjectName("notif_history_btn")
         self._history_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._history_btn.setFixedSize(36, 36)
-        self._history_btn.setToolTip("Historial de notificaciones")
+        self._history_btn.setToolTip(history_tooltip)
         self._history_btn.clicked.connect(self._toggle_history_popup)
 
-        self._btn = QPushButton("\U0001F514", self._bell_wrap)
+        self._btn = QPushButton(bell_glyph, self._bell_wrap)
         self._btn.setObjectName("notif_bell_btn")
         self._btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn.setGeometry(0, 0, 36, 36)
-        self._btn.setToolTip("Notificaciones")
+        self._btn.setToolTip(bell_tooltip)
         self._btn.clicked.connect(self._toggle_popup)
 
         layout.addWidget(self._bell_wrap)
@@ -328,7 +354,7 @@ class NotificationBell(QWidget):
 
         self._badge = QLabel("0", self)
         self._badge.setObjectName("notif_badge")
-        self._badge.setStyleSheet(_BADGE_STYLE)
+        self._badge.setStyleSheet(badge_style or _BADGE_STYLE)
         self._badge.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -400,7 +426,10 @@ class NotificationBell(QWidget):
                 return
             NotificacionController.sync_task_alerts_for_user(session.username, due_days=30)
             self._notifications = NotificacionController.get_active_for_user(
-                session.username, limit=50
+                session.username,
+                limit=50,
+                only_tipos=self._only_tipos,
+                exclude_tipos=self._exclude_tipos,
             )
         except Exception:
             logger.exception("Error al cargar notificaciones")
@@ -461,6 +490,8 @@ class NotificationBell(QWidget):
             history = NotificacionController.get_recent_for_user(
                 session.username,
                 limit=120,
+                only_tipos=self._only_tipos,
+                exclude_tipos=self._exclude_tipos,
             )
         except Exception:
             logger.exception("Error al cargar historial de notificaciones")
@@ -487,10 +518,17 @@ class NotificationBell(QWidget):
         self.refresh()
 
     def _mark_all_read(self):
-        """Marcar todas las notificaciones como leidas."""
+        """Marcar notificaciones visibles en esta campana como leidas."""
         try:
             session = Session.get()
-            NotificacionController.mark_all_read(session.username)
+            if self._only_tipos:
+                NotificacionController.mark_all_read(
+                    session.username, only_tipos=self._only_tipos
+                )
+            else:
+                NotificacionController.mark_all_read(
+                    session.username, exclude_tipos=self._exclude_tipos
+                )
         except Exception:
             logger.exception("Error al marcar todas las notificaciones como leidas")
         self.refresh()

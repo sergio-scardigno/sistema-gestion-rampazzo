@@ -16,7 +16,8 @@ from core.auth import Session
 from core.permissions import modulos_permitidos, ROL_ALIAS
 from core.session_guard import SessionGuard
 from views.widgets.sync_indicator import SyncIndicator
-from views.widgets.notification_bell import NotificationBell
+from views.widgets.notification_bell import NotificationBell, _BADGE_STYLE_ETAPA_MIGR
+from controllers.notificacion_controller import TIPO_RECORDATORIO_MIGRACION_ETAPA
 from config import APP_NAME, APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -183,10 +184,21 @@ class MainWindow(QMainWindow):
 
         topbar_layout.addStretch()
 
-        # Notification bell
-        self._notification_bell = NotificationBell()
+        # Campanas: general (sin etapas internas de migr.) y dedicada a venc. de etapas de requisitos migr.
+        self._notification_bell = NotificationBell(
+            exclude_tipos=(TIPO_RECORDATORIO_MIGRACION_ETAPA,),
+        )
         self._notification_bell.notification_clicked.connect(self._on_notification_clicked)
         topbar_layout.addWidget(self._notification_bell)
+        self._notification_bell_migr_etapa = NotificationBell(
+            only_tipos=(TIPO_RECORDATORIO_MIGRACION_ETAPA,),
+            bell_tooltip="Vencimientos — etapas de requisitos migración",
+            history_tooltip="Historial — etapas migración",
+            bell_glyph="\U0001F4C5",
+            badge_style=_BADGE_STYLE_ETAPA_MIGR,
+        )
+        self._notification_bell_migr_etapa.notification_clicked.connect(self._on_notification_clicked)
+        topbar_layout.addWidget(self._notification_bell_migr_etapa)
 
         # Sync indicator
         self._sync_indicator = SyncIndicator()
@@ -312,6 +324,7 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.StandardButton.Yes:
             self._session_guard.stop()
             self._notification_bell.reset_session()
+            self._notification_bell_migr_etapa.reset_session()
             AuthController.logout()
             self.close()
 
@@ -319,6 +332,7 @@ class MainWindow(QMainWindow):
         """Forzar cierre de sesion por decision de un administrador."""
         self._session_guard.stop()
         self._notification_bell.reset_session()
+        self._notification_bell_migr_etapa.reset_session()
         QMessageBox.critical(
             self, "Sesion Cerrada",
             f"{message}\n\nDebe iniciar sesion nuevamente."
@@ -372,6 +386,7 @@ class MainWindow(QMainWindow):
             "expediente_asignado",
             "expediente_etapa_encargado",
             "recordatorio_expediente",
+            TIPO_RECORDATORIO_MIGRACION_ETAPA,
             "expediente_observacion_equipo",
             "expediente_estado_cambiado",
         }:
@@ -422,8 +437,9 @@ class MainWindow(QMainWindow):
                     selected.get("id_referencia", ""),
                 )
 
-            # Refrescar campana luego del popup inicial.
+            # Refrescar campanas luego del popup inicial.
             self._notification_bell.refresh()
+            self._notification_bell_migr_etapa.refresh()
         except Exception:
             QMessageBox.warning(
                 self,
@@ -476,6 +492,7 @@ class MainWindow(QMainWindow):
                     selected.get("id_referencia", ""),
                 )
             self._notification_bell.refresh()
+            self._notification_bell_migr_etapa.refresh()
         except Exception:
             # No bloquear UI por fallas de popup inmediato.
             pass

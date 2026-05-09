@@ -19,6 +19,17 @@ class TareaController(BaseController):
                            order_by="fecha_vencimiento ASC")
 
     @classmethod
+    def get_by_migracion_requerimiento(cls, id_migracion_requerimiento: str) -> list[dict]:
+        mid = (id_migracion_requerimiento or "").strip()
+        if not mid:
+            return []
+        return cls.get_all(
+            where="id_migracion_requerimiento = ?",
+            params=(mid,),
+            order_by="fecha_vencimiento ASC",
+        )
+
+    @classmethod
     def get_pendientes(cls, responsable: str = "") -> list[dict]:
         if responsable:
             return cls.get_all(

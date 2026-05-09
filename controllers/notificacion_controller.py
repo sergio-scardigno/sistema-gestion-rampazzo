@@ -8,6 +8,10 @@ from config import MACHINE_ID
 OPEN_STATES = ("Pendiente", "En curso", "En espera")
 CLOSED_STATES = ("Cumplida", "Completada", "Cancelada")
 TASK_ALERT_TYPES = ("tarea_asignada", "tarea_proxima_vencer")
+
+# Vencimientos de etapas internas del módulo requisitos migración (campana dedicada en topbar).
+TIPO_RECORDATORIO_MIGRACION_ETAPA = "recordatorio_migracion_etapa"
+
 POPUP_ALERT_TYPES = (
     "tarea_asignada",
     "tarea_proxima_vencer",
@@ -23,6 +27,7 @@ DISMISSIBLE_TYPES = (
     "turno_asignado",
     "expediente_etapa_encargado",
     "recordatorio_expediente",
+    TIPO_RECORDATORIO_MIGRACION_ETAPA,
     "expediente_observacion_equipo",
     "expediente_estado_cambiado",
     "tarea_asignada",
@@ -62,6 +67,13 @@ NOTIF_STYLES = {
         "icon": "\u26A0",
         "icon_color": "#991b1b",
         "label": "RECORD.",
+    },
+    TIPO_RECORDATORIO_MIGRACION_ETAPA: {
+        "bg": "#ede7f6",
+        "border": "#5e35b1",
+        "icon": "\U0001F4C5",
+        "icon_color": "#5e35b1",
+        "label": "ETAPA MIGR.",
     },
     "expediente_asignado": {
         "bg": "#f0ebfa",
@@ -285,6 +297,32 @@ class NotificacionController:
         )
 
     @classmethod
+    def create_for_recordatorio_migracion_etapa(
+        cls,
+        target_username: str,
+        mensaje: str,
+        id_referencia: str,
+        *,
+        force_new: bool = False,
+    ) -> dict:
+        """Aviso por vencimiento de etapa interna de un requisito de migración (campana dedicada)."""
+        if force_new:
+            record = cls._base_record(
+                target_username,
+                TIPO_RECORDATORIO_MIGRACION_ETAPA,
+                mensaje,
+                id_referencia,
+            )
+            db_local.insert("notificaciones", record)
+            return record
+        return cls._upsert_task_notification(
+            target_username=target_username,
+            tipo=TIPO_RECORDATORIO_MIGRACION_ETAPA,
+            mensaje=mensaje,
+            id_referencia=id_referencia,
+        )
+
+    @classmethod
     def create_for_expediente_observacion_equipo(
         cls, target_username: str, mensaje: str, id_referencia: str
     ) -> dict:
@@ -323,28 +361,61 @@ class NotificacionController:
         )
 
     @classmethod
-    def get_active_for_user(cls, username: str, limit: int = 20) -> list[dict]:
+    def get_active_for_user(
+        cls,
+        username: str,
+        limit: int = 20,
+        *,
+        only_tipos: tuple[str, ...] | None = None,
+        exclude_tipos: tuple[str, ...] = (),
+    ) -> list[dict]:
         """Obtener notificaciones activas (leidas o no) para campana."""
         where = "target_username = ?"
+        params: list = [username]
+        if only_tipos:
+            ph = ",".join("?" * len(only_tipos))
+            where += f" AND tipo IN ({ph})"
+            params.extend(only_tipos)
+        elif exclude_tipos:
+            ph = ",".join("?" * len(exclude_tipos))
+            where += f" AND tipo NOT IN ({ph})"
+            params.extend(exclude_tipos)
         if cls._supports_resolution_fields():
             where += " AND (resuelta = 0 OR resuelta IS NULL)"
         return db_local.find_all(
             "notificaciones",
             where=where,
-            params=(username,),
+            params=tuple(params),
             order_by="created_at DESC",
             limit=limit,
         )
 
     @classmethod
-    def get_recent_for_user(cls, username: str, limit: int = 100) -> list[dict]:
+    def get_recent_for_user(
+        cls,
+        username: str,
+        limit: int = 100,
+        *,
+        only_tipos: tuple[str, ...] | None = None,
+        exclude_tipos: tuple[str, ...] = (),
+    ) -> list[dict]:
         """Obtener historial reciente (activas + resueltas) para un usuario."""
         if not username:
             return []
+        where = "target_username = ?"
+        params: list = [username]
+        if only_tipos:
+            ph = ",".join("?" * len(only_tipos))
+            where += f" AND tipo IN ({ph})"
+            params.extend(only_tipos)
+        elif exclude_tipos:
+            ph = ",".join("?" * len(exclude_tipos))
+            where += f" AND tipo NOT IN ({ph})"
+            params.extend(exclude_tipos)
         return db_local.find_all(
             "notificaciones",
-            where="target_username = ?",
-            params=(username,),
+            where=where,
+            params=tuple(params),
             order_by="created_at DESC",
             limit=limit,
         )
@@ -358,9 +429,20 @@ class NotificacionController:
         db_local.update("notificaciones", _id, payload)
 
     @classmethod
-    def mark_all_read(cls, username: str):
-        """Marcar todas las notificaciones activas de un usuario como leidas."""
-        active = cls.get_active_for_user(username, limit=200)
+    def mark_all_read(
+        cls,
+        username: str,
+        *,
+        only_tipos: tuple[str, ...] | None = None,
+        exclude_tipos: tuple[str, ...] = (),
+    ):
+        """Marcar notificaciones activas como leidas (opcionalmente filtradas por tipo)."""
+        active = cls.get_active_for_user(
+            username,
+            limit=500,
+            only_tipos=only_tipos,
+            exclude_tipos=exclude_tipos,
+        )
         for n in active:
             cls.mark_read(n["_id"])
 

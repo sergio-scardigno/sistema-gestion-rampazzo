@@ -21,7 +21,8 @@ SYNC_TABLES = [
     "tareas", "turnos", "citas", "comunicaciones", "movimientos", "documentos",
     "modelos_escrito", "escritos", "notificaciones", "expediente_recordatorios",
     "expediente_etapa_responsables",
-    "expediente_estado_historial", "audit_log"
+    "expediente_estado_historial", "audit_log",
+    "migracion_requerimiento", "migracion_requerimiento_etapa", "migracion_requerimiento_historial",
 ]
 
 # Campos que no van a Atlas

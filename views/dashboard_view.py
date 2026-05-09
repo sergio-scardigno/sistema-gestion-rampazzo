@@ -18,7 +18,10 @@ from controllers.turno_controller import TurnoController
 from controllers.audit_controller import AuditController
 from controllers.cliente_controller import ClienteController
 from controllers.expediente_controller import ExpedienteController
-from controllers.notificacion_controller import NotificacionController
+from controllers.notificacion_controller import (
+    NotificacionController,
+    TIPO_RECORDATORIO_MIGRACION_ETAPA,
+)
 from core.auth import Session
 from core.permissions import tiene_permiso
 from core.scheduler import (
@@ -270,6 +273,8 @@ class DashboardView(QWidget):
             all_kpi_defs.append(("plazos_crit", "Plazos criticos vencidos", "0", "#c62828"))
             all_kpi_defs.append(("plazos_7", "Plazos prox. 7 dias", "0", "#e65100"))
             all_kpi_defs.append(("plazos_hoy", "Plazos hoy", "0", "#f9a825"))
+            all_kpi_defs.append(("migr_req_ini", "Req. migr. iniciados", "0", "#7e57c2"))
+            all_kpi_defs.append(("migr_etapas_14", "Migr. venc. 14 dias", "0", "#5c6bc0"))
         if self._show_audit_kpi:
             all_kpi_defs.append(("acciones_hoy", "Acciones Hoy", "0", "#4a4a4a"))
 
@@ -547,6 +552,17 @@ class DashboardView(QWidget):
             self._kpi_cards["plazos_crit"].update_value(str(plz.get("criticos_vencidos", 0)))
             self._kpi_cards["plazos_7"].update_value(str(plz.get("proximos_7", 0)))
             self._kpi_cards["plazos_hoy"].update_value(str(plz.get("hoy", 0)))
+            try:
+                from controllers.migracion_requerimiento_controller import MigracionRequerimientoController
+
+                mc = MigracionRequerimientoController.count_por_ciclo_scoped()
+                self._kpi_cards["migr_req_ini"].update_value(str(mc.get("iniciados", 0)))
+                prox_m = MigracionRequerimientoController.list_etapas_con_vencimiento_proximo_scoped(14)
+                self._kpi_cards["migr_etapas_14"].update_value(str(len(prox_m)))
+            except Exception:
+                logger.exception("KPIs modulo migracion")
+                self._kpi_cards["migr_req_ini"].update_value("0")
+                self._kpi_cards["migr_etapas_14"].update_value("0")
 
         # KPI Auditoria
         if self._show_audit_kpi:
@@ -640,7 +656,12 @@ class DashboardView(QWidget):
             else:
                 vence = "Proximo"
             ec = (r.get("etapa_codigo") or "").strip()
-            etapa = etapas_map.get(ec, ec or "-")
+            mrt = (r.get("migr_req_titulo") or "").strip()
+            met = (r.get("migr_etapa_titulo") or "").strip()
+            if mrt or met:
+                etapa = "Migr. " + " — ".join(x for x in (mrt, met) if x)
+            else:
+                etapa = etapas_map.get(ec, ec or "-")
             vals = [
                 fd,
                 str(r.get("exp_id_expediente", "")),
@@ -682,6 +703,8 @@ class DashboardView(QWidget):
             if session.logged_in:
                 notifs = NotificacionController.get_active_for_user(session.username, limit=10)
                 for n in notifs:
+                    if n.get("tipo") == TIPO_RECORDATORIO_MIGRACION_ETAPA:
+                        continue
                     alertas.append({
                         "tipo": n.get("tipo", "tarea_asignada"),
                         "mensaje": n.get("mensaje", ""),

@@ -29,13 +29,21 @@ _SEARCH_RESULT_LIMIT = 50
 
 
 class TareaFormDialog(QDialog):
-    def __init__(self, tarea_id: str = None, expediente_id: str = None, parent=None):
+    def __init__(
+        self,
+        tarea_id: str = None,
+        expediente_id: str = None,
+        parent=None,
+        *,
+        id_migracion_requerimiento: str = "",
+    ):
         t0 = time.perf_counter()
         super().__init__(parent)
         self.setObjectName("tareaFormDialog")
         self._id = tarea_id
         self._is_edit = tarea_id is not None
         self._fixed_expediente = expediente_id
+        self._id_migracion_requerimiento = (id_migracion_requerimiento or "").strip()
         self._original_responsable_username = ""
         self._original_responsable_display = ""
 
@@ -431,6 +439,7 @@ class TareaFormDialog(QDialog):
 
         data = {
             "id_expediente": self._cmb_expediente.currentData() or "",
+            "id_migracion_requerimiento": self._id_migracion_requerimiento,
             "tipo_accion": self._cmb_tipo.currentText(),
             "descripcion": desc,
             "responsable": responsable_legible.upper(),
@@ -442,6 +451,7 @@ class TareaFormDialog(QDialog):
         }
 
         if self._is_edit:
+            data.pop("id_migracion_requerimiento", None)
             TareaController.update(self._id, data)
         else:
             session = Session.get()

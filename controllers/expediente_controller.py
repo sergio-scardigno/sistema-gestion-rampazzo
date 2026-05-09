@@ -32,7 +32,15 @@ class ExpedienteController(BaseController):
         {"codigo": "iniciada_virtual", "titulo": "INICIADA - Virtual", "color": "#00acc1", "instruccion_corta": "Carpeta INICIADA - Modalidad Virtual. Gestionar acciones de trámite iniciado."},
         {"codigo": "iniciada_presencial", "titulo": "INICIADA - Presencial", "color": "#29b6f6", "instruccion_corta": "Carpeta INICIADA - Modalidad Presencial. Gestionar acciones de trámite iniciado."},
         {"codigo": "req_analizar", "titulo": "Requerimientos - Analizar", "color": "#ab47bc", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de análisis antes de reiniciar."},
-        {"codigo": "req_migraciones", "titulo": "Requerimientos - Migraciones", "color": "#7e57c2", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de migraciones antes de reiniciar."},
+        {
+            "codigo": "req_migraciones",
+            "titulo": "Requerimientos - Migraciones",
+            "color": "#7e57c2",
+            "instruccion_corta": (
+                "Etapa del flujo global (diagrama): resolver requisitos antes de INICIADA Virtual/Presencial. "
+                "En Migraciones, «iniciado» es el ciclo de cada requisito (pestaña Req. migraciones); no es lo mismo que esta etapa."
+            ),
+        },
         {"codigo": "req_citar", "titulo": "Requerimientos - Citar", "color": "#5c6bc0", "instruccion_corta": "Carpeta NO INICIADA. Resolver requerimiento de citación antes de reiniciar."},
         {"codigo": "citado_anses", "titulo": "Citado por ANSES", "color": "#42a5f5", "instruccion_corta": "ANSES citó personalmente. Preparar gestión; resultado pendiente (Favorable/Desfavorable)."},
         {"codigo": "favorable", "titulo": "Favorable", "color": "#2e7d32", "instruccion_corta": "Registrar resolución favorable."},
@@ -64,6 +72,17 @@ class ExpedienteController(BaseController):
         - texto: mensaje para el usuario
         """
         c = (codigo or "").strip()
+        if c == "req_migraciones":
+            return {
+                "mostrar": True,
+                "categoria": "migracion_flujo_global",
+                "texto": (
+                    "Clasificación — Etapas del flujo (diagrama): Requerimientos - Migraciones; "
+                    "aún no está en INICIADA Virtual/Presencial. "
+                    "Apartado: en el módulo Migraciones cada trámite puede tener ciclo iniciado o finalizado "
+                    "(pestaña Req. migraciones); eso no es esta etiqueta."
+                ),
+            }
         if c in cls.ETAPAS_NO_INICIADA:
             motivos = {
                 "req_analizar": "Requerimiento de análisis",
@@ -1007,10 +1026,15 @@ class ExpedienteController(BaseController):
             "SELECT r.*, e.id_expediente AS exp_id_expediente, e.etapa_codigo AS exp_etapa_actual, "
             "e.responsable_username AS exp_responsable_username, "
             "e.responsable_secundario_username AS exp_responsable_secundario_username, "
-            "c.nombre_completo AS cli_nombre, c.numero_carpeta AS numero_carpeta_cliente "
+            "c.nombre_completo AS cli_nombre, c.numero_carpeta AS numero_carpeta_cliente, "
+            "mr.titulo AS migr_req_titulo, mre.titulo AS migr_etapa_titulo "
             "FROM expediente_recordatorios r "
             "JOIN expedientes e ON e._id = r.id_expediente "
             "LEFT JOIN clientes c ON c._id = e.id_cliente "
+            "LEFT JOIN migracion_requerimiento mr ON mr._id = r.id_migracion_requerimiento "
+            "AND (mr.is_deleted IS NULL OR mr.is_deleted = 0) "
+            "LEFT JOIN migracion_requerimiento_etapa mre ON mre._id = r.id_migracion_etapa "
+            "AND (mre.is_deleted IS NULL OR mre.is_deleted = 0) "
             + cls._JOIN_ETAPA_ENCARGADO
             + " WHERE " + " AND ".join(conditions)
             + " ORDER BY r.fecha_disparo ASC, r.es_critico DESC"
