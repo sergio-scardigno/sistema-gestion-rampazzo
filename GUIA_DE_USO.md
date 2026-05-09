@@ -26,6 +26,7 @@ Esta guia esta dividida en dos partes:
    - [Citas del estudio](#47-citas-del-estudio)
    - [Pendientes citar](#48-pendientes-citar)
    - [Listados](#49-listados)
+   - [Carpetas iniciadas y requerimientos de migracion](#410-carpetas-iniciadas-y-requerimientos-de-migracion)
 5. [Tu dia a dia segun tu rol](#5-tu-dia-a-dia-segun-tu-rol)
 6. [Preguntas frecuentes](#6-preguntas-frecuentes)
 
@@ -288,6 +289,30 @@ En el listado se muestran las columnas: N° Carpeta, **Rama**, **Subtipo**, Tipo
 > **Tip:** Si guardas una carpeta en estado "Activo" sin ninguna tarea asignada, el sistema te avisa con una alerta. Siempre conviene tener al menos una tarea activa.
 
 > **Tip (etapas de citar):** Si la carpeta esta en etapa **Para citar** o **Para citar o videollamada** y aun **no** hay una cita interna en estado **Pendiente** o **Confirmada**, al **Guardar** el sistema puede preguntar si queres **crear la cita** ahora (solo si tu rol tiene permiso de alta en Citas).
+
+---
+
+### 4.10 Carpetas iniciadas y requerimientos de migracion
+
+En el sidebar, el modulo **Carpetas Iniciadas** concentra dos cosas distintas en pestañas superiores:
+
+1. **Carpetas**  
+   Listados de carpetas de **rama Previsional** ya **iniciadas** (virtual o presencial), con contadores y sub-pestañas **Presenciales** / **Virtuales**. Desde aqui podes **Nueva carpeta**, **Editar**, **Eliminar** o **doble clic** para abrir la ficha del expediente (igual que en el listado general de carpetas).
+
+2. **Req. migraciones**  
+   Requerimientos internos de **migracion** con el **ciclo iniciado**, de cualquier area de la carpeta. Tambien hay contadores y sub-pestañas **Presenciales** / **Virtuales**.
+
+**Como se decide si un caso aparece en Presenciales o en Virtuales (Req. migraciones):**
+
+- Si la etapa global es **iniciada presencial** o **iniciada virtual**, manda la **etapa** (aunque el combo de modalidad este desactualizado).
+- Si la carpeta esta en etapas de **requerimiento** (por ejemplo migraciones, analizar o citar), manda el campo **Modalidad** de la ficha (**Presencial** o **Virtual**). Si la modalidad no esta definida, el caso **no** aparece en ninguna de las dos sub-pestañas hasta completarla: asi cada carpeta sale en un solo listado.
+
+**Acciones sobre una fila (Req. migraciones):**
+
+- **Doble clic:** abre el **detalle del requerimiento** de migracion (etapas internas, plazos, etc.).
+- Seleccionar la fila y **Ir a carpeta:** abre la **ficha completa del expediente**.
+
+Arriba del listado hay un texto de ayuda y un **buscador** por N° de carpeta, DNI/CUIL, claves, trámite ANSES, titulo del requerimiento, fechas de vencimiento o alarma, etc.
 
 ---
 

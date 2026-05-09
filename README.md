@@ -4,7 +4,18 @@ Sistema de gestion integral para estudio juridico previsional. Aplicacion de esc
 
 Diseñado para gestionar el ciclo completo de un estudio: desde la consulta inicial del cliente, pasando por la apertura de carpetas, seguimiento de tareas y turnos ANSES, hasta el cobro de honorarios y la generacion de reportes.
 
-**Versión de aplicación:** 1.8.3
+**Versión de aplicación:** 1.9.0
+
+---
+
+## Notas de versión — 1.9.0 (mayo 2026)
+
+### Resumen breve de implementaciones
+
+- **Carpetas iniciadas — Req. migraciones:** sub-pestañas Presencial y Virtual según la modalidad efectiva de la carpeta (etapa global INICIADA presencial/virtual o campo **Modalidad** en la ficha). En etapas de requerimiento (migraciones, analizar, citar) debe estar definida la modalidad para que el caso aparezca en el listado correcto, sin duplicar la misma carpeta en ambas listas.
+- Botón **Ir a carpeta** en Req. migraciones: con una fila seleccionada abre la ficha del expediente; el **doble clic** sigue abriendo el detalle del requerimiento de migración.
+- Ajustes en **sincronización** (motor local/remoto), **notificaciones** y vistas operativas (**dashboard**, **timeline** de etapas en carpeta, **tareas**, **campana** de avisos) alineados al flujo multiplataforma y de build estricto.
+- Pruebas de integración ampliadas para el módulo de requerimientos de migración.
 
 ---
 
